@@ -8,9 +8,10 @@ class FormulationException(Exception):
 
 
 class InvalidConfigException(FormulationException):
-    """ Formulation recived an invalid configuration
+    """ Formulation received an invalid configuration
     """
     pass
+
 
 class NoPathsException(InvalidConfigException):
     """
@@ -20,7 +21,7 @@ class NoPathsException(InvalidConfigException):
 
 
 class UnsupportedOperationException(Exception):
-    """ Something is either not allowed or not implemnted yet
+    """ Something is either not allowed or not implemented yet
     """
     pass
 
