@@ -1,5 +1,5 @@
 """
-Various functinos for traffic class generation
+Various functions for traffic class generation
 """
 from panacea.lps.topology.traffic import TrafficClass
 

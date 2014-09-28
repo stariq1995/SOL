@@ -1,2 +1,1 @@
-""" Implements the sdn & mininet component of the library"""
-__author__ = 'victor'
+""" Implements the sdn & Mininet component of the library"""
