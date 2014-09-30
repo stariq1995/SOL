@@ -463,7 +463,7 @@ def addRequireSomeNodesConstraints(prob, ppk):
 def addBudgetConstraint(prob, topology, func, bound):
     """
 
-    :type topology: :py:class:`~panacea.lps.topology.Topology`
+    :type topology: :py:class:`~panacea.optimization.topology.Topology`
     :param prob:
     :param topology:
     :param func:

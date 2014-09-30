@@ -39,7 +39,7 @@ tabledir = os.path.normpath(__currdir + '/../../../../paper/nsdi15/textables/')
 def loadTopologies(names):
     """ Loads all the topologies from pre-defined places on disk
     :param names: names of topologies to load
-    :return: list of :py:class:`~panacea.lps.topology.Topology` objects
+    :return: list of :py:class:`~panacea.optimization.topology.Topology` objects
     """
     topos = []
     for name in names:

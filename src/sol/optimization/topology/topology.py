@@ -167,7 +167,7 @@ class Topology(object):
 
         :param nodePairs: Node pairs that define commodities
         :param trafficMatrix: traffic matrix class
-            (see :py:class:`~panacea.lps.topology.traffic.TrafficMatrix`)
+            (see :py:class:`~panacea.optimization.topology.traffic.TrafficMatrix`)
         :param trafficClasses: a list of traffic class objects
         Returns a list of Commodity objects
         """

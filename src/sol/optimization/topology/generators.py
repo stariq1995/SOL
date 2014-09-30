@@ -40,7 +40,7 @@ def addMiddleboxes(topology, locations=None, superSink=True, shortcuts=True,
     :param shortcuts: add links from middleboxes to switches downstream
     :param mtypes: types of middleboxes
     :return:
-    :rtype :py:class:`~panacea.lps.topology.Topology`
+    :rtype :py:class:`~panacea.optimization.topology.Topology`
     """
 
     c = topology.__class__
