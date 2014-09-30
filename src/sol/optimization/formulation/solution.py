@@ -59,8 +59,9 @@ def cleanSolutionPaths(topology, ppk):
                 k.dst = G.node[e]['sinkParent']
     return newppk
 
+
 def getCPULoads(solvedProblem):
-    res ={}
+    res = {}
     for k, v in getValueDict(solvedProblem).iteritems():
         if k.startswith('cpuLoad_'):
             res[int(k.split('_')[-1])] = v

@@ -18,7 +18,7 @@ ALLtopologyNames = sorted([
 ])
 
 topologyNames = sorted([
-    #'asAtt', 'asCogent',
+    # 'asAtt', 'asCogent',
     'asGarr',
     'asInternet2',
     # 'asIon',
@@ -54,6 +54,7 @@ def loadTopologies(names):
             print e
             continue
     return topos
+
 
 frameworkName = 'SOL'
 

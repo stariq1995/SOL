@@ -9,38 +9,42 @@ import errno
 from collections import defaultdict
 
 
-class regexdict(dict):
-    """ Dict that return multiple values if the key is a regex
+class RegexDict(dict):
+    """
+    Dict that return multiple values on get operation if the key is a regex
     """
 
     def __getitem__(self, regex):
+        """ Override the default get operation"""
         r = re.compile(regex)
         mkeys = filter(r.match, self.keys())
         for i in mkeys:
             yield (i, dict.__getitem__(self, i))
 
 
-def rmRegex(dirName, pattern):
+def rmRegex(dirname, pattern):
     """
+    Remove files using a regex
 
-    :param dirName:
-    :param pattern:
+    :param dirname: the directory from which we are removing files
+    :param pattern: the regex. File names matching this regex within the
+        directory will be removed
     """
     e = re.compile(pattern)
-    for f in os.listdir(dirName):
+    for f in os.listdir(dirname):
         if e.search(f):
-            os.remove(os.path.join(dirName, f))
+            os.remove(os.path.join(dirname, f))
 
 
 def mkdirs(path):
     """
-
-    :param path:
-    :raise:
+    Create nested directories, just like "mkdir -p"
+    :param path: the name of directory to create
+    :raise: OSError
     """
     try:
         os.makedirs(path)
-    except OSError as exc:  # Python >2.5
+    except OSError as exc:
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else:
@@ -71,5 +75,5 @@ def str2tup(s, d='_'):
     """
     return tuple(s.split(d))
 
-# Self nesting dict
+# Self-nesting dict
 Tree = lambda: defaultdict(Tree)

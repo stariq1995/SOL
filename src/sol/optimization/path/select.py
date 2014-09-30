@@ -2,7 +2,6 @@
 """
 from collections import defaultdict
 import random
-from math import floor
 
 
 def chooserand(ppk, numPaths):

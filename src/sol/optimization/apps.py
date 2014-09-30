@@ -3,7 +3,7 @@ from panacea.lps.path.predicates import SIMPLEModifier
 
 apps = {
     # 'MCF': {
-    #     'constraints': ['linkcap', 'routeall'],
+    # 'constraints': ['linkcap', 'routeall'],
     #     'objective': 'routingcost',
     #     'task': 'minimize',
     #     'predicate': 'nullPredicate',

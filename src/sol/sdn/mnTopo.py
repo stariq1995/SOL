@@ -1,7 +1,8 @@
 """ Mininet topology helper
 """
-from mininet.topo import Topo
 import networkx
+
+from mininet.topo import Topo
 
 
 class mnTopo(Topo):

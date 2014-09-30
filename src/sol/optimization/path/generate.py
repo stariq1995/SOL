@@ -26,7 +26,7 @@ def generatePathsPerIE(source, sink, topology, predicate, cutoff,
     # Now generate all paths that match a predicate for each commodity
     G = topology.getGraph()
     # if cutoff is None:
-    #     cutoff = int(ceil(nx.diameter(topology.getGraph().to_undirected()) *
+    # cutoff = int(ceil(nx.diameter(topology.getGraph().to_undirected()) *
     #                       1.7))
     paths = []
     num = 0

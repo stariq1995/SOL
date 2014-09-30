@@ -7,11 +7,9 @@
     depending on the desired application
 
 """
-import abc
 import itertools
 from os.path import sep
 from collections import defaultdict
-
 import networkx as nx
 from networkx.readwrite import graphml
 import numpy
@@ -22,21 +20,19 @@ from traffic import TrafficMatrix, Commodity, Path
 class Topology(object):
     """
     Class that stores the topology graph as well as some traffic information,
-    like number of flows and traffic volume across the network
-
-    For the purposes of the given framework, we keep two versions of the
-    topology: the "original" topology (just the switches)
+    like number of flows in the network
 
     """
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, name, graph=None, numFlows=0):
         """ Create a new empty topology
 
         :param name: The topology name
-        :param graph: a :py:module:`networkx` graph that represents the topology
-        :param numFlows: number of flows in the network
+        :param graph: Either a
+            1) :py:module:`networkx` graph that represents the topology
+            2) filename of a graphml file to load the graph from
 
+        :param numFlows: number of flows in the network
         """
         self.name = name
         if graph is not None:
@@ -144,22 +140,6 @@ class Topology(object):
     def __repr__(self):
         return "{}(name={})".format(self.__class__, self.name)
 
-    @abc.abstractmethod
-    def generateIEPairs(self):
-        """
-        Generates the ingress egress pairs
-        """
-        return
-
-    @abc.abstractmethod
-    def generateTrafficMatrix(self, nodePairs, model):
-        """ Generates the traffic matrix
-        :param nodePairs: use the following IE pairs
-        :param model: traffic model
-        :return:
-        """
-        return
-
     @staticmethod
     def generateCommodities(nodePairs, trafficMatrix, trafficClasses):
         """ Generate the commodities for given node pairs, traffic matrix and
@@ -222,9 +202,9 @@ class Topology(object):
     def computeUnifromPlusNormalODTM(self, nodePairs, std=.5):
         tm = dict()
         uni = self.getNumFlows() / len(nodePairs)
-        vals = numpy.random.normal(uni, scale=std*uni, size=len(nodePairs))
-        vals = numpy.clip(vals, std*uni, (1+std)*uni)
-        for index,ie in enumerate(nodePairs):
+        vals = numpy.random.normal(uni, scale=std * uni, size=len(nodePairs))
+        vals = numpy.clip(vals, std * uni, (1 + std) * uni)
+        for index, ie in enumerate(nodePairs):
             tm[ie] = vals[index]
         return TrafficMatrix(tm)
 

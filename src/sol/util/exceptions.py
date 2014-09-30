@@ -21,7 +21,8 @@ class NoPathsException(InvalidConfigException):
 
 
 class UnsupportedOperationException(Exception):
-    """ Something is either not allowed or not implemented yet
+    """
+    Something is either not allowed or not implemented yet
     """
     pass
 

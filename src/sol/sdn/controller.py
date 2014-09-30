@@ -6,12 +6,11 @@ import copy
 import json
 import re
 import itertools
-
-import netaddr
 import requests
 from requests.auth import HTTPBasicAuth
 import networkx
 
+import netaddr
 from panacea.util.exceptions import ControllerException
 
 
@@ -323,13 +322,13 @@ def convertPath(path, offset=0):
     _path = copy.copy(path)
     for ind, node in enumerate(_path):
         if type(node) == int:
-            node = hex(node+offset).lstrip('0x').zfill(16)
+            node = hex(node + offset).lstrip('0x').zfill(16)
             _path[ind] = ':'.join(
                 s.encode('hex') for s in node.decode('hex'))
         elif type(node) == str \
                 and re.match(r'^([0-9A-Fa-f]{2}[:-]){5,8}([0-9A-Fa-f]{2})$',
                              node) is None:
-            node = int(node)+1
+            node = int(node) + 1
             # print node
             node = hex(node).lstrip('0x').zfill(16)
             _path[ind] = ':'.join(
@@ -372,7 +371,7 @@ if __name__ == "__main__":
     # sint = int('0x'+s.replace(':', ''), 16)
     # for d in allpaths[s]:
     # dint = int('0x'+d.replace(':', ''), 16)
-    #         k = Commodity(index, s, d, getClassesRegular()[0],
+    # k = Commodity(index, s, d, getClassesRegular()[0],
     #                       srcprefix='10.0.0.{}'.format(sint),
     #                       dstprefix='10.0.0.{}'.format(dint))
     #         ppk[k] = [allpaths[s][d]]

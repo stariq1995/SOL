@@ -1,13 +1,13 @@
-""" Generates the formulation for Panacea"""
+""" Generates the formulation for SOL"""
 
 from __future__ import division
 import itertools
 
-from panacea.lps.formulation import funcs
-from panacea.util.exceptions import InvalidConfigException, \
+from sol.lps.formulation import funcs
+from sol.util.exceptions import InvalidConfigException, \
     UnsupportedOperationException, NoPathsException
-from panacea.util.pythonHelper import tup2str, Tree
-from panacea.lps.topology.traffic import PathWithMbox
+from sol.util.pythonHelper import tup2str, Tree
+from sol.lps.topology.traffic import PathWithMbox
 
 
 try:
@@ -136,7 +136,7 @@ def addRoutingCost(prob, ppk):
     coeffs = {}
     for k in ppk:
         for pi, path in enumerate(ppk[k]):
-            coeffs[_pv(k, pi)] = len(path)-1
+            coeffs[_pv(k, pi)] = len(path) - 1
     defineVar(prob, 'RoutingCost', coeffs)
 
 
@@ -373,7 +373,7 @@ def addPathBinaryConstraints(prob, ppk):
             # prob.indicator_constraints.add(
             # cplex.SparsePair([varindex[_pv(k, pi)]], [1]),
             # indvar=varindex['binpath_{}_{}'.format(k.ID, pi)],
-            #     sense='E', complemented=1, rhs=0)
+            # sense='E', complemented=1, rhs=0)
             # prob.indicator_constraints.add(
             #     cplex.SparsePair([varindex[_pv(k, pi)]], [1]),
             #     indvar=varindex['binpath_{}_{}'.format(k.ID, pi)],
@@ -399,7 +399,7 @@ def addRequireAllNodesConstraints(prob, ppk, nodes):
             for pi, path in enumerate(ppk[k]):
                 if n in path:
                     # prob.indicator_constraints.add(
-                    #     cplex.SparsePair(
+                    # cplex.SparsePair(
                     #         [varindex['binpath_{}_{}'.format(k.ID, pi)]],
                     #         [1]),
                     #     indvar=varindex['binnode_{}'.format(n)],
@@ -429,7 +429,7 @@ def addRequireAllEdgesConstraint(prob, ppk, edges):
                     u, v = edge
                     # prob.indicator_constraints.add(
                     # cplex.SparsePair(
-                    #         [varindex['binpath_{}_{}'.format(k.ID, pi)]],
+                    # [varindex['binpath_{}_{}'.format(k.ID, pi)]],
                     #         [1]),
                     #     indvar=varindex['binedge_{}_{}'.format(u, v)],
                     #     sense='E', rhs=0, complemented=1)
@@ -463,7 +463,7 @@ def addRequireSomeNodesConstraints(prob, ppk):
 def addBudgetConstraint(prob, topology, func, bound):
     """
 
-    :type topology: :py:class:`~panacea.optimization.topology.Topology`
+    :type topology: :py:class:`~sol.optimization.topology.Topology`
     :param prob:
     :param topology:
     :param func:

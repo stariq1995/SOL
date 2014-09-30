@@ -132,7 +132,7 @@ class PathWithMbox(Path):
     def __eq__(self, other):
         assert isinstance(other, PathWithMbox)
         return self._nodes == other._nodes and self.useMBoxes == \
-                                                other.useMBoxes
+                                               other.useMBoxes
 
     def __repr__(self):
         return "PathWithMbox(nodes={}, useMBoxes={} numFlows={})".format(str(
@@ -198,13 +198,14 @@ class TrafficMatrix(object):
         return self._perPathMatrix
 
     def permute(self):
-        k, v = map(list,zip(*self._perODMatrix.iteritems()))
+        k, v = map(list, zip(*self._perODMatrix.iteritems()))
         # print k,v
         random.shuffle(v)
         self._perODMatrix = dict(zip(k, v))
         if self._perPathMatrix is not None:
-            #TODO: test this
-            self._perPathMatrix = self.convertODtoPathMatrix(self._perPathMatrix)
+            # TODO: test this
+            self._perPathMatrix = self.convertODtoPathMatrix(
+                self._perPathMatrix)
 
     def getODPairs(self):
         """
