@@ -38,11 +38,15 @@ def testFatTreeGenerator():
 
 
 def testForceSwitchLabels():
+    """
+    Ensure that switches are labeled appropriately
+
+    """
     topo = generateCompleteTopology(5)
     forceSwitchLabels(topo)
     G = topo.getGraph()
     for node in G.nodes_iter():
-        assert G.node[node]['type'] == 'switch'
+        assert 'switch' in G.node[node]['services']
 
 
 

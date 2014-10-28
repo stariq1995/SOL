@@ -1,7 +1,10 @@
 # coding=utf-8
+import copy
+import random
 import pytest
+
 from sol.optimization.topology.traffic import Path, PathWithMbox, \
-    TrafficClass
+    TrafficClass, TrafficMatrix
 
 
 def testPathGetters():
@@ -10,8 +13,10 @@ def testPathGetters():
     assert p.getNumFlows() == 0
     assert p.getIngress() == 1
     assert p.getEgress() == -1
+    assert p.getIEPair() == (1, -1)
     assert p.getNodes() == [1, 4, 6, -1]
     assert p.getNodesAsTuple() == (1, 4, 6, -1)
+    assert list(p.getLinks()) == [(1, 4), (4, 6), (6, -1)]
 
     assert p[1] == 4
     assert p[-1] == -1
@@ -20,7 +25,6 @@ def testPathGetters():
 
 
 def testPathEquality():
-
     p = Path([1, 2, 3, 4])
     p1 = Path([1, 2, 3, 4], 10)
     p2 = Path([1, 2, 3, 5])
@@ -86,10 +90,12 @@ def testTrafficClass():
     t4 = TrafficClass(1, 'web', 1, 2, myval=20)
     assert t4.myval == 20
 
-
 def testTrafficMatrix():
-    pass
-    # assert False
-
-def testTrafficMatrixConversion():
-    pass
+    tm = TrafficMatrix({(1, 2): 100, (3, 4): 500, (2, 4): 200})
+    tm2 = copy.deepcopy(tm)
+    r = random.Random(1)
+    tm2.permute(rand=r.random)
+    assert len(tm) == len(tm2)
+    assert tm.keys() == tm2.keys()
+    assert tm.values() != tm2.values()
+    assert sorted(tm.values()) == sorted(tm2.values())

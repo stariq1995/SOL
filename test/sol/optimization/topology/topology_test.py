@@ -11,12 +11,20 @@ def testTopologyWriteRead(tmpdir):
     topo.writeGraph(dirname)
     topo2 = Topology(topo.name)
     topo2.loadGraph(dirname + os.path.sep + topo.name + '.graphml')
-    assert networkx.is_isomorphic(topo, topo2)
-    topo.writeGraph(dirname, 'lalala')
-    topo2 = Topology.loadGraph(dirname + os.path.sep + 'lalala.graphml')
-    assert networkx.is_isomorphic(topo, topo2)
+    assert networkx.is_isomorphic(topo.getGraph(), topo2.getGraph())
+    topo.writeGraph(dirname, 'lalala.graphml')
+    topo2.loadGraph(dirname + os.path.sep + 'lalala.graphml')
+    assert networkx.is_isomorphic(topo.getGraph(), topo2.getGraph())
 
-#todo: test constructor with diff types
-#todo: test get numnodes
+def testTopologyConstructor():
+    #todo: test constructor with diff types
+    pass
+
+def testGetNumNodes():
+    topo = generateCompleteTopology(8)
+    assert topo.getNumNodes() == 8
+    assert topo.getNumNodes('switch') == 8
+    assert topo.getNumNodes('middlebox') == 0
+    #todo: test get numnodes
 
 
