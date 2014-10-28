@@ -1,13 +1,14 @@
+# coding=utf-8
 """ Generates the formulation for SOL"""
 
 from __future__ import division
 import itertools
 
-from sol.lps.formulation import funcs
+from sol.optimization.formulation import funcs
 from sol.util.exceptions import InvalidConfigException, \
     UnsupportedOperationException, NoPathsException
 from sol.util.pythonHelper import tup2str, Tree
-from sol.lps.topology.traffic import PathWithMbox
+from sol.optimization.topology.traffic import PathWithMbox
 
 
 try:
@@ -375,9 +376,9 @@ def addPathBinaryConstraints(prob, ppk):
             # indvar=varindex['binpath_{}_{}'.format(k.ID, pi)],
             # sense='E', complemented=1, rhs=0)
             # prob.indicator_constraints.add(
-            #     cplex.SparsePair([varindex[_pv(k, pi)]], [1]),
-            #     indvar=varindex['binpath_{}_{}'.format(k.ID, pi)],
-            #     sense='G', complemented=0, rhs=0)
+            # cplex.SparsePair([varindex[_pv(k, pi)]], [1]),
+            # indvar=varindex['binpath_{}_{}'.format(k.ID, pi)],
+            # sense='G', complemented=0, rhs=0)
             prob.linear_constraints.add(
                 [cplex.SparsePair([varindex[_pv(k, pi)],
                                    varindex['binpath_{}_{}'.format(k.ID, pi)]],
@@ -400,10 +401,10 @@ def addRequireAllNodesConstraints(prob, ppk, nodes):
                 if n in path:
                     # prob.indicator_constraints.add(
                     # cplex.SparsePair(
-                    #         [varindex['binpath_{}_{}'.format(k.ID, pi)]],
-                    #         [1]),
-                    #     indvar=varindex['binnode_{}'.format(n)],
-                    #     sense='E', rhs=0, complemented=1)
+                    # [varindex['binpath_{}_{}'.format(k.ID, pi)]],
+                    # [1]),
+                    # indvar=varindex['binnode_{}'.format(n)],
+                    # sense='E', rhs=0, complemented=1)
                     prob.linear_constraints.add(
                         [cplex.SparsePair(
                             [varindex['binpath_{}_{}'.format(k.ID, pi)],
@@ -430,9 +431,9 @@ def addRequireAllEdgesConstraint(prob, ppk, edges):
                     # prob.indicator_constraints.add(
                     # cplex.SparsePair(
                     # [varindex['binpath_{}_{}'.format(k.ID, pi)]],
-                    #         [1]),
-                    #     indvar=varindex['binedge_{}_{}'.format(u, v)],
-                    #     sense='E', rhs=0, complemented=1)
+                    # [1]),
+                    # indvar=varindex['binedge_{}_{}'.format(u, v)],
+                    # sense='E', rhs=0, complemented=1)
                     prob.linear_constraints.add(
                         [cplex.SparsePair(
                             [varindex['binpath_{}_{}'.format(k.ID, pi)],

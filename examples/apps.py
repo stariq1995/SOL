@@ -1,15 +1,8 @@
+# coding=utf-8
 """ App configurations """
-from panacea.lps.path.predicates import SIMPLEModifier
+from sol.optimization.path.predicates import SIMPLEModifier
 
 apps = {
-    # 'MCF': {
-    # 'constraints': ['linkcap', 'routeall'],
-    #     'objective': 'routingcost',
-    #     'task': 'minimize',
-    #     'predicate': 'nullPredicate',
-    #     'pruneStrategy': 'shortest',
-    #     'pruneNumber': '5x',  # 5 paths per commodity
-    # },
     'SIMPLE': {
         'constraints': ['linkcap', 'nodecap', 'dnodecap', 'routeall'],
         'objective': 'maxload',
@@ -22,7 +15,7 @@ apps = {
         'pairparams': {'minShortestPath': 1, 'minDegree': 1, 'hasSinks': False},
         'predicate': 'SIMPLEPredicate',
         'trafficModel': 'normal',
-        #'trafficMatrix': 'object or file',
+        # 'trafficMatrix': 'object or file',
         'pruneStrategy': 'random',
         'pruneNumber': '5x',
         'pathModifyFunc': SIMPLEModifier
@@ -40,14 +33,14 @@ apps = {
         'pairparams': {'minShortestPath': 1, 'minDegree': 1, 'hasSinks': False},
         'predicate': 'SIMPLEPredicate',
         'trafficModel': 'normal',
-        #'trafficMatrix': 'object or file',
+        # 'trafficMatrix': 'object or file',
         'pruneStrategy': 'random',
         'pruneNumber': '5x',
         # 'pathModifyFunc': SIMPLEModifier
     },
     # 'Merlin': {
-    #     'constraints': ['linkcap', 'routeall'],
-    #     'resources': [],
+    # 'constraints': ['linkcap', 'routeall'],
+    # 'resources': [],
     #     'task': 'minimize',
     #     'objective': 'maxlinkload',
     #     'pairparams': {'minShortestPath': 2, 'minDegree': 1, 'hasSinks': True},
