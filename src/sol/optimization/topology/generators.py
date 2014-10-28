@@ -1,10 +1,13 @@
-"""
-Generates toplogies for various applications we are evaluating
+# coding=utf-8
 
-MUST DOCUMENT MORE
 """
+Generates some basic topologies. Contains utility methods as well.
+"""
+
+
 import itertools
 import networkx as nx
+from sol.optimization.topology.topology import Topology
 
 
 def forceSwitchLabels(topology):
@@ -15,10 +18,10 @@ def forceSwitchLabels(topology):
     """
     G = topology.getGraph()
     for n in G.nodes_iter():
-        G.node[n]['functions'] = 'switch'
+        topology.addServiceType(n, 'switch')
 
 
-def generateFatTree(k, numFlows=None):
+def generateFatTree(k):
     """ Creates a FatTree topology as a directed graph
 
     :param k: specify the k-value that controls the size of the topology
@@ -49,13 +52,7 @@ def generateFatTree(k, numFlows=None):
         index += 1
     G.add_edges_from(itertools.product(core, middle), capacitymult=10)
     G = G.to_directed()
-    # Compute the number of flows for this network
-    if numFlows is None:
-        a = (k ** 2) / 2
-        G.graph['numFlows'] = a * (a - 1) * 1000
-    else:
-        G.graph['numFlows'] = numFlows
-    return G
+    return Topology('k{}'.format(k), G)
 
 
 def generateChainTopology(n, name='chain'):
@@ -68,14 +65,14 @@ def generateChainTopology(n, name='chain'):
     :rtype TestTopology
     """
     G = nx.path_graph(n).to_directed()
-    t = TestTopology(name, G)
+    t = Topology(name, G)
     forceSwitchLabels(t)
     return t
 
 
 def generateCompleteTopology(n, name='complete'):
     """
-    Generates a complete graph toplogy
+    Generates a complete graph topology
 
     :param n: number of nodes in the complete graph
     :param name: name of the topology
@@ -83,7 +80,7 @@ def generateCompleteTopology(n, name='complete'):
     :rtype: TestTopology
     """
     G = nx.complete_graph(n).to_directed()
-    t = TestTopology(name, G)
+    t = Topology(name, G)
     forceSwitchLabels(t)
     return t
 

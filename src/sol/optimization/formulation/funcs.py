@@ -1,9 +1,10 @@
+# coding=utf-8
 """
  Example functions for modeling link/node capacity constraints for use with the
  optimizations
 """
 
-
+raise NotImplemented()
 def curryLinkConstraintFunc(func, *args, **kwargs):
     """
     Curries the link constraint functions

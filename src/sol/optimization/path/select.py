@@ -1,3 +1,4 @@
+# coding=utf-8
 """ Module implements different path pruning strategies
 """
 from collections import defaultdict

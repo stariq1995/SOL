@@ -19,10 +19,10 @@ class Topology(object):
 
         :param name: The topology name
         :param graph: Either a
-            1) :py:module:`networkx` graph that represents the topology
-            2) filename of a graphml file to load the graph from
+            #) :py:module:`networkx` graph that represents the topology
+            #) filename of a graphml file to load the graph from
+            #) None, in which case an empty directed graph is created
 
-        :param numFlows: number of flows in the network
         """
         self.name = name
         if graph is not None:
@@ -36,8 +36,8 @@ class Topology(object):
     def getNumNodes(self, service=None):
         """ Returns the number of nodes in this topology
 
-        :param nodeType: only count nodes of particular nodeType (e.g., switch,
-            host, middlebox)
+        :param service: only count nodes that provide a particular service (
+            e.g., 'switch', 'ids', 'fw', etc.)
         """
         if service is None:
             return self._graph.number_of_nodes()
@@ -60,14 +60,15 @@ class Topology(object):
         """
         self._graph = graph
 
-    def writeGraph(self, dirName, fname=None):
+    def writeGraph(self, dirName, fName=None):
         """
         Writes out the graph in GraphML format
 
         :param dirName: directory to write to
-        :param fname: file name to use. If None, topology name is used
+        :param fName: file name to use. If None, topology name with a
+            '.graphml' suffix is used
         """
-        n = self.name + '.graphml' if fname is None else fname
+        n = self.name + '.graphml' if fName is None else fName
         graphml.write_graphml(
             self._graph, dirName + sep + n)
 
@@ -78,32 +79,50 @@ class Topology(object):
         """
         self._graph = graphml.read_graphml(fName, int)
 
-    # def _istype(self, node, typ):
-    # """
-    # Check if given node is of a given type
-    #
-    #     :param node: node to check
-    #     :param typ: type (e.g., middlebox, switch)
-    #     :return: True or False
-    #     """
-    #     return 'functions' in self._graph.node[node] and \
-    #            self._graph.node[node]['functions'].lower() == typ.lower()
-    #
-    # def isMiddlebox(self, node):
-    #     """ Check if given node is a middlebox
-    #
-    #     :param node: node to check
-    #     :return: True or False
-    #     """
-    #     return self._istype(node, 'middlebox')
-    #
-    # def isSwitch(self, node):
-    #     """ Check if given node is a switch
-    #
-    #     :param node: node to check
-    #     :return: True or False
-    #     """
-    #     return self._istype(node, 'switch')
+    def getServiceTypes(self, node):
+        """
+        Returns the list of services a particular node provides
+        :param node: the node id of interest
+        :return: a list of available services at this node (e.g., 'switch',
+            'ids')
+        """
+        return self._graph.node[node]['services'].split(';')
+
+    def setServiceTypes(self, node, serviceTypes):
+        """
+        Set the service types for this node
+
+        :param node: the node id of interest
+        :param serviceTypes: a list of strings denoting the services
+        :type serviceTypes: list
+        """
+        if isinstance(serviceTypes, str):
+            self._graph.node[node]['services'] = serviceTypes
+        elif isinstance(serviceTypes, list):
+            self._graph.node[node]['services'] = ';'.join(serviceTypes)
+        else:
+            raise AttributeError('Wrong type of serviceTypes, use a list')
+
+    def addServiceType(self, node, serviceType):
+        """
+        Add a single service type to the given node
+        :param node: the node id of interest
+        :param serviceType: the service to add (e.g., 'switch', 'ids')
+        :type serviceType: str
+        """
+        if 'services' in self._graph.node[node]:
+            types = self._graph.node[node]['services'].split(';') + [
+                serviceType]
+        else:
+            types = [serviceType]
+        self._graph.node[node]['services'] = ';'.join(types)
+
+    #todo: document this
+    def nodes(self):
+        return self._graph.nodes_iter(data=True)
+
+    def edges(self):
+        return self._graph.edges_iter(data=True)
 
     def __repr__(self):
         return "{}(name={})".format(self.__class__, self.name)

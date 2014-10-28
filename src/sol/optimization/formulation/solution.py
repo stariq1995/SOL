@@ -1,3 +1,4 @@
+# coding=utf-8
 """ Functions to manipulate the solution to the formulation
 """
 import copy

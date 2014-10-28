@@ -1,3 +1,4 @@
+# coding=utf-8
 """ Implements functions necessary to operate the OpenDaylight controller
 using their RESTful APIs
 """
@@ -11,7 +12,7 @@ from requests.auth import HTTPBasicAuth
 import networkx
 
 import netaddr
-from panacea.util.exceptions import ControllerException
+from sol.util.exceptions import ControllerException
 
 
 class PanaceaController(object):
@@ -335,7 +336,6 @@ def convertPath(path, offset=0):
                 s.encode('hex') for s in node.decode('hex'))
     return _path
 
-
 def checkErr(r):
     """
     :param r: the response recieved form the requests library
@@ -349,34 +349,4 @@ def checkErr(r):
             r.status_code))
     return True
 
-
 # TODO: figure out hosts dynamically
-
-if __name__ == "__main__":
-    c = PanaceaController()
-    # daylightGraph = c.getTopology()
-    # print topo.edges(data=True)
-
-    # THIS IS A TEST FOR A TREE TOPO WITH DEPTH 3
-    # spath = networkx.shortest_path(daylightGraph, '00:00:00:00:00:00:00:03',
-    # '00:00:00:00:00:00:00:07')
-    # c.pushPath(spath, daylightGraph, '10.0.0.1', '10.0.0.8')
-    # c.pushPath(spath, daylightGraph, '10.0.0.8', '10.0.0.1')
-
-    # THIS IS A TEST FOR A TREE TOPO
-    # allpaths = networkx.all_pairs_shortest_path(daylightGraph)
-    # ppk = {}
-    # index = 1
-    # for s in allpaths:
-    # sint = int('0x'+s.replace(':', ''), 16)
-    # for d in allpaths[s]:
-    # dint = int('0x'+d.replace(':', ''), 16)
-    # k = Commodity(index, s, d, getClassesRegular()[0],
-    #                       srcprefix='10.0.0.{}'.format(sint),
-    #                       dstprefix='10.0.0.{}'.format(dint))
-    #         ppk[k] = [allpaths[s][d]]
-    #         index += 1
-    # c.pushRoutes(ppk, daylightGraph)
-
-    # THIS IS A TEST FOR DELETING ALL FLOWS
-    c.deleteAllFlows()
