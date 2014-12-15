@@ -1,6 +1,8 @@
 # coding=utf-8
-import networkx
 import os
+
+import networkx
+
 from sol.optimization.topology.generators import generateCompleteTopology
 from sol.optimization.topology.topology import Topology
 
@@ -16,15 +18,17 @@ def testTopologyWriteRead(tmpdir):
     topo2.loadGraph(dirname + os.path.sep + 'lalala.graphml')
     assert networkx.is_isomorphic(topo.getGraph(), topo2.getGraph())
 
+
 def testTopologyConstructor():
-    #todo: test constructor with diff types
+    # todo: test constructor with diff types
     pass
+
 
 def testGetNumNodes():
     topo = generateCompleteTopology(8)
     assert topo.getNumNodes() == 8
     assert topo.getNumNodes('switch') == 8
     assert topo.getNumNodes('middlebox') == 0
-    #todo: test get numnodes
+    # todo: test get numnodes
 
 

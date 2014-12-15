@@ -1,4 +1,5 @@
 import networkx
+
 from sol.optimization.topology.generators import *
 from sol.optimization.topology.topology import Topology
 

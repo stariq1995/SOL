@@ -1,7 +1,7 @@
 # coding=utf-8
 import pytest
 from sol.optimization.path.generate import generatePathsPerIE
-from sol.optimization.path.predicates import nullPredicate, UseMboxModifier
+from sol.optimization.path.predicates import nullPredicate, useMboxModifier
 from sol.optimization.topology.generators import generateChainTopology, \
     generateCompleteTopology
 from sol.optimization.topology.traffic import PathWithMbox
@@ -27,6 +27,7 @@ def test_pathgen_simple():
     assert len(generatePathsPerIE(0, 4, chaintopo, nullPredicate, cutoff=100,
                                   raiseOnEmpty=False)) == 0
 
+
 def test_pathgen_cutoffs():
     t = generateCompleteTopology(8)
     pptc = generatePathsPerIE(1, 3, t, nullPredicate, 100)
@@ -41,16 +42,16 @@ def test_pathgen_cutoffs():
 
 def test_pathgen_mbox():
     t = generateCompleteTopology(8)
+
     def mbox(path, topology):
-        G = topology.getGraph()
         return [PathWithMbox(path, [n]) for n in path]
 
     pptc = generatePathsPerIE(1, 3, t, nullPredicate, 2,
                               modifyFunc=mbox)
     assert len(pptc) == 20
 
-    t.getGraph().node[1]['hasmbox'] = True
-    t.getGraph().node[3]['hasmbox'] = True
+    t.setMbox(1)
+    t.setMbox(3)
     pptc = generatePathsPerIE(1, 3, t, nullPredicate, 2,
-                              modifyFunc=UseMboxModifier)
+                              modifyFunc=useMboxModifier)
     assert len(pptc) == 14

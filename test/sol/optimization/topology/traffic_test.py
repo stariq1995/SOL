@@ -1,8 +1,8 @@
 # coding=utf-8
 import copy
 import random
-import pytest
 
+import pytest
 from sol.optimization.topology.traffic import Path, PathWithMbox, \
     TrafficClass, TrafficMatrix
 
@@ -89,6 +89,7 @@ def testTrafficClass():
     assert t3.myval == 'val'
     t4 = TrafficClass(1, 'web', 1, 2, myval=20)
     assert t4.myval == 20
+
 
 def testTrafficMatrix():
     tm = TrafficMatrix({(1, 2): 100, (3, 4): 500, (2, 4): 200})
