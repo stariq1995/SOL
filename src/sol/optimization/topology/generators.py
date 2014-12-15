@@ -4,9 +4,10 @@
 Generates some basic topologies. Contains utility methods as well.
 """
 
-
 import itertools
+
 import networkx as nx
+
 from sol.optimization.topology.topology import Topology
 
 
@@ -25,7 +26,6 @@ def generateFatTree(k):
     """ Creates a FatTree topology as a directed graph
 
     :param k: specify the k-value that controls the size of the topology
-    :param numFlows: optional number of flows for this network
     :returns: a ~:py:module:networkx DiGraph
     """
     G = nx.empty_graph()

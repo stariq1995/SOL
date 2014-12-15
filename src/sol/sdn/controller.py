@@ -7,11 +7,12 @@ import copy
 import json
 import re
 import itertools
+
+import networkx
+import netaddr
+
 import requests
 from requests.auth import HTTPBasicAuth
-import networkx
-
-import netaddr
 from sol.util.exceptions import ControllerException
 
 
@@ -335,6 +336,7 @@ def convertPath(path, offset=0):
             _path[ind] = ':'.join(
                 s.encode('hex') for s in node.decode('hex'))
     return _path
+
 
 def checkErr(r):
     """

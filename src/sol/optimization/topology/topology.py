@@ -1,16 +1,16 @@
 # coding=utf-8
-""" Implements the topology class
+""" Implements the topology for SOL optimization
 
 """
 from os.path import sep
+
 import networkx as nx
 from networkx.readwrite import graphml
 
 
 class Topology(object):
     """
-    Class that stores the topology graph as well as some traffic information,
-    like number of flows in the network
+    Class that stores the topology graph and provides helper functions (e.g., middlebox manipulation)
 
     """
 
@@ -19,7 +19,7 @@ class Topology(object):
 
         :param name: The topology name
         :param graph: Either a
-            #) :py:module:`networkx` graph that represents the topology
+            #) :py:mod:`networkx` graph that represents the topology
             #) filename of a graphml file to load the graph from
             #) None, in which case an empty directed graph is created
 
@@ -49,7 +49,7 @@ class Topology(object):
     def getGraph(self):
         """ Return the topology graph
 
-        :returns :py:mod:`networkx` topology directed graph
+        :return: :py:mod:`networkx` topology directed graph
         """
         return self._graph
 
@@ -82,6 +82,7 @@ class Topology(object):
     def getServiceTypes(self, node):
         """
         Returns the list of services a particular node provides
+
         :param node: the node id of interest
         :return: a list of available services at this node (e.g., 'switch',
             'ids')
@@ -106,6 +107,7 @@ class Topology(object):
     def addServiceType(self, node, serviceType):
         """
         Add a single service type to the given node
+
         :param node: the node id of interest
         :param serviceType: the service to add (e.g., 'switch', 'ids')
         :type serviceType: str
@@ -117,15 +119,47 @@ class Topology(object):
             types = [serviceType]
         self._graph.node[node]['services'] = ';'.join(types)
 
-    #todo: document this
     def nodes(self):
+        """
+
+        :return: Iterator over topology nodes as tuples of the form (nodeID, nodeData)
+        """
         return self._graph.nodes_iter(data=True)
 
     def edges(self):
+
+        """
+
+        :return: Iterator over topology edge tuples (nodeID1, nodeID2, edgeData)
+        """
         return self._graph.edges_iter(data=True)
+    links = edges  # Method alias here
 
     def __repr__(self):
         return "{}(name={})".format(self.__class__, self.name)
+
+    def hasMiddlebox(self, node):
+        """
+        Check if the given node has a middlebox attached to it:
+
+        :param node: node ID to check
+        :return: True or False
+        """
+        try:
+            return self._graph.node[node]['hasMbox']
+        except KeyError:
+            return False
+    hasMbox = hasMiddlebox
+
+    def setMiddlebox(self, node, val=True):
+        """
+        Indicate whether a middlebox is attached to a given node
+
+        :param node: node ID
+        :param val: True or False
+        """
+        self._graph.node[node]['hasMbox'] = val
+    setMbox = setMiddlebox
 
 
 

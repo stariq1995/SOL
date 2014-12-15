@@ -3,30 +3,38 @@
 """
 from collections import defaultdict
 import random
+import functools
+
+from sol.util.exceptions import InvalidConfigException
 
 
-def chooserand(ppk, numPaths):
+_RANDOM = ['random', 'rand']
+_SHORTEST = ['shortest', 'short', 'kshortest', 'k-shortest', 'kshort',
+             'k-short']
+
+
+def chooserand(pptc, numPaths):
     """ Chooses a number of paths uniformly at random
 
-    :param ppk: paths per commodity
+    :param pptc: paths per commodity
     :param numPaths: number of paths to pick per commodity
     :return: the new (chosen) paths per each commodity
     :rtype: dict
     """
     newppk = {}
-    for comm in ppk:
-        if len(ppk[comm]) > numPaths:
-            newppk[comm] = random.sample(ppk[comm], numPaths)
+    for comm in pptc:
+        if len(pptc[comm]) > numPaths:
+            newppk[comm] = random.sample(pptc[comm], numPaths)
         else:
-            newppk[comm] = ppk[comm]
+            newppk[comm] = pptc[comm]
     return newppk
 
 
-def sortPathsPerCommodity(ppk, key=None, inplace=True):
+def sortPathsPerCommodity(pptc, key=None, inplace=True):
     """
     Sort paths per commodity
 
-    :param ppk: ppk
+    :param pptc: paths per traffic class
     :param key: criteria to sort by. If none, path length is used
     :param inplace: sort in place. If False, new sorted ppk is returned.
     :return: New ppk if *inplace=False* otherwise None
@@ -34,18 +42,18 @@ def sortPathsPerCommodity(ppk, key=None, inplace=True):
     if key is None:
         key = len
     if inplace:
-        for k in ppk:
-            ppk[k].sort(key=len)
+        for tc in pptc:
+            pptc[tc].sort(key=len)
     else:
         newppk = {}
-        for k in ppk:
-            newppk[k] = sorted(ppk[k], key=key)
+        for tc in pptc:
+            newppk[tc] = sorted(pptc[tc], key=key)
         return newppk
 
 
-def kShortestPaths(ppk, numPaths, needsSorting=True, inplace=True):
+def kShortestPaths(pptc, numPaths, needsSorting=True, inplace=True):
     """ Chooses K shortest paths
-    :param ppk: paths per commodity
+    :param pptc: paths per commodity
     :param numPaths: number of paths to choose (k) per commodity
     :param needsSorting: whether we need to sort the paths first
     :param inplace: if *needsSorting* is True, whether to sort the ppk in
@@ -55,28 +63,51 @@ def kShortestPaths(ppk, numPaths, needsSorting=True, inplace=True):
     """
     newppk = None
     if needsSorting:
-        newppk = sortPathsPerCommodity(ppk, key=len, inplace=inplace)
+        newppk = sortPathsPerCommodity(pptc, key=len, inplace=inplace)
     if newppk is None:
-        newppk = ppk
+        newppk = pptc
     result = {}
-    for comm in ppk:
+    for comm in pptc:
         result[comm] = newppk[comm][:numPaths]
     return result
 
 
-def filterPaths(ppk, func):
-    """
-    Filter paths using a function.
+# def filterPaths(pptc, func):
+#     """
+#     Filter paths using a function.
+#
+#     :param pptc: paths per traffic class
+#     :param func: function to be applied to each path
+#     :return: new paths per commodity with paths for which *func* returned a
+#         true value
+#     """
+#     assert (hasattr(func, '__call__'))
+#     result = defaultdict(lambda: [])
+#     for tc in pptc:
+#         for path in pptc[tc]:
+#             if func(path):
+#                 result[tc].append(path)
+#     return result
 
-    :param ppk: paths per commodity
-    :param func: function to be applied to each path
-    :return: new paths per commodity with paths for which *func* returned a
-        true value
+
+def getSelectFunction(strName, kwargs=None):
     """
-    assert (hasattr(func, '__call__'))
-    result = defaultdict(lambda: [])
-    for k in ppk:
-        for path in ppk[k]:
-            if func(path):
-                result[k].append(path)
-    return result
+    Return the path selection function based on name.
+    Allows passing of additional keyword arguments, so that the returned function can satisfy the following signature::
+        function(pptc, selectNumber)
+
+    :param strName: the name of the function
+    :param kwargs: a dictionary of keyword arguements to be passed to the function
+    :return: the callable object with
+    :raise: InvalidConfigException
+        if the name passed in is not supported
+    """
+    # TODO: write doc example
+    if kwargs is None:
+        kwargs = {}
+    if strName.lower() in _RANDOM:
+        return functools.partial(chooserand, **kwargs)
+    elif strName.lower() in _SHORTEST:
+        return functools.partial(kShortestPaths, **kwargs)
+    else:
+        raise InvalidConfigException("Unknown select method")

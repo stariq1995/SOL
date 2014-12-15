@@ -2,6 +2,7 @@
 """ Implement predicates for path validity.
 Both generic (example predicates) and some app-specific predicates
 """
+import itertools
 from sol.optimization.topology.traffic import PathWithMbox
 
 __author__ = 'victor'
@@ -18,6 +19,9 @@ def nullPredicate(path, topology=None):
     return True
 
 
-def UseMboxModifier(path, topology):
-    G = topology.getGraph()
-    return [PathWithMbox(path, [n]) for n in path if 'hasmbox' in G.node[n]]
+def useMboxModifier(path, topology, chainLength=1):
+    return [PathWithMbox(path, chain) for chain in itertools.combinations(path, chainLength)
+            if all([topology.hasMbox(n) for n in chain])]
+
+def hasMboxPredicate(path, topology):
+    return any([topology.hasMbox(node) for node in path])

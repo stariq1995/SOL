@@ -2,11 +2,8 @@
 """ Implements utility classes that have to do with traffic patterns, such as
 network path, traffic matrix, and network commodities
 """
-from collections import defaultdict
-import cPickle as pickle
 import random
 
-import yaml
 import itertools
 
 
@@ -68,7 +65,7 @@ class Path(object):
 
     def getLinks(self):
         """
-            Return an iterator over the links in this path
+        :return: Return an iterator over the links in this path
         """
         return itertools.izip(self._nodes, self._nodes[1:])
 
@@ -109,29 +106,31 @@ class Path(object):
 
 class PathWithMbox(Path):
     """
+    Create a new path with middlebox
 
-    :param nodes:
-    :param useMBoxes:
-    :param numFlows:
+    :param nodes: path nodes (an ordered list)
+    :param useMBoxes: at which nodes the middleboxes will be used
+    :param numFlows: number of flows (if any) along this path. Default is 0.
     """
 
     def __init__(self, nodes, useMBoxes, numFlows=0):
         super(PathWithMbox, self).__init__(nodes, numFlows)
-        if hasattr(useMBoxes, '__contains__') and hasattr(useMBoxes, '__len__'):
-            self.useMBoxes = useMBoxes
-        else:
-            self.useMBoxes = [useMBoxes]
+        self.useMBoxes = list(useMBoxes)
 
     def usesBox(self, node):
         """
+        Check the path uses a given middlebox
 
-        :param node:
-        :return:
+        :param node: nodeID in question
+        :return: True or False
         """
         return node in self.useMBoxes
 
-    # def __len__(self):
     def fullLength(self):
+        """
+
+        :return: The full length of the path (includes all middleboxes)
+        """
         return len(self._nodes) + len(self.useMBoxes)
 
     def __key(self):
@@ -149,105 +148,20 @@ class PathWithMbox(Path):
 
 class TrafficMatrix(dict):
     """
-    Represents a traffic matrix
+    Represents a traffic matrix, extends basic dictionary type
 
     """
-
-    # def __init__(self, arg):
-    #     """ Creates a new traffic matrix.
-    #
-    #     :param arg:
-    #         a dict mapping a 2-tuple (ingress, egress) to a number of flows
-    #     """
-    #     self._perODMatrix = arg
-    #
-    # def getODMatrix(self):
-    #     """ Returns reference to the per OD traffic matrix """
-    #     return self._perODMatrix
 
     def permute(self, rand=None):
         """
         Permute this traffic matrix randomly
 
-        :param rand:
+        :param rand: instance of a Python :py:mod:`random` object
         """
         v = self.values()
         random.shuffle(v, rand)
         for i, k in enumerate(self.iterkeys()):
             self[k] = v[i]
-
-    # def getODPairs(self):
-    #     """
-    #     :return: the ingress-egress pair of the perOD (perIE) traffic matrix
-    #     :rtype: list of tuples
-    #     """
-    #     return self._perODMatrix.keys()
-    #
-    # def dumpToPickle(self, fobj):
-    #     """  Write the traffic matrix to a pickle file
-    #
-    #     :param fobj: file-like object
-    #     """
-    #     pickle.dump(self._perODMatrix, fobj)
-    #
-    # def dumpToYAML(self, fobj):
-    #     """
-    #     Write the traffic matrix to a file (using yaml format)
-    #
-    #     :param fobj: file-like object
-    #     """
-    #     yaml.dump(self._perODMatrix, fobj)
-    #
-    # def dumpToPlainText(self, fobj):
-    #     """
-    #     Write the perOD traffic matrix to a plaintext file
-    #
-    #     :param fobj: file-like object
-    #     """
-    #     for k, v in self._perODMatrix.iteritems():
-    #         fobj.write('{} {} {}\n'.format(k[0], k[1], v))
-    #
-    # @staticmethod
-    # def loadFromYAML(fobj):
-    #     """
-    #     Load the traffic matrix from file
-    #
-    #     :param fobj: file-like object
-    #     :return: the traffic matrix object
-    #     """
-    #     perODMatrix = yaml.load(fobj)
-    #     t = TrafficMatrix(perODMatrix)
-    #     return t
-    #
-    # @staticmethod
-    # def loadFromPickle(fobj):
-    #     """
-    #     Load the traffic matrix from file
-    #
-    #     :param fobj: file-like object
-    #     :return: the traffic matrix object
-    #     """
-    #     l = pickle.load(fobj)
-    #     t = TrafficMatrix(l)
-    #     return t
-    #
-    # @staticmethod
-    # def loadFromPlaintext(fobj):
-    #     """ Load the traffic matrix from plaintext file
-    #     The format must be as follows:
-    #     ingress egress volume
-    #
-    #     :param fobj: file-like object
-    #     :return: the traffic matrix object
-    #     """
-    #     tm = {}
-    #     for line in fobj:
-    #         i, e, flows = line.split()
-    #         tm[(int(i), int(e))] = float(flows)
-    #     return TrafficMatrix(tm)
-    #
-    # def __repr__(self):
-    #     return repr(self._perODMatrix)
 
 
 class TrafficClass(object):
@@ -257,11 +171,20 @@ class TrafficClass(object):
     def __init__(self, ID, name, src, dst, volFlows=0, volBytes=0, priority=1,
                  srcIPPrefix=None, dstIPPrefix=None, srcAppPorts=None,
                  dstAppPorts=None, **kwargs):
-        """ Creates a new traffic class
+        """ Creates a new traffic class. Any keyword arguments will be made into attributes.
 
         :param ID: unique traffic class identifier
         :param name: traffic class name, for human readability (e.g., 'web',
             'ssh', etc.)
+        :param src: nodeID that is the ingress for this traffic class
+        :param dst: nodeID that is the egress for this traffic class
+        :param volFlows: number of flows for this traffic class
+        :param volBytes: number of bytes for this traffic class
+        :param priority: traffic class priority, as an integer (higher number means higher priority)
+        :param srcIPPrefix: ingress IP prefix (CIDR notation)
+        :param dstIPPrefix: egress IP prefix (CIDR notation)
+        :param scrAppPorts: packet application ports (source)
+        :param dstAppPorts: packet application ports (destination)
         """
 
         self.ID = ID

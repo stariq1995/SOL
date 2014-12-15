@@ -1,26 +1,60 @@
 # coding=utf-8
 from collections import defaultdict
 import itertools
+
 import networkx
 import numpy
 
 from sol.optimization.topology.traffic import TrafficClass, TrafficMatrix, Path
+from sol.util.pythonHelper import deprecated
 
 
 def generateIEpairs(topology):
+    """
+    :param topology: the topology to work with
+    :type topology: sol.optimization.topology.Topology
+    :return: list of ingress-egress pairs (as tuples)
+    """
     return [pair for pair in
             itertools.product([n for n, d in topology.nodes()], repeat=2)
             if pair[0] != pair[1]]
 
 
 def computeUniformTrafficMatrixPerIE(iepairs, totalFlows):
+    """
+
+    :param iepairs:
+    :param totalFlows:
+    :return:
+    """
     return TrafficMatrix({ie: totalFlows / len(iepairs) for ie in iepairs})
 
+def computeLogNormalTrafficMatrixPerIE(iepairs, meanFlows):
+    """
 
+    :param iepairs:
+    :param meanFlows:
+    :return:
+    """
+    dist = numpy.random.lognormal(0, .5)
+    return TrafficMatrix({ie: meanFlows*d for ie, d in itertools.izip(iepairs, dist)})
+
+
+@deprecated
 def computeUnifromPlusNormalODTM(iepairs, totalFlows, std=.5):
+    """
+    A so-so way of generating the traffic matrix.
+    Draw from a normal distribution centered around the uniform-mean.
+    (That is, the mean is what uniform traffic matrix would be like)
+    Then, values that fall outside of the standard deviation are clipped.
+    :param iepairs: ingress-egress pairs
+    :param totalFlows: total number of flow desired (only used to compute the uniform mean)
+    :param std: standrard deviation of the normal distribution (as a fraction)
+    :return: the new traffic matrix
+    """
     tm = dict()
     uniform = totalFlows / len(iepairs)
-    vals = numpy.random.normal(uniform, scale=std*uniform, size=len(iepairs))
+    vals = numpy.random.normal(uniform, scale=std * uniform, size=len(iepairs))
     vals = numpy.clip(vals, std * uniform, (1 + std) * uniform)
     for index, ie in enumerate(iepairs):
         tm[ie] = vals[index]
@@ -28,13 +62,22 @@ def computeUnifromPlusNormalODTM(iepairs, totalFlows, std=.5):
 
 
 def computeGravityTrafficMatrixPerIE(iepairs, totalFlows, populationDict):
-    raise NotImplementedError()
+    """
+    Computes the gravity model traffic matrix base
+    :param iepairs:
+    :param totalFlows:
+    :param populationDict:
+    :return:
+    """
+    tm = dict()
+    tot_population = sum(populationDict.values())
 
+    for i, e in iepairs:
+        ti_in = populationDict[i]
+        tj_out = populationDict[e]
+        tm[(i, e)] = ((float(ti_in * tj_out) / (tot_population ** 2)) * totalFlows)
+    return TrafficMatrix(tm)
 
-def computeDirichletTrafficMatrixPerIE(iepairs, totalFlows):
-    raise NotImplementedError()
-
-# todo: implement other types of traffic matrices
 
 
 def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
@@ -75,7 +118,8 @@ def provisionLinks(topology, trafficClasses, overprovision=3,
             i, e = tc.getIEPair()
             paths[(i, e)] = Path(allsp[i][e])
         loads = {}
-        for link in topology.links():
+        for u, v, data in topology.links():
+            link = (u,v)
             loads[link] = 0
         for tc in trafficClasses:
             path = paths[tc.getIEPair()]
@@ -88,8 +132,8 @@ def provisionLinks(topology, trafficClasses, overprovision=3,
     maxBackground = max(bg.itervalues())
     capacities = {}
     G = topology.getGraph()
-    for link in topology.links():
-        u, v = link
+    for u, v, data in topology.links():
+        link = (u, v)
         mult = 1
         if 'capacitymult' in G.edge[u][v]:
             mult = G.edge[u][v]['capacitymult']

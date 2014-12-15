@@ -5,8 +5,8 @@ Also speeds up parsing the solutions.
 """
 
 import networkx as nx
-from sol.util import exceptions
 
+from sol.util import exceptions
 from ..topology.traffic import Path
 
 
@@ -33,24 +33,26 @@ def generatePathsPerIE(source, sink, topology, predicate, cutoff,
     num = 0
 
     for p in nx.all_simple_paths(G, source, sink, cutoff):
-        if predicate(p, topology):
-            if modifyFunc is None:
+        if modifyFunc is None:
+            if predicate(p, topology):
                 paths.append(Path(p))
                 num += 1
+        else:
+            np = modifyFunc(p, topology)
+            if isinstance(np, list):
+                for innerp in np:
+                    if predicate(innerp, topology):
+                        paths.append(innerp)
+                        num += 1
             else:
-                np = modifyFunc(p, topology)
-                if isinstance(np, list):
-                    paths.extend(np)
-                    num += len(np)
-                else:
+                if predicate(np, topology):
                     paths.append(np)
                     num += 1
         if num >= maxPaths:
             break
     if not paths:
         if raiseOnEmpty:
-            raise exceptions.NoPathsException("No paths between {} and {"
-                                              "}".format(source, sink))
+            raise exceptions.NoPathsException("No paths between {} and {}".format(source, sink))
     return paths
 
 
@@ -64,7 +66,7 @@ def generatePathsPerIE_stitching():
 
 
 # def mergeppk(oldppk, newppk):
-#     """ Merges paths per commodity dictionaries by appending newppk to oldppk
+# """ Merges paths per commodity dictionaries by appending newppk to oldppk
 #     ..warning::
 #         Requires dictionary keys (the commodities) to be the same in both
 #         oldppk and newppk

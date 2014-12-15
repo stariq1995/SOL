@@ -2,6 +2,7 @@
 """ Functions to manipulate the solution to the formulation
 """
 import copy
+
 import itertools
 
 
