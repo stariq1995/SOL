@@ -9,5 +9,5 @@ setup(
     packages=['sol'],
     author='Victor Heorhiadi',
     url='https://bitbucket.org/progwriter/sol',
-    requires=['networkx', 'requests', 'netaddr']
+    requires=['networkx', 'requests', 'netaddr', 'pytest', 'numpy']
 )
