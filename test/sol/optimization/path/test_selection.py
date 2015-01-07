@@ -1,2 +1,2 @@
-
-#TODO: testing of this is crucial
+# coding=utf-8
+# TODO: testing of this is crucial

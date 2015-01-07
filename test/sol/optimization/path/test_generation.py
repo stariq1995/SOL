@@ -5,7 +5,7 @@ from sol.optimization.path.predicates import nullPredicate, useMboxModifier
 from sol.optimization.topology.generators import generateChainTopology, \
     generateCompleteTopology
 from sol.optimization.topology.traffic import PathWithMbox
-from sol.util.exceptions import NoPathsException
+from sol.utils.exceptions import NoPathsException
 
 
 def test_pathgen_simple():
@@ -43,6 +43,7 @@ def test_pathgen_cutoffs():
 def test_pathgen_mbox():
     t = generateCompleteTopology(8)
 
+    # noinspection PyUnusedLocal
     def mbox(path, topology):
         return [PathWithMbox(path, [n]) for n in path]
 

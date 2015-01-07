@@ -1,3 +1,4 @@
+# coding=utf-8
 import networkx
 
 from sol.optimization.topology.generators import *

@@ -1,7 +1,6 @@
-
+# coding=utf-8
 import functools
 
-from sol.optimization.formulation import generateFormulation
 from sol.optimization.formulation.funcs import defaultLinkFunc, defaultNodeCapFunc
 from sol.optimization.path.predicates import nullPredicate, useMboxModifier
 from sol.optimization.topology import generators
@@ -10,6 +9,7 @@ from sol.optimization.topology.provisioning import generateTrafficClasses
 
 
 def testBasicLoadBalancer():
+    assert False
     # Let's create a topology first, as an example
     topo = generators.generateChainTopology(4)
     # label our switches
