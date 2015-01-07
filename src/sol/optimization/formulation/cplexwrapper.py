@@ -8,13 +8,13 @@ import copy
 from sol.optimization.formulation.optbase import Optimization
 from sol.util.exceptions import InvalidConfigException, \
     FormulationException
-from sol.util.pythonHelper import tup2str, Tree
+from sol.util.pythonHelper import tup2str, Tree, overrides
 from sol.optimization.topology.traffic import PathWithMbox
 
 
 try:
     # noinspection PyUnresolvedReferences
-    import cplex
+    import cplexwrapper
 except ImportError as ex:
     print 'Need IBM CPLEX API, ' \
           'make sure it is installed and in your pythonpath'
@@ -34,11 +34,10 @@ class OptimizationCPLEX(Optimization):
 
     def __init__(self):
         super(OptimizationCPLEX, self).__init__()
-        self.cplexprob = cplex.Cplex()
+        self.cplexprob = cplexwrapper.Cplex()
         self.nodeLoads = Tree()
         self.linkLoads = Tree()
         self.allocationVars = []
-
 
     def getVarIndex(self):
         """
@@ -52,6 +51,7 @@ class OptimizationCPLEX(Optimization):
         varindex = dict(izip(v, range(len(v))))
         return varindex
 
+    @overrides(Optimization)
     def solve(self):
         """
         Call the solver and solve the CPLEX problem
@@ -94,7 +94,7 @@ class OptimizationCPLEX(Optimization):
         var.append(varindex[name])
         mults.append(-1.0)
         self.cplexprob.linear_constraints.add(
-            [cplex.SparsePair(ind=var, val=mults)],
+            [cplexwrapper.SparsePair(ind=var, val=mults)],
             senses=['E'], rhs=[const])
 
     def defineVarSymbolic(self, name, symbolicEq):
@@ -140,7 +140,7 @@ class OptimizationCPLEX(Optimization):
             self.setObjectiveCoeff({varindex['MinFlow']: 1}, 'max')
             for allocation in self.allocationVars:
                 self.cplexprob.linear_constraints.add(
-                    [cplex.SparsePair([varindex['MinFlow'], allocation],
+                    [cplexwrapper.SparsePair([varindex['MinFlow'], allocation],
                                       [1, -1])],
                     senses=['G'], rhs=[0])
         elif objective.lower() == 'minroutingcost':
@@ -159,7 +159,7 @@ class OptimizationCPLEX(Optimization):
                     if storedRes == resource:
                         for loadvar in self.nodeLoads[node][storedRes]:
                             self.cplexprob.linear_constraints.add(
-                                [cplex.SparsePair(
+                                [cplexwrapper.SparsePair(
                                     ind=[varindex[maxLoadVarName],
                                          varindex[loadvar]], val=[1.0, -1.0])],
                                 senses=['G'], rhs=[0],
@@ -179,7 +179,7 @@ class OptimizationCPLEX(Optimization):
                     if resource == storedRes:
                         for loadvar in self.linkLoads[link][storedRes]:
                             self.cplexprob.linear_constraints.add(
-                                [cplex.SparsePair(
+                                [cplexwrapper.SparsePair(
                                     [varindex[maxLoadVarName],
                                      varindex[loadvar]],
                                     [1.0, -1.0])],
@@ -190,10 +190,6 @@ class OptimizationCPLEX(Optimization):
             raise FormulationException("Invalid objective function")
 
     def addDecisionVariables(self, pptc):
-        """ Add and set bounds on the flow fraction variables
-
-        :param pptc: paths per commodity
-        """
         var = []
         for tc in pptc:
             for pi in xrange(len(pptc[tc])):
@@ -202,14 +198,6 @@ class OptimizationCPLEX(Optimization):
                                      ub=[1] * len(var))
 
     def addBinaryVariables(self, pptc, topology, types):
-        """
-        Add binary variables to this formulation
-
-        :param pptc: paths per traffic class
-        :param topology: the topology we are operating on
-        :param types: types of binary variables to add. Allowed values are
-            'node', 'edge', and 'path'
-        """
         graph = topology.getGraph()
         if 'node' in types:
             var = [self.bn(n) for n in graph.nodes_iter()]
@@ -232,10 +220,6 @@ class OptimizationCPLEX(Optimization):
                 lb=[0] * len(var), ub=[1] * len(var))
 
     def addRoutingCost(self, pptc):
-        """ Defines the routing cost constraint
-
-        :param pptc: paths per traffic class
-        """
         coeffs = {}
         for tc in pptc:
             for pi, path in enumerate(pptc[tc]):
@@ -243,24 +227,15 @@ class OptimizationCPLEX(Optimization):
         self.defineVar(self.cplexprob, 'RoutingCost', coeffs)
 
     def addRouteAllConstraint(self, pptc):
-        """ Adds the constraint to ensure all traffic is routed
-
-        :param pptc: paths per traffic class
-        """
         v = self.cplexprob.variables.get_names()
         varindex = dict(izip(v, range(len(v))))
         for tc in pptc:
             self.cplexprob.linear_constraints.add(
-                [cplex.SparsePair([varindex[self.al(tc)]], [1])],
+                [cplexwrapper.SparsePair([varindex[self.al(tc)]], [1])],
                 senses=['E'], rhs=[1],
                 names=['Coverage.tc.{}'.format(tc.ID)])
 
     def addAllocateFlowConstraint(self, pptc):
-        """
-        Allocate flow for each traffic class
-
-        :param pptc: paths per traffic class
-        """
         v = self.cplexprob.variables.get_names()
         for tc in pptc:
             name = self.al(tc)
@@ -277,7 +252,7 @@ class OptimizationCPLEX(Optimization):
             var.append(varindex[self.al(tc)])
             mults.append(-1)
             self.cplexprob.linear_constraints.add(
-                [cplex.SparsePair(var, mults)],
+                [cplexwrapper.SparsePair(var, mults)],
                 senses=['E'], rhs=[0],
                 names=['Allocation.tc.{}'.format(tc.ID)])
 
@@ -336,22 +311,6 @@ class OptimizationCPLEX(Optimization):
 
     def addNodeCapacityConstraint(self, pptc, resource, nodecaps,
                                    nodeCapFunction):
-        """
-        Add node capacity constraints
-
-        :param pptc: paths per commodity
-        :param resource: the resource for which we are adding the capacity
-            constraints
-        :param nodecaps: dictionary containing a mapping of nodes to
-        to capacities for this particular resource. For exapmle::
-                nodecaps[1] = 10
-                nodecaps[3] = 4
-
-            means that capacity of node 1 is 10 units,
-            capacity of node 3 is 4 units
-        :param nodeCapFunction: user defined function
-        """
-
         for node in nodecaps:
             loadstr = 'Load_{}_{}'.format(resource, node)
             self.nodeLoads[node][resource][loadstr] = 1
@@ -377,27 +336,14 @@ class OptimizationCPLEX(Optimization):
                         mults.append(multiplier)
                         var.append(varindex[self.xp(tc, pi)])
             self.cplexprob.linear_constraints.add(
-                [cplex.SparsePair(ind=var, val=mults),
-                 cplex.SparsePair(ind=[varindex[loadstr]], val=[1.0])],
+                [cplexwrapper.SparsePair(ind=var, val=mults),
+                 cplexwrapper.SparsePair(ind=[varindex[loadstr]], val=[1.0])],
                 senses=['E', 'L'], rhs=[0, cap],
                 names=['Load.{}.{}'.format(resource, node),
                        'Cap.{}.{}'.format(resource, node)])
 
     def addLinkCapacityConstraint(self, pptc, resource, linkcaps,
                            linkCapFunction):
-        """
-        Add node capacity constraints
-
-        :param pptc: paths per commodity
-        :param resource: the resource for which we are adding the capacity
-            constraints
-        :param linkcaps: dictionary containing a mapping of links to
-        to capacities for this particular resource. For exapmle::
-                linkcaps[(1,3)] = 10
-
-            means that link capacity between nodes 1 and 3 is 10 units.
-        :param linkCapFunction: user defined function
-        """
         for link in linkcaps:
             u, v = link
             cap = linkcaps[link]
@@ -424,21 +370,14 @@ class OptimizationCPLEX(Optimization):
                             mults.append(multiplier)
                             var.append(varindex[self.xp(tc, pi)])
                 self.cplexprob.linear_constraints.add(
-                    [cplex.SparsePair(ind=var, val=mults),
-                     cplex.SparsePair(ind=[varindex[loadstr]], val=[1.0])],
+                    [cplexwrapper.SparsePair(ind=var, val=mults),
+                     cplexwrapper.SparsePair(ind=[varindex[loadstr]], val=[1.0])],
                     senses=['E', 'L'], rhs=[0, cap],
                     names=['LinkLoad.{}.{}'.format(resource, linkstr),
                            'LinkCap.{}.{}'.format(resource, linkstr)])
 
     def addNodeCapacityIfActive(self, pptc, resource, nodecaps,
                                 nodeCapFunction):
-        """
-        :param pptc:
-        :param resource:
-        :param nodecaps:
-        :param nodeCapFunction
-        :return:
-        """
         for node in nodecaps:
             loadstr = 'DLoad_{}_{}'.format(resource, node)
             self.nodeLoads[node][resource][loadstr] = 1
@@ -464,11 +403,11 @@ class OptimizationCPLEX(Optimization):
                         var.append(varindex[self.bp(tc, pi)])
                         mults.append(multiplier)
             self.cplexprob.linear_constraints.add(
-                [cplex.SparsePair(ind=var, val=mults)],
+                [cplexwrapper.SparsePair(ind=var, val=mults)],
                 rhs=[0], senses=['E'],
                 names=['DLoad.{}.{}'.format(resource, node)])
             self.cplexprob.linear_constraints.add(
-                [cplex.SparsePair([varindex[loadstr]], [1])],
+                [cplexwrapper.SparsePair([varindex[loadstr]], [1])],
                 rhs=[cap], senses=['L'],
                 names=['DCap.{}.{}'.format(resource, node)])
 
@@ -486,7 +425,7 @@ class OptimizationCPLEX(Optimization):
         for tc in trafficClasses:
             for pi in xrange(len(pptc[tc])):
                 self.cplexprob.linear_constraints.add(
-                    [cplex.SparsePair([varindex[self.xp(tc, pi)],
+                    [cplexwrapper.SparsePair([varindex[self.xp(tc, pi)],
                                        varindex[self.bp(tc, pi)]],
                                       [1, -1])],
                     rhs=[0], senses='L', names=['pathdisable'])
@@ -503,7 +442,7 @@ class OptimizationCPLEX(Optimization):
             for pi, path in enumerate(pptc[tc]):
                 for n in path:
                     self.cplexprob.linear_constraints.add(
-                        [cplex.SparsePair([varindex[self.bp(tc, pi)],
+                        [cplexwrapper.SparsePair([varindex[self.bp(tc, pi)],
                                            varindex[self.bn(n)]],
                                           [1, -1])],
                         rhs=[0], senses='L', names='reqallnodes')
@@ -521,7 +460,7 @@ class OptimizationCPLEX(Optimization):
                 for edge in path.getLinks():
                     u, v = edge
                     self.cplexprob.linear_constraints.add(
-                        [cplex.SparsePair([varindex[self.bp(tc, pi)],
+                        [cplexwrapper.SparsePair([varindex[self.bp(tc, pi)],
                                            varindex[self.be(u, v)]],
                                           [1, -1])],
                         rhs=[0], senses='L', names=['reqalledges'])
@@ -542,7 +481,7 @@ class OptimizationCPLEX(Optimization):
                     var.append(varindex[self.bn(n)])
                     mults.append(1)
                 self.cplexprob.linear_constraints.add(
-                    [cplex.SparsePair(var, mults)],
+                    [cplexwrapper.SparsePair(var, mults)],
                     senses=['G'], rhs=[0], names=['reqallnodes'])
 
     def addBudgetConstraint(self, topology, budgetFunc, bound):
@@ -558,25 +497,21 @@ class OptimizationCPLEX(Optimization):
         varindex = dict(izip(v, range(len(v))))
         G = topology.getGraph()
         self.cplexprob.linear_constraints.add(
-            [cplex.SparsePair([varindex[self.bn(n)] for n in G.nodes_iter()],
+            [cplexwrapper.SparsePair([varindex[self.bn(n)] for n in G.nodes_iter()],
                               [budgetFunc(n) for n in G.nodes_iter()])],
             senses=['L'], rhs=[bound],
             names=['Budget'])
 
-    def addEnforceSinglePath(self, pptc):
-        """
+    def addEnforceSinglePath(self, pptc, trafficClasses=None):
 
-        :param self.cplexprob:
-        :param pptc:
-        """
         v = self.cplexprob.variables.get_names()
         varindex = dict(izip(v, range(len(v))))
-        for tc in pptc:
+        for tc in trafficClasses:
             var = []
             for pi, path in enumerate(pptc[tc]):
                 var.append(varindex[self.bp(tc, pi)])
             self.cplexprob.linear_constraints.add(
-                [cplex.SparsePair(var, [1] * len(var))], senses=['E'], rhs=[1],
+                [cplexwrapper.SparsePair(var, [1] * len(var))], senses=['E'], rhs=[1],
                 names=['singlepath_{}'.format(tc.ID)])
 
     # def addPowerConstraint(self, nodeConsumption, edgeConsumption,
@@ -607,14 +542,15 @@ class OptimizationCPLEX(Optimization):
     #                                           rhs=[0], senses=['E'])
 
     def addMinDiffConstraint(self, prevSolution, epsilon=None, diffFactor=.5):
-        #TODO: check this method
         """
+        Add min-diff constraint. Minimizes the "distance" from the previous solution
 
         :param self.cplexprob:
         :param prevSolution:
         :param epsilon:
         :param diffFactor:
         """
+        # TODO: check this method
         names = [x for x in prevSolution if x.startswith('x')]
         if epsilon is None:
             epsdict = {}
@@ -632,15 +568,15 @@ class OptimizationCPLEX(Optimization):
             varindex = dict(izip(v, range(len(v))))
             for x in names:
                 self.cplexprob.linear_constraints.add(
-                    [cplex.SparsePair([varindex[x], varindex[epsdict[x]]],
+                    [cplexwrapper.SparsePair([varindex[x], varindex[epsdict[x]]],
                                       [1, -1])],
                     rhs=[prevSolution[x]], senses='L')
                 self.cplexprob.linear_constraints.add(
-                    [cplex.SparsePair([varindex[x], varindex[epsdict[x]]],
+                    [cplexwrapper.SparsePair([varindex[x], varindex[epsdict[x]]],
                                       [1, 1])],
                     rhs=[prevSolution[x]], senses='G')
                 self.cplexprob.linear_constraints.add(
-                    [cplex.SparsePair(
+                    [cplexwrapper.SparsePair(
                         [varindex['maxdiff'], varindex[epsdict[x]]],
                         [1, -1])],
                     rhs=[0], senses='G')
@@ -711,6 +647,11 @@ class OptimizationCPLEX(Optimization):
         self.cplexprob.write(fname, 'sol')
 
     def getSolvedObjective(self):
+        """
+        Get the objective value of the solved problem
+
+        :return: the objective value
+        """
         return self.cplexprob.solution.get_objective_value()
 
     def setName(self, newName):
@@ -722,6 +663,11 @@ class OptimizationCPLEX(Optimization):
         self.cplexprob.set_problem_name(newName)
 
     def getAllVariableValues(self):
+        """
+        Get the values of all variables in the problem.
+
+        Must be called after problem is solved.
+        """
         raise NotImplementedError()
 
     def setSolveTimeLimit(self, time):

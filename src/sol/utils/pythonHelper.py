@@ -101,3 +101,22 @@ def deprecated(func):
         )
         return func(*args, **kwargs)
     return new_func
+
+def overrides(interface_class):
+    """
+    Override decorator. Mostly for developer's convenience.
+
+    :param interface_class:
+    :return:
+    """
+
+    def overrider(method):
+        assert(method.__name__ in dir(interface_class))
+        return method
+    return overrider
+
+
+class alwaysOneDict(object):
+    """ Dictionary that returns one for any key. Only supports get operation """
+    def __getitem__(self, key):
+        return 1
