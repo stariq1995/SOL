@@ -8,7 +8,7 @@ import itertools
 
 
 class Path(object):
-    """ Represents a weighted path in a network"""
+    """ Represents a path in the network"""
 
     def __init__(self, nodes, numFlows=0):
         """Create a new path
@@ -52,13 +52,14 @@ class Path(object):
 
     def getNumFlows(self):
         """
-        :return: the weight of this path.
+        :return: the number of flows on this path.
         """
         return self._numFlows
 
     def setNumFlows(self, nflows):
         """
-        Set the weight of this path
+        Set number of flows on this path
+
         :param nflows: the new number of flows
         """
         self._numFlows = nflows
@@ -165,7 +166,7 @@ class TrafficMatrix(dict):
 
 
 class TrafficClass(object):
-    """ Represents a traffic class.
+    """ Represents a traffic class. All members are public
     """
 
     def __init__(self, ID, name, src, dst, volFlows=0, volBytes=0, priority=1,

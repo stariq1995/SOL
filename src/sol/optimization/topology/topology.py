@@ -140,7 +140,7 @@ class Topology(object):
 
     def hasMiddlebox(self, node):
         """
-        Check if the given node has a middlebox attached to it:
+        Check if the given node has a middlebox attached to it
 
         :param node: node ID to check
         :return: True or False

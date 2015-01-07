@@ -10,7 +10,7 @@ def defaultLinkFunc(link, tc, path, resource, linkCaps):
     """
     Default link function that we use in all the optimizations
 
-    :param link: link for which $x_p$ multiplier is being computed
+    :param link: link for which multiplier is being computed
     :param tc: the traffic class
     :param path: the path
     :param resource: the resource for which this is computed.
@@ -21,20 +21,22 @@ def defaultLinkFunc(link, tc, path, resource, linkCaps):
     return tc.volBytes / linkCaps[link]
 
 
+# noinspection PyUnusedLocal
 def defaultNodeCapFunc(node, tc, path, resource, nodeCaps):
     """
     Default node load function
 
-    :param node: node for which $x_p$ multiplier is being computed
+    :param node: nodeID
     :param tc: the traffic class
     :param path: path under consideration
     :param resource: ignored, assumes we have only one resource (or all are the same)
     :param nodeCaps: the node capacities for the resource
-    :return: the multiplier
+    :return: traffic fraction multiplier
     """
     return tc.volFlows * getattr(tc, '{}Cost'.format(resource)) / nodeCaps[node]
 
 
+# noinspection PyUnusedLocal
 def dropUpstreamLinkFunc(link, tc, path, resource, linkCaps, dropRates, cumulative=False):
     """
     Example function for modeling link load while taking into account upstream
@@ -50,7 +52,7 @@ def dropUpstreamLinkFunc(link, tc, path, resource, linkCaps, dropRates, cumulati
     :type dropRates: dict
     :param cumulative: If true, all nodes upstream contribute to the drop;
         if false, only the first node with non-zero drop contributes to the drop
-    :return: $x_p$ multiplier
+    :return: traffic fraction multiplier
     """
     retention = 1
     u, v = link
@@ -74,12 +76,3 @@ def defaultCostFunction(path):
     :return: length of the path
     """
     return len(path)
-
-def defaultSomeNodesFunction(path):
-    """
-    Simple function that requires at least one node to be enabled on the path
-
-    :param path: path in question
-    :return: number of nodes to be enabled (as int) before traffic can flow
-    """
-    return 1

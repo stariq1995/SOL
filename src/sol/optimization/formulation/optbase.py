@@ -1,3 +1,4 @@
+# coding=utf-8
 from abc import ABCMeta, abstractmethod
 
 
@@ -83,9 +84,9 @@ class Optimization(object):
         Utility function to define an (almost) arbitrary variable.
         :param name: name of the variable
         :param coeffs: coefficients of other variables that define this
-        variable, a dictionary of strings to floats.
-        If None, then only the name is defined, with no value assigned
-        to it.
+            variable, a dictionary of strings to floats.
+            If None, then only the name is defined, with no value assigned
+            to it.
         :param const: any non-coefficient slack
         :param lowerBound: lower bound on the variable
         :param upperBound: upper bound on the variable
@@ -94,6 +95,9 @@ class Optimization(object):
 
     @abstractmethod
     def defineVarSymbolic(self, name, symbolicEq):
+        pass
+
+    def parseSymbolicEq(self, eq):
         pass
 
     @abstractmethod
@@ -108,7 +112,7 @@ class Optimization(object):
         pass
 
     @abstractmethod
-    def setPredefinedObjective(self, objective, resource):
+    def setPredefinedObjective(self, objective, resource=None):
         """
         Set a predefined objective. See :py:attr:`definedObjectives` for the list
         of supported objectives
@@ -119,7 +123,7 @@ class Optimization(object):
         :param objective: predefined objective name
         :param resource: some objectives (such as minmaxnodeload) come with a
             resource parameter. Set it here.
-        :raise FormulationException: if passed objective is not supported
+        :raise FormulationException: if passed in objective is not supported
         """
         pass
 
@@ -157,7 +161,9 @@ class Optimization(object):
     @abstractmethod
     def addRouteAllConstraint(self, pptc):
         """
-        Adds the constraint to ensure all traffic is routed
+        Add the constraint to ensure all traffic is routed
+
+        This sets the allocation for each traffic class equal to 1.
 
         :param pptc: paths per traffic class
         """
@@ -175,12 +181,12 @@ class Optimization(object):
     @abstractmethod
     def addLinkCapacityConstraint(self, pptc, resource, linkcaps, linkCapFunction):
         """
-        Add node capacity constraints
+        Add a link capacity constraint
 
-        :param pptc: paths per commodity
+        :param pptc: paths per traffic class
         :param resource: the resource for which we are adding the capacity
             constraints
-        :param linkcaps:
+        :param linkcaps: link capacities (as a dict) mapping link IDs to capacities for this resource
         :param linkCapFunction: user defined function that computes the traffic fraction muliplier
         """
         pass
@@ -188,22 +194,20 @@ class Optimization(object):
     @abstractmethod
     def addNodeCapacityConstraint(self, pptc, resource, nodecaps, nodeCapFunction):
         """
-        Add node capacity constraints
+        Add a node capacity constraint
 
         :param pptc: paths per commodity
         :param resource: the resource for which we are adding the capacity
             constraints
-        :param nodecaps:
+        :param nodecaps: node capacities (as a dictionary) mapping node IDs to capacities for this resource
         :param nodeCapFunction: user defined function
         """
         pass
 
-
-
     @abstractmethod
-    def addNodeCapacityIfActive(self, pptc, resource, nodecaps, nodeCapFunction):
+    def addNodeCapacityPerPathConstraint(self, pptc, resource, nodecaps, nodeCapFunction):
         """
-        Add node capacity constraints, if the path is active.
+        Add a node capacity constraint, where capacity is consumed per path, if path is active.
 
         :param pptc: paths per traffic class
         :param resource: current resource
@@ -215,7 +219,7 @@ class Optimization(object):
     @abstractmethod
     def addPathDisableConstraint(self, pptc, trafficClasses=None):
         """
-        Add *enforcePathDisable* constraint. That is, only allow traffic flow if
+        Enforce disabled paths. That is, only allow traffic flow if
         the path is enabled.
 
         :param pptc: paths per traffic class
@@ -247,14 +251,14 @@ class Optimization(object):
         pass
 
     @abstractmethod
-    def addRequireSomeNodesConstraint(self, pptc, trafficClasses, pathFunc):
+    def addRequireSomeNodesConstraint(self, pptc, trafficClasses=None, some=1):
         """
         Require at some nodes on the path to be enabled before traffic can flow along that path
 
         :param pptc: paths per traffic class
         :param trafficClasses: traffic classes for which this constraint should be activated.
             If None, it will be activated for all traffic classes
-        :param pathFunc: User-defined function
+        :param some: how many active nodes are required. By default it's 1.
         """
         pass
 
@@ -264,28 +268,46 @@ class Optimization(object):
         Add a budget constraint on the number of enabled nodes
 
         :type topology: :py:class:`~sol.optimization.topology.Topology`
-        :param topology: topology
-        :param budgetFunc:
-        :param bound:
+        :param topology: our topology
+        :param budgetFunc: a callable object that computes the cost (per node). Must be of the form::
+
+            budgetFunc(nodeID)
+
+        :param bound: a value that limits the cost
+        :param bound: float
         """
-        # TODO: finish documenting this
         pass
 
     @abstractmethod
-    def addEnforceSinglePath(self, pptc, trafficClasses):
+    def addEnforceSinglePath(self, pptc, trafficClasses=None):
         """
-        :param self.cplexprob:
-        :param pptc:
+        Enforces a single active path per traffic class
+
+        :param pptc: paths per traffic class
+        :param trafficClasses: traffic classes for which this constraint takes effect.
+            If None, all classes from *pptc* will be used.
         """
         pass
 
     @abstractmethod
     def addMinDiffConstraint(self, prevSolution, epsilon, diffFactor):
         """
-        :param self.cplexprob:
-        :param prevSolution:
-        :param epsilon:
+        Add min-diff constraint. Minimizes the "distance" from the previous solution
+
+        :param prevSolution: a dictionary containing mapping of variable names to values after the optimization
+            is solved.
+
+            Can be obtained with :py:meth:`~getAllVariableValues`
+        :param epsilon: the limit on the "distance" between last solution and current solution. Must be between 0 and 1.
+            If it is None, it will be inserted into the objective function in such a way that *epsilon* is minimized.
         :param diffFactor:
+            If *epsilon* is None, then you must specify *diffFactor*,
+            a weight of *epsilon* when it comes to the objective value.
+            This value must also be between 0 and 1.
+
+        .. note::
+            For min-diff constraint to be effective, your objective function must also be normalized to be in the [0..1]
+            range.
         """
         pass
 
@@ -305,6 +327,8 @@ class Optimization(object):
     @abstractmethod
     def getSolvedObjective(self):
         """
+        Get the objective value of the solved problem
+
         :return: the objective value
         :rtype: float
         """
@@ -313,6 +337,9 @@ class Optimization(object):
     @abstractmethod
     def getAllVariableValues(self):
         """
+        Get the values of all variables in the problem.
+
+        Must be called after problem is solved.
 
         :return: a dictionary of all variable values
         :rtype: dict

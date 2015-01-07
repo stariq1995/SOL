@@ -5,7 +5,7 @@ from collections import defaultdict
 import random
 import functools
 
-from sol.util.exceptions import InvalidConfigException
+from sol.utils.exceptions import InvalidConfigException
 
 
 _RANDOM = ['random', 'rand']
@@ -72,22 +72,22 @@ def kShortestPaths(pptc, numPaths, needsSorting=True, inplace=True):
     return result
 
 
-# def filterPaths(pptc, func):
-#     """
-#     Filter paths using a function.
-#
-#     :param pptc: paths per traffic class
-#     :param func: function to be applied to each path
-#     :return: new paths per commodity with paths for which *func* returned a
-#         true value
-#     """
-#     assert (hasattr(func, '__call__'))
-#     result = defaultdict(lambda: [])
-#     for tc in pptc:
-#         for path in pptc[tc]:
-#             if func(path):
-#                 result[tc].append(path)
-#     return result
+def filterPaths(pptc, func):
+    """
+    Filter paths using a function.
+
+    :param pptc: paths per traffic class
+    :param func: function to be applied to each path
+    :return: new paths per commodity with paths for which *func* returned a
+        true value
+    """
+    assert (hasattr(func, '__call__'))
+    result = defaultdict(lambda: [])
+    for tc in pptc:
+        for path in pptc[tc]:
+            if func(path):
+                result[tc].append(path)
+    return result
 
 
 def getSelectFunction(strName, kwargs=None):
@@ -101,8 +101,15 @@ def getSelectFunction(strName, kwargs=None):
     :return: the callable object with
     :raise: InvalidConfigException
         if the name passed in is not supported
+
+    Supported names so far: 'random' and 'shortest' For example::
+
+        f = getSelectFunction('random')
+        pptc = f(pptc, 5)
+
+    will give you 5 paths per traffic class, randomly chosen
+
     """
-    # TODO: write doc example
     if kwargs is None:
         kwargs = {}
     if strName.lower() in _RANDOM:

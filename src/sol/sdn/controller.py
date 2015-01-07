@@ -13,7 +13,7 @@ import netaddr
 
 import requests
 from requests.auth import HTTPBasicAuth
-from sol.util.exceptions import ControllerException
+from sol.utils.exceptions import ControllerException
 
 
 class PanaceaController(object):
