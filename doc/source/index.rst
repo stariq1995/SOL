@@ -6,8 +6,12 @@
 Welcome to SOL's documentation!
 ===============================
 
-Getting SOL
------------
+Getting and Installing SOL
+--------------------------
+
+Source code will be available soon!
+
+.. https://bitbucket.org/progwriter/sol
 
 Using SOL
 ---------
@@ -15,15 +19,26 @@ Using SOL
 Take a look at the following:
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 3
 
+    opthowto
+    pathgen
+    funchowto
+    funcs
     examples
 
-SOL APIs
---------
+API
+---
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 3
 
     api
-    funcs
+    
+Optimization Summary
+--------------------
+
+.. toctree::
+    :maxdepth: 1
+
+    summary

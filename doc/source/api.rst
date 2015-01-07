@@ -6,7 +6,7 @@ High-level API
 
 .. py:currentmodule:: sol.optimization.formulation
 .. autofunction:: getOptimization
-.. autofunction:: generateFormulation
+.. autofunction:: kickStartOptimization
 
 .. py:currentmodule:: sol.optimization.formulation.optbase
 .. py:class:: Optimization
@@ -14,11 +14,12 @@ High-level API
     .. automethod:: solve
     .. automethod:: getSolvedObjective
     .. automethod:: getPathFractions
+    .. automethod:: getAllVariableValues
 
 Mid-level API
 -------------
 
-You can programatically "build" your optimization using the defined functions and constraints.
+You can programmatically "build" your optimization using the defined functions and constraints.
 
 .. py:currentmodule:: sol.optimization.formulation.optbase
 
@@ -28,21 +29,21 @@ You can programatically "build" your optimization using the defined functions an
     .. automethod:: addRouteAllConstraint
     .. automethod:: addLinkCapacityConstraint
     .. automethod:: addNodeCapacityConstraint
-    .. automethod:: addNodeCapacityIfActive
+    .. automethod:: addNodeCapacityPerPathConstraint
     .. automethod:: addRequireAllNodesConstraint
     .. automethod:: addRequireSomeNodesConstraint
     .. automethod:: addRequireAllEdgesConstraint
     .. automethod:: addEnforceSinglePath
     .. automethod:: addBudgetConstraint
-    .. automethod:: addMinDiffConstraint
-
-Objective manipulation
+    .. automethod:: addMinDiffConstraint    
+    .. automethod:: setPredefinedObjective
 
 
 Low-level API
 -------------
 
-The functions are exposed to you, but you are discouraged from using them. Use them for very fine-grained control over your optimization problem.
+These low-level functions are exposed to you, but you are discouraged from using them. 
+Only use them for very fine-grained control over your optimization problem.
 
 .. py:currentmodule:: sol.optimization.formulation.optbase
 
@@ -54,28 +55,24 @@ The functions are exposed to you, but you are discouraged from using them. Use t
     .. automethod:: be
     .. automethod:: bp
 
-Solver-specific APIs
---------------------
+Solver-specific API
+-------------------
+
+If you know your optimization backend, here are some solver specific convenience methods.
 
 CPLEX
 ~~~~~
 
-.. py:currentmodule:: sol.optimization.formulation.cplex
+.. py:currentmodule:: sol.optimization.formulation.cplexwrapper
 
 .. autoclass:: OptimizationCPLEX
     
     .. automethod:: getCPLEXObject
     .. automethod:: getVarIndex
     .. automethod:: setName
-
-
-.. Gurobi
-.. ~~~~~~
-
-.. .. py:currentmodule:: sol.optimization.formulation.gurobi
-
-.. .. autoclass:: OptimizationGurobi
-..     :members:
+    .. automethod:: setSolveTimeLimit
+    .. automethod:: write
+    .. automethod:: writeSolution
 
 
 Helper Classes
@@ -87,20 +84,14 @@ Topology
 .. autoclass:: Topology
     :members:
 
-    .. automethod:: __init__
-
 Paths
 ~~~~~
 .. py:currentmodule:: sol.optimization.topology.traffic
 .. autoclass:: Path
     :members:
 
-    .. automethod:: __init__
-
 .. autoclass:: PathWithMbox
     :members:
-
-    .. automethod:: __init__
 
 Traffic
 ~~~~~~~
@@ -112,6 +103,17 @@ Traffic
 .. autoclass:: TrafficMatrix
     :members:
 
-SDN Propotype
-~~~~~~~~~~~~~
-.. autoclass:: sol.sdn.controller.PanaceaController
+..
+    SDN Propotype
+    ~~~~~~~~~~~~~
+    .. autoclass:: sol.sdn.controller.PanaceaController
+
+Utils
+~~~~~
+
+.. automodule:: sol.utils.exceptions
+    :members:
+
+.. automodule:: sol.utils.pythonHelper
+    :members:
+    
