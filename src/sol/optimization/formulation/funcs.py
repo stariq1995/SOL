@@ -35,6 +35,8 @@ def defaultNodeCapFunc(node, tc, path, resource, nodeCaps):
     """
     return tc.volFlows * getattr(tc, '{}Cost'.format(resource)) / nodeCaps[node]
 
+def defaultLinkFuncNoNormalize(link, tc, path, resource):
+    return tc.volBytes
 
 # noinspection PyUnusedLocal
 def dropUpstreamLinkFunc(link, tc, path, resource, linkCaps, dropRates, cumulative=False):

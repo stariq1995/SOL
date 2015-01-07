@@ -8,6 +8,7 @@ class Optimization(object):
     """
     __metaclass__ = ABCMeta
 
+    #: Currently supported pre-defined objectives
     definedObjectives = ['maxallflow', 'maxminflow', 'minmaxnodeload',
                          'minmaxlinkload', 'minroutingcost']
 

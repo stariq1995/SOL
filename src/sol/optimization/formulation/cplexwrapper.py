@@ -331,16 +331,18 @@ class OptimizationCPLEX(Optimization):
                 names=['DCap.{}.{}'.format(resource, node)])
 
     @overrides(Optimization)
-    def addPathDisableConstraint(self, pptc, trafficClasses):
+    def addPathDisableConstraint(self, pptc, trafficClasses=None):
         v = self.cplexprob.variables.get_names()
         varindex = dict(izip(v, range(len(v))))
+        if trafficClasses is None:
+            trafficClasses = pptc.keys()
         for tc in trafficClasses:
             for pi in xrange(len(pptc[tc])):
                 self.cplexprob.linear_constraints.add(
                     [cplex.SparsePair([varindex[self.xp(tc, pi)],
                                        varindex[self.bp(tc, pi)]],
                                       [1, -1])],
-                    rhs=[0], senses='L', names=['pathdisable'])
+                    rhs=[0], senses='L')
 
     @overrides(Optimization)
     def addRequireAllNodesConstraint(self, pptc, trafficClasses=None):
@@ -355,7 +357,7 @@ class OptimizationCPLEX(Optimization):
                         [cplex.SparsePair([varindex[self.bp(tc, pi)],
                                            varindex[self.bn(n)]],
                                           [1, -1])],
-                        rhs=[0], senses='L', names='reqallnodes')
+                        rhs=[0], senses='L')
 
     @overrides(Optimization)
     def addRequireAllEdgesConstraint(self, pptc, trafficClasses=None):
@@ -371,7 +373,7 @@ class OptimizationCPLEX(Optimization):
                         [cplex.SparsePair([varindex[self.bp(tc, pi)],
                                            varindex[self.be(u, v)]],
                                           [1, -1])],
-                        rhs=[0], senses='L', names=['reqalledges'])
+                        rhs=[0], senses='L')
 
     @overrides(Optimization)
     def addRequireSomeNodesConstraint(self, pptc, trafficClasses=None, some=1):
