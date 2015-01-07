@@ -1,3 +1,4 @@
 .idea
 *.pyc
 SOL.egg-info
+doc/build
