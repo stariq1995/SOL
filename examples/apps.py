@@ -41,7 +41,7 @@ apps = {
     # 'Merlin': {
     # 'constraints': ['linkcap', 'routeall'],
     # 'resources': [],
-    #     'task': 'minimize',
+    # 'task': 'minimize',
     #     'objective': 'maxlinkload',
     #     'pairparams': {'minShortestPath': 2, 'minDegree': 1, 'hasSinks': True},
     #     'predicate': 'merlinPredicate',

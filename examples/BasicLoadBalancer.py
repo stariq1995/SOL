@@ -10,6 +10,8 @@ from sol.optimization.topology.provisioning import generateTrafficClasses
 
 
 def runBasicLoadBalancer():
+
+    raise NotImplemented()
     # Let's create a topology first, as an example
     topo = generators.generateChainTopology(4)
     # label our switches

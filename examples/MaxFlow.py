@@ -39,6 +39,7 @@ if __name__ == '__main__':
 
     opt.solve()
     print opt.getSolvedObjective()  # let's see how much traffic we managed to push
+    print opt.getPathFractions(pptc)  # this tells you how much traffic goes on each path
 
     ####
     # The answer is: 0.5 (50%). Because our links were constrained

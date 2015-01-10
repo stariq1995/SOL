@@ -1,3 +1,4 @@
+# coding=utf-8
 """ This script sets up and executes the optimization for SIMPLE [#simple]_
 
 
@@ -7,10 +8,11 @@ SDN. SIGCOMM (2013).
 
 import functools
 import itertools
+
 import networkx
 
 from sol.optimization.formulation import getOptimization
-from sol.optimization.formulation.funcs import defaultLinkFunc, defaultNodeCapFunc
+from sol.optimization.formulation.funcs import defaultLinkFunc
 from sol.optimization.path.generate import generatePathsPerTrafficClass
 from sol.optimization.path.predicates import useMboxModifier
 from sol.optimization.path.select import chooserand
@@ -49,27 +51,36 @@ if __name__ == '__main__':
     maxCPUCap = provisioning.computeMaxIngressLoad(trafficClasses, {t: t.cpuCost for t in trafficClasses})
     nodeCaps = dict()
     nodeCaps['cpu'] = {node: maxCPUCap * 2 for node, data in topo.nodes()
-                        if 'fw' or 'ids' in topo.getServiceTypes(node)}
+                       if 'fw' or 'ids' in topo.getServiceTypes(node)}
     # and the tcam capacities
     nodeCaps['tcam'] = {node: 1000 for node, data in topo.nodes()}
     # similartly with link capacities
     linkCaps = provisioning.provisionLinks(topo, trafficClasses, 3)
 
     # =====================================
-    # Write out user defined functions now:
+    # Write our user defined functions now:
     # =====================================
 
     def SIMPLE_predicate(path, topology):
-        # our firewall followed by IDS is the requirement for the path
+        # Firewall followed by IDS is the requirement for the path
         return any([s == ('fw', 'ids') for s in itertools.product(*[topology.getServiceTypes(node)
-                                                                  for node in path.useMBoxes])])
+                                                                    for node in path.useMBoxes])])
 
     def SIMPLE_NodeCapFunc(node, tc, path, resource, nodeCaps):
-        # this computes the cost of processing the traffic
-        if resource == 'cpu':
+        # this computes the cost of processing the traffic class at
+        if resource == 'cpu' and node in nodeCaps['cpu']:
             return tc.volFlows * tc.cpuCost / nodeCaps[resource][node]
-        elif resource == 'tcam':
-            return 1  # this is per path cost
+        else:
+            raise ValueError("wrong resource")  # just in case
+    # Curry the function
+    capFunc = functools.partial(SIMPLE_NodeCapFunc, nodeCaps=nodeCaps)
+
+    def SIMPLE_TCAMFunc(node, tc, path, resource):
+        # it would be best to test if node is a switch here, but we know all nodes are switches in this scenario
+        if resource == 'tcam':
+            return 2  # two rules per path on each switch, as an example.
+        else:
+            raise ValueError("wrong resource")  # just in case
 
     # ======================
     # start our optimization
@@ -77,7 +88,7 @@ if __name__ == '__main__':
     opt = getOptimization()
     # generate the paths
     pptc = generatePathsPerTrafficClass(topo, trafficClasses, SIMPLE_predicate,
-                                        networkx.diameter(topo.getGraph())*1.5,
+                                        networkx.diameter(topo.getGraph()) * 1.5,
                                         1000, functools.partial(useMboxModifier, chainLength=2))
     # randomly choose 5 paths per traffic class
     pptc = chooserand(pptc, 5)
@@ -85,28 +96,27 @@ if __name__ == '__main__':
     # add all the constraints
     # variables go first
     opt.addDecisionVariables(pptc)
+    # we know that we will need binary variables per path and node. (because we read the paper)
     opt.addBinaryVariables(pptc, topo, ['path', 'node'])
     # then routing of traffic
     opt.addAllocateFlowConstraint(pptc)
     opt.addRouteAllConstraint(pptc)
 
-    # then link capacities
+    # then link capacities (use default Link Function, nothing fancy here)
     opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, functools.partial(defaultLinkFunc, linkCaps=linkCaps))
+
     # then node capacities
-    capFunc = functools.partial(SIMPLE_NodeCapFunc, nodeCaps=nodeCaps)
-    opt.addNodeCapacityConstraint(pptc, 'cpu', nodeCaps['cpu'], capFunc)
-    opt.addNodeCapacityPerPathConstraint(pptc, 'tcam', nodeCaps['tcam'], capFunc)
+    # recall we are normalizing the CPU node load, so capacities are now all 1.
+    opt.addNodeCapacityConstraint(pptc, 'cpu', {node: 1 for node, data in topo.nodes()
+                                                if 'fw' or 'ids' in topo.getServiceTypes(node)}, capFunc)
+    opt.addNodeCapacityPerPathConstraint(pptc, 'tcam', nodeCaps['tcam'], SIMPLE_TCAMFunc)
 
     # finally, the objective
     opt.setPredefinedObjective('minmaxnodeload', 'cpu')
 
     # Solve the formulation:
     # ======================
-    opt.write('/tmp/simple.lp')
     opt.solve()
 
     # Print the objective function
     print opt.getSolvedObjective()
-
-    # Get the solution
-    pathFractions = opt.getPathFractions(pptc)
