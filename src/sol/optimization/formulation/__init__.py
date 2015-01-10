@@ -3,6 +3,7 @@ import networkx
 from sol.optimization.formulation.cplexwrapper import OptimizationCPLEX
 from sol.optimization.formulation.gurobiwrapper import OptimizationGurobi
 from sol.optimization.path.generate import generatePathsPerTrafficClass
+from sol.optimization.path.predicates import nullPredicate
 from sol.optimization.path.select import getSelectFunction
 from sol.utils.exceptions import InvalidConfigException
 
@@ -27,7 +28,7 @@ def getOptimization(backend=DEFAULT_OPTIMIZER):
         raise InvalidConfigException('Unsupported optimization backend')
 
 
-def kickStartOptimization(topology, trafficClasses, predicate, selectStrategy, selectNumber=None,
+def kickStartOptimization(topology, trafficClasses, predicate=nullPredicate, selectStrategy='shortest', selectNumber=10,
                           modifyFunc=None, backend=DEFAULT_OPTIMIZER):
     """
     A kick start function for the optimization

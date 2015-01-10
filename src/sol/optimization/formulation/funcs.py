@@ -16,7 +16,7 @@ def defaultLinkFunc(link, tc, path, resource, linkCaps):
     :param resource: the resource for which this is computed.
         For simplicity assume this is just bandwidth
     :param linkCaps: all link capacities
-    :return: the multiplier
+    :return: volume of traffic in bytes normalized by link capacity
     """
     return tc.volBytes / linkCaps[link]
 
@@ -31,11 +31,20 @@ def defaultNodeCapFunc(node, tc, path, resource, nodeCaps):
     :param path: path under consideration
     :param resource: ignored, assumes we have only one resource (or all are the same)
     :param nodeCaps: the node capacities for the resource
-    :return: traffic fraction multiplier
+    :return: cost of processing the traffic class for given resource, normalized by node capacity
     """
     return tc.volFlows * getattr(tc, '{}Cost'.format(resource)) / nodeCaps[node]
 
 def defaultLinkFuncNoNormalize(link, tc, path, resource):
+    """
+    Default link function. Computes volume of bytes, does not normalize
+
+    :param link:
+    :param tc:
+    :param path:
+    :param resource:
+    :return: volume of this traffic class in bytes
+    """
     return tc.volBytes
 
 # noinspection PyUnusedLocal
@@ -54,7 +63,7 @@ def dropUpstreamLinkFunc(link, tc, path, resource, linkCaps, dropRates, cumulati
     :type dropRates: dict
     :param cumulative: If true, all nodes upstream contribute to the drop;
         if false, only the first node with non-zero drop contributes to the drop
-    :return: traffic fraction multiplier
+    :return: volume of traffic in bytes normalized by link capacity, and taking into account upstream drops
     """
     retention = 1
     u, v = link

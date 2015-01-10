@@ -271,7 +271,6 @@ class Optimization(object):
         :type topology: :py:class:`~sol.optimization.topology.Topology`
         :param topology: our topology
         :param budgetFunc: a callable object that computes the cost (per node). Must be of the form::
-
             budgetFunc(nodeID)
 
         :param bound: a value that limits the cost
