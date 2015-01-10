@@ -46,5 +46,45 @@ Get me started!
 ---------------
 
 Here we show you how to get started with a simple optimization. 
+Say you would like to maximize the thoughput of traffic in your network.
 
+#. Think of your constraints:
+    #. Traffic must flow
+    #. Do not overload links
+#. Think of your objective:
+    #. Maximize traffic flow
+#. Think of your path requirements (if any):
+    None, you're good to go
+
+Gather your topology, and traffic data.
+Now proceed to kikstart your optmization: ::
+
+    opt, pptc = kickStartOptimization(topology, trafficClasses, nullPredicate, 'shortest', 5)
+
+* *nullPredicate* because any path will work for you. 
+* 'shortest' and 5 are a way to reduce the number of paths in your optimization and speed it up
+
+You get back two objects: *opt*, which is your optimization object and *pptc* which is paths per traffic class. You will use them as follows:
+
+Add your constraints: ::
+
+    # Traffic must flow!
+    opt.addAllocateFlowConstraint(pptc)
+    # Traffic must not overload links!
+    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
+    # Push as much traffic as we can!
+    opt.setPredefinedObjective('maxminflow')
+
+Solve the optimization ::
+
+    opt.solve()
+
+Get your solution::
+
+    print opt.getSolvedObjective()  # let's see how much traffic we managed to push
+    print opt.getPathFractions(pptc)  # this tells you how much traffic goes on each path
+
+You're done!
+
+See the :ref:`examples` section for the full version (and more applications with comments).
 

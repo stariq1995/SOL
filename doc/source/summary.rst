@@ -3,6 +3,7 @@ Optimization API Summary
 
 .. py:currentmodule:: sol.optimization.formulation.optbase
 .. autosummary:: 
+    :nosignatures:
 
     Optimization.addAllocateFlowConstraint
     Optimization.addRouteAllConstraint

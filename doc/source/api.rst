@@ -37,6 +37,7 @@ You can programmatically "build" your optimization using the defined functions a
     .. automethod:: addBudgetConstraint
     .. automethod:: addMinDiffConstraint    
     .. automethod:: setPredefinedObjective
+    .. autoattribute:: definedObjectives
 
 
 Low-level API
