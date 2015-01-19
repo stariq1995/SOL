@@ -252,12 +252,42 @@ class OptimizationCPLEX(Optimization):
                     if multiplier != 0:
                         mults.append(multiplier)
                         var.append(varindex[self.xp(tc, pi)])
-            self.cplexprob.linear_constraints.add(
-                [cplex.SparsePair(ind=var, val=mults),
-                 cplex.SparsePair(ind=[varindex[loadstr]], val=[1.0])],
-                senses=['E', 'L'], rhs=[0, cap],
-                names=['Load.{}.{}'.format(resource, node),
-                       'Cap.{}.{}'.format(resource, node)])
+            if cap is None:
+                cv = self.nc(node, resource)
+                self.cplexprob.variables.add(names=[cv], lb=[0])
+                if self.bn(node) in varindex:
+                    self.cplexprob.indicator_constraints.add(indvar=self.bn(node),
+                                                             lin_expr=cplex.SparsePair([cv], [1]),
+                                                             complemented=1,
+                                                             sense="E", rhs=0)
+                self.cplexprob.linear_constraints.add(
+                    [cplex.SparsePair(ind=var, val=mults),
+                     cplex.SparsePair(ind=[self.nl(node, resource), cv],
+                                      val=[1, -1])],
+                    senses="EL", rhs=[0, 0],
+                    names=['Load.{}.{}'.format(resource, node),
+                           'Cap.{}.{}'.format(resource, node)])
+            else:
+                self.cplexprob.linear_constraints.add(
+                    [cplex.SparsePair(ind=var, val=mults),
+                     cplex.SparsePair(ind=[varindex[loadstr]], val=[1.0])],
+                    senses=['E', 'L'], rhs=[0, cap],
+                    names=['Load.{}.{}'.format(resource, node),
+                           'Cap.{}.{}'.format(resource, node)])
+
+    @overrides(Optimization)
+    def addCapacityBudgetConstraint(self, resource, nodes, totCap):
+        var = []
+        mults = []
+        varindex = self.getVarIndex()
+        for node in nodes:
+            var.append(varindex[self.nc(node, resource)])
+            mults.append(1)
+        self.cplexprob.linear_constraints.add(
+            [cplex.SparsePair(var, mults)],
+            senses="L", rhs=[totCap],
+            names=['CapacityBudget.{}'.format(resource)]
+        )
 
     @overrides(Optimization)
     def addLinkCapacityConstraint(self, pptc, resource, linkcaps,
@@ -390,7 +420,7 @@ class OptimizationCPLEX(Optimization):
                     mults.append(1)
                 self.cplexprob.linear_constraints.add(
                     [cplex.SparsePair(var, mults)],
-                    senses=['G'], rhs=[0], names=['reqallnodes'])
+                    senses=['G'], rhs=[some - 1], names=['reqsomenodes.{}.{}'.format(tc.ID, pi)])
 
     @overrides(Optimization)
     def addBudgetConstraint(self, topology, budgetFunc, bound):
@@ -530,4 +560,7 @@ class OptimizationCPLEX(Optimization):
             This is really low-level, know what you're doing!
         """
         return self.cplexprob
+
+        # def saveBasis(self):
+        # self.cplexprob.start
 

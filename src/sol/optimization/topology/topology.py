@@ -119,20 +119,20 @@ class Topology(object):
             types = [serviceType]
         self._graph.node[node]['services'] = ';'.join(types)
 
-    def nodes(self):
+    def nodes(self, data=True):
         """
 
         :return: Iterator over topology nodes as tuples of the form (nodeID, nodeData)
         """
-        return self._graph.nodes_iter(data=True)
+        return self._graph.nodes_iter(data=data)
 
-    def edges(self):
-
+    def edges(self, data=True):
         """
 
         :return: Iterator over topology edge tuples (nodeID1, nodeID2, edgeData)
         """
-        return self._graph.edges_iter(data=True)
+        return self._graph.edges_iter(data=data)
+
     links = edges  # Method alias here
 
     def __repr__(self):
@@ -149,6 +149,7 @@ class Topology(object):
             return self._graph.node[node]['hasMbox']
         except KeyError:
             return False
+
     hasMbox = hasMiddlebox
 
     def setMiddlebox(self, node, val=True):
@@ -159,6 +160,7 @@ class Topology(object):
         :param val: True or False
         """
         self._graph.node[node]['hasMbox'] = val
+
     setMbox = setMiddlebox
 
 

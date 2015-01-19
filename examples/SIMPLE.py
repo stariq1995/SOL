@@ -12,7 +12,7 @@ import itertools
 import networkx
 
 from sol.optimization.formulation import getOptimization
-from sol.optimization.formulation.funcs import defaultLinkFunc
+from sol.optimization.formulation.funcs import defaultLinkFunc, defaultLinkFuncNoNormalize
 from sol.optimization.path.generate import generatePathsPerTrafficClass
 from sol.optimization.path.predicates import useMboxModifier
 from sol.optimization.path.select import chooserand
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     opt.addRouteAllConstraint(pptc)
 
     # then link capacities (use default Link Function, nothing fancy here)
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, functools.partial(defaultLinkFunc, linkCaps=linkCaps))
+    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
 
     # then node capacities
     # recall we are normalizing the CPU node load, so capacities are now all 1.
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     opt.addNodeCapacityPerPathConstraint(pptc, 'tcam', nodeCaps['tcam'], SIMPLE_TCAMFunc)
 
     # finally, the objective
-    opt.setPredefinedObjective('minmaxnodeload', 'cpu')
+    opt.setPredefinedObjective('minmaxnodeload', resource='cpu')
 
     # Solve the formulation:
     # ======================

@@ -1,5 +1,6 @@
 # coding=utf-8
 from abc import ABCMeta, abstractmethod
+from sol.utils.pythonHelper import tup2str
 
 
 class Optimization(object):
@@ -71,6 +72,36 @@ class Optimization(object):
         :return: variable name of the form *binpath_classid_pathindex*
         """
         return 'binpath_{}_{}'.format(trafficClass.ID, pathIndex)
+
+    @staticmethod
+    def nl(node, resource):
+        """
+        Format a node load variable
+
+        :param node: node ID
+        :param resource: the resource
+        """
+        return 'Load_{}_{}'.format(resource, node)
+
+    @staticmethod
+    def el(link, resource):
+        """
+        Format a link load variable
+
+        :param link:
+        :param resource:
+        """
+        return 'Load_{}_{}'.format(resource, tup2str(link))
+
+    @staticmethod
+    def nc(node, resource):
+        """
+        Format a capacity variable
+
+        :param node:
+        :param resource:
+        """
+        return 'Cap_{}_{}'.format(resource, node)
 
     @abstractmethod
     def solve(self):
@@ -202,6 +233,19 @@ class Optimization(object):
             constraints
         :param nodecaps: node capacities (as a dictionary) mapping node IDs to capacities for this resource
         :param nodeCapFunction: user defined function
+        """
+        pass
+
+    @abstractmethod
+    def addCapacityBudgetConstraint(self, resource, nodes, totCap):
+        """
+        Add a total capacity budget for a list of nodes and a given resource.
+
+        To be used when the capacities are allocated by SOL, and not predefined
+
+        :param resource: resource for which capacities are set
+        :param nodes: nodes whose sum of capacities is to be capped
+        :param totCap: total node capacity
         """
         pass
 

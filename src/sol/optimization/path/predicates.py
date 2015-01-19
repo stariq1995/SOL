@@ -3,7 +3,9 @@
 Both generic (example predicates) and some app-specific predicates
 """
 import itertools
+
 from sol.optimization.topology.traffic import PathWithMbox
+
 
 
 # noinspection PyUnusedLocal
@@ -45,3 +47,18 @@ def hasMboxPredicate(path, topology):
     :return: True if at least one middlebox is present
     """
     return any([topology.hasMbox(node) for node in path])
+
+
+def waypointMboxPredicate(path, topology, order):
+    """
+    Check the path for correct waypoint enforcement through the middleboxes
+
+    :param path: the path in question
+    :param topology: topology
+    :param order: a tuple contatining ordered service types. For example::
+        ('fw', 'ids')
+
+    :return: True if the path satisfies the desired waypoint order
+    """
+    return any([s == order for s in itertools.product(*[topology.getServiceTypes(node)
+                                                        for node in path.useMBoxes])])
