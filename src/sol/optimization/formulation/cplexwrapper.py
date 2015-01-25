@@ -62,9 +62,9 @@ class OptimizationCPLEX(Optimization):
                   upperBound=None):
         self.cplexprob.variables.add(names=[name])
         if lowerBound is not None:
-            self.cplexprob.variables.set_lower_bounds((name, lowerBound))
+            self.cplexprob.variables.set_lower_bounds(name, lowerBound)
         if upperBound is not None:
-            self.cplexprob.variables.set_upper_bounds((name, upperBound))
+            self.cplexprob.variables.set_upper_bounds(name, upperBound)
         if coeffs is None:
             return
         v = self.cplexprob.variables.get_names()
@@ -92,7 +92,7 @@ class OptimizationCPLEX(Optimization):
         self.cplexprob.objective.set_linear(coeffs.items())
 
     @overrides(Optimization)
-    def setPredefinedObjective(self, objective, resource=None):
+    def setPredefinedObjective(self, objective, resource=None, routingCostFunc=len, pptc=None):
         if objective.lower() == 'maxallflow':
             self.defineVar('TotalFlow', {name: 1 for name in
                                          self.allocationVars},
@@ -108,6 +108,7 @@ class OptimizationCPLEX(Optimization):
                                       [1, -1])],
                     senses=['L'], rhs=[0])
         elif objective.lower() == 'minroutingcost':
+            self.addRoutingCost(pptc, routingCostFunc)
             self.setObjectiveCoeff({'RoutingCost': 1}, 'min')
         elif objective.lower() == 'minmaxnodeload':
             self.cplexprob.objective.set_sense(
@@ -186,12 +187,12 @@ class OptimizationCPLEX(Optimization):
                 lb=[0] * len(var), ub=[1] * len(var))
 
     @overrides(Optimization)
-    def addRoutingCost(self, pptc):
+    def addRoutingCost(self, pptc, routingCostFunc=len):
         coeffs = {}
         for tc in pptc:
             for pi, path in enumerate(pptc[tc]):
-                coeffs[self.xp(tc, pi)] = len(path)
-        self.defineVar(self.cplexprob, 'RoutingCost', coeffs)
+                coeffs[self.xp(tc, pi)] = routingCostFunc(path)
+        self.defineVar('RoutingCost', coeffs, lowerBound=0)
 
     @overrides(Optimization)
     def addRouteAllConstraint(self, pptc):

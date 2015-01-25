@@ -16,9 +16,9 @@ from requests.auth import HTTPBasicAuth
 from sol.utils.exceptions import ControllerException
 
 
-class PanaceaController(object):
+class OpenDaylightInterface(object):
     """
-        The panacea controller that manages OpenDaylight controller
+        Manages OpenDaylight controller using its REST interface
     """
 
     def __init__(self, daylightURL='http://localhost:8080/controller/nb/v2',
@@ -350,5 +350,3 @@ def checkErr(r):
         raise ControllerException("REST API error, code {}".format(
             r.status_code))
     return True
-
-# TODO: figure out hosts dynamically

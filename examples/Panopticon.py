@@ -1,16 +1,16 @@
-from random import randint
-import itertools
+# coding=utf-8
+""" This script sets up and executes the optimization for ElasticTree [#elastictree]_
+
+
+[#elastictree] Heller, B. et al. 2013. ElasticTree: Saving Energy in Data Center Networks. NSDI (2010).
+"""
 
 import networkx
-from sol.optimization.topology.topology import Topology
-
-
-__author__ = 'victor'
 
 from sol.optimization.formulation import getOptimization
 from sol.optimization.formulation.funcs import defaultLinkFuncNoNormalize
 from sol.optimization.path.generate import generatePathsPerTrafficClass
-from sol.optimization.path.predicates import hasMboxPredicate, useMboxModifier
+from sol.optimization.path.predicates import nullPredicate
 from sol.optimization.path.select import chooserand
 from sol.optimization.topology import generators
 from sol.optimization.topology import provisioning
@@ -20,45 +20,39 @@ if __name__ == '__main__':
 
     # Let's create a topology first, as an example
     # ============================================
-    topo = Topology('star', networkx.star_graph(11).to_directed())
+    topo = generators.generateCompleteTopology(10)
     # label our switches
     generators.forceSwitchLabels(topo)
     # For the sake of example, set middleboxes everywhere
     for node, data in topo.nodes():
         topo.setMbox(node)
-        topo.setServiceTypes(node, ['switch', 'dpis'])
+        topo.setServiceTypes(node, ['switch', 'fw', 'ids'])
 
     # Resort to some default functions, obviously you'd provide your real data here
     # =============================================================================
 
     # ingress-egress pairs
-    G = topo.getGraph()
-    iePairs = [(i, e) for i, e in itertools.product(topo.nodes(False), repeat=2)
-               if i != e and G.out_degree(i) == 1 and G.out_degree(e) == 1]
-    print iePairs
+    iePairs = provisioning.generateIEpairs(topo)
     # generate traffic matrix
-    populations = {node: randint(1 << 15, 1 << 18) for node, data in topo.nodes()}
-    trafficMatrix = provisioning.computeGravityTrafficMatrixPerIE(
-        iePairs, 10 ** 6, populations)
+    trafficMatrix = provisioning.computeUniformTrafficMatrixPerIE(
+        iePairs, 10 ** 6)
     # compute traffic classes, only one class
     trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},
                                             {'allTraffic': 2000})
-    # assign flow processing cost for each traffic class
-    for t in trafficClasses:
-        t.cpuCost = 10
-    # provision the node cpu capacities
-    nodeCaps = {node: None for node, data in topo.nodes()}
     # similartly with link capacities
     linkCaps = provisioning.provisionLinks(topo, trafficClasses, 3)
+    # Fake power consumption. Imagine these are kw/h, whatever.
+    switchPower = {node: 1500 for node, data in topo.nodes()}
+    linkPower = {(u, v): 500 for u, v, data in topo.links()}
 
     # ======================
     # start our optimization
     # ======================
     opt = getOptimization()
     # generate the paths
-    pptc = generatePathsPerTrafficClass(topo, trafficClasses, hasMboxPredicate,
+    pptc = generatePathsPerTrafficClass(topo, trafficClasses, nullPredicate,
                                         networkx.diameter(topo.getGraph()) * 1.5,
-                                        1000, useMboxModifier)
+                                        1000)
     # randomly choose 5 paths per traffic class
     pptc = chooserand(pptc, 5)
 
@@ -72,24 +66,22 @@ if __name__ == '__main__':
 
     # then link capacities
     opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
-    # then node capacities
-    opt.addNodeCapacityConstraint(pptc, 'cpu', nodeCaps,
-                                  lambda node, tc, path, resource: tc.volFlows * tc.cpuCost)
+
+    # Now enforce disabled paths when we toggle links/nodes
     opt.addRequireSomeNodesConstraint(pptc, some=1)
-    opt.addPathDisableConstraint(pptc)
-    opt.addBudgetConstraint(topo, lambda node: 1, 5)
-    # opt.addCapacityBudgetConstraint('cpu', nodeCaps.keys(), 10 ** 9) # optional
+    opt.addBudgetConstraint(topo, lambda n: 1, 5)
 
-    opt.setPredefinedObjective('minmaxnodeload', resource='cpu')
+    # Now, set the objective, and value the switch power more.
+    opt.setPredefinedObjective('minroutingcost', pptc=pptc)
 
-    # opt.write('/tmp/escale.lp')
     # Solve the formulation:
     # ======================
     opt.solve()
 
     # Print the objective function
     print opt.getSolvedObjective()
-    # Print allocated capacities
-    vals = opt.getAllVariableValues()
-    for node in nodeCaps:
-        print node, vals[opt.nc(node, 'cpu')], vals[opt.nl(node, 'cpu')]
+
+    ######
+    # Total power consumption: 6875
+    # If we kept everything on, it would be: 5 * 1500 + 500 * 10 = 12500
+    ######

@@ -39,16 +39,6 @@ if __name__ == '__main__':
     # compute traffic classes, only one class
     trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},
                                             {'allTraffic': 2000})
-    # assign flow processing cost for each traffic class
-    for t in trafficClasses:
-        t.cpuCost = 10
-    # provision the node cpu capacities
-    maxCPUCap = provisioning.computeMaxIngressLoad(trafficClasses, {t: t.cpuCost for t in trafficClasses})
-    nodeCaps = dict()
-    nodeCaps['cpu'] = {node: maxCPUCap * 2 for node, data in topo.nodes()
-                       if 'fw' or 'ids' in topo.getServiceTypes(node)}
-    # and the tcam capacities
-    nodeCaps['tcam'] = {node: 1000 for node, data in topo.nodes()}
     # similartly with link capacities
     linkCaps = provisioning.provisionLinks(topo, trafficClasses, 3)
     # Fake power consumption. Imagine these are kw/h, whatever.
