@@ -504,7 +504,7 @@ class OptimizationCPLEX(Optimization):
             for index, path in enumerate(paths):
                 newpath = copy.copy(path)
                 newpath.setNumFlows(self.cplexprob.solution.get_values(
-                    'x_{}_{}'.format(tc.ID, index)))
+                    self.xp(tc, index)))
                 if newpath.getNumFlows() > 0 and flowCarryingOnly:
                     result[tc].append(newpath)
                 elif not flowCarryingOnly:

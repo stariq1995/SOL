@@ -205,7 +205,7 @@ class TrafficClass(object):
 
     def __repr__(self):
         return "TrafficClass({})".format(
-            ",".join(["{}={}".format(k, v) for k, v in self.__dict__]))
+            ",".join(["{}={}".format(k, v) for k, v in self.__dict__.iteritems()]))
 
     def __str__(self):
         return "Traffic class {} -> {}, {}, ID={}".format(self.src, self.dst,
