@@ -62,6 +62,11 @@ class OpenDaylightInterface(object):
             links.append((u, v))
             props.append(
                 {'tailport': tailport, 'headport': headport, 'name': name})
+            # Now add the other direction
+            links.append((v, u))
+            props.append(
+                {'tailport': headport, 'headport': tailport, 'name': name}
+            )
         G.add_edges_from(links)
         for ind, (u, v) in enumerate(links):
             G.edge[u][v].update(props[ind])
@@ -122,7 +127,7 @@ class OpenDaylightInterface(object):
         for ind in xrange(1, len(daylightPath) - 1):
             node = daylightPath[ind]
             # print ind, node
-            # print node
+            # print daylightGraph.edge[daylightPath[ind - 1]]
             ingressPort = daylightGraph.edge[daylightPath[ind - 1]][node][
                 'tailport']
             egressPort = daylightGraph.edge[node][daylightPath[ind + 1]][
@@ -160,31 +165,36 @@ class OpenDaylightInterface(object):
             self._pathmap[daylightPath] = (srcPrefix, dstPrefix)
 
     def _computeSplit(self, k, paths, blockbits, mindiff):
-        srcprefix = netaddr.IPNetwork(k.srcprefix)
-        dstprefix = netaddr.IPNetwork(k.dstprefix)
+        srcnet = netaddr.IPNetwork(k.srcprefix)
+        dstnet = netaddr.IPNetwork(k.dstprefix)
         ipbits = 32
-        if srcprefix.version == 6:
+        if srcnet.version == 6:
             ipbits = 128
-        assert blockbits <= ipbits - srcprefix.prefixlen
-        assert blockbits <= ipbits - dstprefix.prefixlen
-        numblocks = len(srcprefix) * len(dstprefix) / (2 ** blockbits)
-        newmask1 = ipbits - blockbits
-        newmask2 = ipbits - blockbits
+        assert blockbits <= ipbits - srcnet.prefixlen
+        assert blockbits <= ipbits - dstnet.prefixlen
+        numblocks = len(srcnet) * len(dstnet) / (2 ** (2 * blockbits))
+        print 'numblocks', numblocks
+        newmask1 = srcnet.prefixlen + blockbits
+        newmask2 = srcnet.prefixlen + blockbits
         blockweight = 1.0 / numblocks
         assigned = defaultdict(lambda: [])
         if not mindiff:
             assweight = 0
             index = 0
             path = paths[index]
-            for block in itertools.product(srcprefix.subnet(newmask1),
-                                           dstprefix.subnet(newmask2)):
+            for block in itertools.product(srcnet.subnet(newmask1),
+                                           dstnet.subnet(newmask2)):
+                if index >= len(paths):
+                    raise Exception('no bueno')
+
                 assigned[path].append(block)
                 assweight += blockweight
                 if assweight >= path.getNumFlows():
                     # print path.getNumFlows(), assweight
                     assweight = 0
                     index += 1
-                    path = paths[index]
+                    if index < len(paths):
+                        path = paths[index]
         else:
             leftovers = []
             # iteration one, remove any exess blocks and put them into leftover
@@ -237,6 +247,7 @@ class OpenDaylightInterface(object):
                     subdstprefix = netaddr.cidr_merge(dests)
                     assert len(subsrcprefix) == 1
                     assert len(subdstprefix) == 1
+                    # print path, subsrcprefix, subdstprefix
                     routeList.append((convertPath(path, offset=convertoffset),
                                       daylightGraph,
                                       str(subsrcprefix[0]),
@@ -335,6 +346,7 @@ def convertPath(path, offset=0):
             node = hex(node).lstrip('0x').zfill(16)
             _path[ind] = ':'.join(
                 s.encode('hex') for s in node.decode('hex'))
+    # print _path
     return _path
 
 
