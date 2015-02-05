@@ -4,8 +4,10 @@
 
 from mininet.topo import Topo
 
+
 def offset(val, offset):
-    return str(int(val)+offset)
+    return str(int(val) + offset)
+
 
 class mnTopo(Topo):
     """ Implements custom topology class that allows loading of panacea
@@ -17,7 +19,7 @@ class mnTopo(Topo):
         Topo.__init__(self, **params)
 
         for n in topo.nodes(False):
-            n = offset(n, 1) # offset in case topoliges start from 0
+            n = offset(n, 1)  # offset in case topoliges start from 0
             # print n
             self.addSwitch(n)
             self.addHost('h{}'.format(n))
@@ -28,4 +30,4 @@ class mnTopo(Topo):
 
         # add links here:
         for u, v in topo.getGraph().to_undirected().edges_iter():
-            self.addLink(offset(u,1), offset(v,1))
+            self.addLink(offset(u, 1), offset(v, 1))
