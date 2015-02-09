@@ -18,6 +18,20 @@ class Path(object):
         """
         self._nodes = list(nodes)
         self._numFlows = numFlows
+        self._computeLinks()
+
+    @staticmethod
+    def decode(dictionary):
+        """
+        Create a new path from a dict
+        :param dictionary: dict type, must contain following keys:
+
+            'nodes': maps to a list of nodes
+        """
+        return Path(dictionary['nodes'], dictionary.get('numFlows', 0))
+
+    def _computeLinks(self):
+        self._links = tuple(zip(self._nodes, self._nodes[1:]))
 
     def getIngress(self):
         """
@@ -68,7 +82,16 @@ class Path(object):
         """
         :return: Return an iterator over the links in this path
         """
-        return itertools.izip(self._nodes, self._nodes[1:])
+        # return itertools.izip(self._nodes, self._nodes[1:])
+        return self._links
+
+    def encode(self):
+        """
+        Encode this path in dict/list form so it can be JSON-ed or MsgPack-ed
+
+        :return: dictionary representation of this path
+        """
+        return {'nodes': self._nodes, 'numFlows': self._numFlows, 'Path':True}
 
     def __contains__(self, obj):
         return obj in self._nodes
@@ -104,7 +127,6 @@ class Path(object):
     def __getitem__(self, i):
         return self._nodes[i]
 
-
 class PathWithMbox(Path):
     """
     Create a new path with middlebox
@@ -117,6 +139,17 @@ class PathWithMbox(Path):
     def __init__(self, nodes, useMBoxes, numFlows=0):
         super(PathWithMbox, self).__init__(nodes, numFlows)
         self.useMBoxes = list(useMBoxes)
+
+    @staticmethod
+    def decode(dictionary):
+        """
+        Create a new path from a dict
+        :param dictionary: dict type, must contain following keys:
+
+            'nodes': maps to a list of nodes
+            'useMBoxes': maps to a list of nodes at which middlebox is used
+        """
+        return PathWithMbox(dictionary['nodes'], dictionary['useMBoxes'], dictionary.get('numFlows', 0))
 
     def usesBox(self, node):
         """
@@ -133,6 +166,15 @@ class PathWithMbox(Path):
         :return: The full length of the path (includes all middleboxes)
         """
         return len(self._nodes) + len(self.useMBoxes)
+
+    def encode(self):
+        """
+        Encode this path in dict/list form so it can be JSON-ed or MsgPack-ed
+
+        :return: dictionary representation of this path
+        """
+        return {'nodes': self._nodes, 'numFlows': self._numFlows, 'useMBoxes': self.useMBoxes,
+                'PathWithMbox': True}
 
     def __key(self):
         return tuple(self._nodes), tuple(self.useMBoxes), self._numFlows
@@ -210,6 +252,13 @@ class TrafficClass(object):
     def __str__(self):
         return "Traffic class {} -> {}, {}, ID={}".format(self.src, self.dst,
                                                           self.name, self.ID)
+
+    def encode(self):
+        return {'TrafficClass': True}.update(self.__dict__)
+
+    @staticmethod
+    def decode(dict):
+        return TrafficClass(**dict)
 
     def getIEPair(self):
         """

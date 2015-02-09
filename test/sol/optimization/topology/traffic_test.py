@@ -115,3 +115,22 @@ def testTrafficMatrix():
     assert tm.keys() == tm2.keys()
     assert tm.values() != tm2.values()
     assert sorted(tm.values()) == sorted(tm2.values())
+
+
+def testPathEncoding():
+    p = Path([1,2,3])
+    assert p.encode() == {'nodes':[1,2,3], 'numFlows':0, 'Path':True}
+    assert p == p.decode(p.encode())
+    try:
+        import msgpack
+        l = msgpack.loads(msgpack.dumps(p, default=lambda x: x.encode()),
+                          object_hook=Path.decode)
+        assert p == l
+    except ImportError:
+        pass
+
+def testPathWithMboxEncoding():
+    p = PathWithMbox([1, 2, 3], useMBoxes=[2])
+    assert p.encode() == {'nodes': [1, 2, 3], 'numFlows': 0, 'useMBoxes': [2], 'PathWithMbox':True}
+    l = p.decode(p.encode())
+    assert p == l
