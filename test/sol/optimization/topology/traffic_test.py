@@ -18,10 +18,20 @@ def testPathGetters():
     assert p.getNodesAsTuple() == (1, 4, 6, -1)
     assert list(p.getLinks()) == [(1, 4), (4, 6), (6, -1)]
 
+    # test indexing/length
     assert p[1] == 4
     assert p[-1] == -1
     assert len(p) == 4
     assert len(p2) == 4
+    assert p2.fullLength() == 6
+
+    # test contains method and delete method
+    assert 6 in p
+    assert 7 not in p
+    assert 4 in p2 and -1 in p2
+    del p[1]
+    assert 4 not in p
+    assert p[1] == 6
 
 
 def testPathEquality():
@@ -46,6 +56,7 @@ def testPathEquality():
     # again, numflows does not matter
     assert p4 == p5
 
+    assert not p == (1, 2, 3, 4)
 
 def testPathSetters():
     p = Path([1, 2, 3, 4])
@@ -53,6 +64,8 @@ def testPathSetters():
     assert p.getNumFlows() == 100
     # assert p._numFlows == 100
 
+    p[1] = 100
+    assert p[1] == 100
 
 def testPathHashing():
     d = {}
@@ -89,6 +102,8 @@ def testTrafficClass():
     assert t3.myval == 'val'
     t4 = TrafficClass(1, 'web', 1, 2, myval=20)
     assert t4.myval == 20
+    assert t != 'randomstring'
+    assert not t == 'randomlkdjf;aljkd'
 
 
 def testTrafficMatrix():
