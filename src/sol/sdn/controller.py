@@ -18,17 +18,18 @@ from sol.utils.exceptions import ControllerException
 
 class OpenDaylightInterface(object):
     """
-        Manages OpenDaylight controller using its REST interface
+        Manages OpenDaylight controller using its REST interface.
+        This is a prototype implementation
     """
 
     def __init__(self, daylightURL='http://localhost:8080/controller/nb/v2',
                  daylightUser='admin', daylightPass='admin'):
         """
         Create a new controller
-        :param daylightURL:
-        :param daylightUser:
-        :param daylightPass:
-        :return:
+
+        :param daylightURL: URL to the daylight controller/namespace
+        :param daylightUser: username to use when connecting. 'admin' by default
+        :param daylightPass: password to use when connecting. 'admin' by default
         """
         self._baseURL = daylightURL
         self._auth = HTTPBasicAuth(daylightUser, daylightPass)
@@ -42,8 +43,9 @@ class OpenDaylightInterface(object):
 
     def getTopology(self):
         """
-        Returns the Daylight topology
-        :return:
+        Returns the Daylight topology by querying the OpenDaylight controller
+
+        :rtype: :py:class:`networkx.DiGraph`
         """
 
         G = networkx.DiGraph()
@@ -87,19 +89,19 @@ class OpenDaylightInterface(object):
         assert networkx.is_connected(G.to_undirected())
         return G
 
-    def getFlowStats(self):
-        """
-        Get the flow statistics from OpenDaylight
-
-        :return:
-        """
-        r = self._session.get(self._buildURL('statistics') + '/flow')
-        checkErr(r)
-        return r.json()
+    # def getFlowStats(self):
+    #     """
+    #     Get the flow statistics from OpenDaylight
+    #
+    #     :return:
+    #     """
+    #     r = self._session.get(self._buildURL('statistics') + '/flow')
+    #     checkErr(r)
+    #     return r.json()
 
     def getRoutes(self):
         """
-        Returns currently installed routes in the network
+        Returns currently installed routes in the network by querying OpenDaylight
         """
         r = self._session.get(self._buildURL('flowprogrammer'))
         checkErr(r)
@@ -109,17 +111,19 @@ class OpenDaylightInterface(object):
                  protocol=None, srcPort=None, dstPort=None, installHw=True,
                  priority=500):
         """
+        Pushes a single route to the network using the OD controller
 
-        :param daylightPath:
-        :param daylightGraph:
-        :param srcPrefix:
-        :param dstPrefix:
-        :param protocol:
-        :param srcPort:
-        :param dstPort:
-        :param installHw:
-        :param priority:
-        :raise Exception:
+        :param daylightPath: the route, using OpenDaylight node IDs
+        :param daylightGraph: the topology, obtained from OpenDaylight (see :py:func:`getTopology`)
+        :param srcPrefix: IP src prefix
+        :param dstPrefix: IP dst prefix
+        :param protocol: tcp/udp etc.
+        :param srcPort: source ports, if any
+        :param dstPort: destination ports, if any
+        :param installHw: Something OpenDaylight wants. Set it to true
+        :param priority: rule priority
+        :raises ControllerException:
+            In case OpenDaylight returns any of the non-success codes
         """
         props = {'installInHW': installHw,
                  'priority': priority}
@@ -228,19 +232,23 @@ class OpenDaylightInterface(object):
         # TODO: implement more sophisticated volume-aware splitting
         # XXX: splitting if just one IP per src/dst?
 
-    def generateRoutes(self, ppk, daylightGraph, blockbits=8, convertoffset=0):
+    def generateRoutes(self, pptc, daylightGraph, blockbits=5, convertoffset=0):
         """
 
-        :param ppk:
-        :param daylightGraph:
-        :param blockbits:
+        :param pptc: path per traffic class obtained from the optimization
+        :param daylightGraph: the openDaylight topology
+        :param blockbits: How many bits define a block of IP adresses.
+            The smaller the number, the more fine-grained splitting is.
+
+        :param convertoffset: offset to use when converting paths.
+            If you have topology that uses with nodeID of 0, set this to 1.
         :return:
         """
         routeList = []
-        for k in ppk:
-            numpaths = len(ppk[k])
+        for k in pptc:
+            numpaths = len(pptc[k])
             if numpaths > 1:
-                assigned = self._computeSplit(k, ppk[k], blockbits, False)
+                assigned = self._computeSplit(k, pptc[k], blockbits, False)
                 for path in assigned:
                     sources, dests = zip(*assigned[path])
                     subsrcprefix = netaddr.cidr_merge(sources)
@@ -253,55 +261,60 @@ class OpenDaylightInterface(object):
                                       str(subsrcprefix[0]),
                                       str(subdstprefix[0])))
             else:
-                routeList.append((convertPath(ppk[k][0], offset=convertoffset),
+                routeList.append((convertPath(pptc[k][0], offset=convertoffset),
                                   daylightGraph,
                                   k.srcprefix, k.dstprefix))
         return routeList
 
     def pushRoutes(self, routeList):
+        """
+        Push a list of routes using REST API. (See :py:func:`generateRoutes` for route generation)
+
+        :param routeList: list of routes/paths
+        """
         for route in routeList:
             self.pushPath(*route)
 
-    def generateUpdatedRoutes(self, ppk, daylightGraph, blockbits=5,
-                              convertoffset=0):
-        """
+    # def generateUpdatedRoutes(self, ppk, daylightGraph, blockbits=5,
+    #                           convertoffset=0):
+    #     """
+    #
+    #     :param ppk:
+    #     :param daylightGraph:
+    #     :param blockbits:
+    #     :return:
+    #     """
+    #     routeList = []
+    #     for k in ppk:
+    #         numpaths = len(ppk[k])
+    #         if numpaths > 1:
+    #             assigned = self._computeSplit(k, ppk[k], blockbits, True)
+    #             for path in assigned:
+    #                 sources, dests = zip(*assigned[path])
+    #                 subsrcprefix = netaddr.cidr_merge(sources)
+    #                 subdstprefix = netaddr.cidr_merge(dests)
+    #                 assert len(subsrcprefix) == 1
+    #                 assert len(subdstprefix) == 1
+    #                 routeList.append((convertPath(path, offset=convertoffset),
+    #                                   daylightGraph,
+    #                                   str(subsrcprefix[0]),
+    #                                   str(subdstprefix[0])))
+    #         else:
+    #             routeList.append((convertPath(ppk[k][0], offset=convertoffset),
+    #                               daylightGraph,
+    #                               k.srcprefix, k.dstprefix))
+    #     return routeList
 
-        :param ppk:
-        :param daylightGraph:
-        :param blockbits:
-        :return:
-        """
-        routeList = []
-        for k in ppk:
-            numpaths = len(ppk[k])
-            if numpaths > 1:
-                assigned = self._computeSplit(k, ppk[k], blockbits, True)
-                for path in assigned:
-                    sources, dests = zip(*assigned[path])
-                    subsrcprefix = netaddr.cidr_merge(sources)
-                    subdstprefix = netaddr.cidr_merge(dests)
-                    assert len(subsrcprefix) == 1
-                    assert len(subdstprefix) == 1
-                    routeList.append((convertPath(path, offset=convertoffset),
-                                      daylightGraph,
-                                      str(subsrcprefix[0]),
-                                      str(subdstprefix[0])))
-            else:
-                routeList.append((convertPath(ppk[k][0], offset=convertoffset),
-                                  daylightGraph,
-                                  k.srcprefix, k.dstprefix))
-        return routeList
-
-    def updateRoutes(self, routeList):
-        # TODO: be more clever, not just delete all flows
-        self.deleteAllFlows()
-        self.pushRoutes(routeList)
+    # def updateRoutes(self, routeList):
+    #     # TODO: be more clever, not just delete all flows
+    #     self.deleteAllFlows()
+    #     self.pushRoutes(routeList)
 
     def getAllFlows(self):
         """
         Get all installed flows from OpenDaylight
 
-        :return the JSON object with all flows
+        :return: the JSON object with all flows
         """
         r = self._session.get(self._buildURL('flowprogrammer'))
         checkErr(r)
@@ -326,11 +339,12 @@ class OpenDaylightInterface(object):
 def convertPath(path, offset=0):
     """
     Convert node IDs in the path to the daylight IDs
-    :param path:
-    :param offset: any offset when converting node numbers. Default is 0,
-        but some topologies start at 0 and opendaylight craps itself. So
-        offset of 1 is required
-    :return:
+
+    :param path: the path obtained from the optimization
+    :param offset: An offset when converting node numbers. Default is 0,
+        but some topologies start at 0 and opendaylight panics. So
+        offset of 1 is required.
+
     """
     _path = copy.copy(path)
     for ind, node in enumerate(_path):
@@ -352,10 +366,13 @@ def convertPath(path, offset=0):
 
 def checkErr(r):
     """
+    Check the response from OpenDaylight for any error codes
+
     :param r: the response recieved form the requests library
-    :return True if status code is within 200s
-    :raises :py:class:`~panacea.util.exceptions.ControllerException`
-        If the status code is not OK (within the 200s)
+    :return: True if status code is within 200s
+    :raises: :py:class:`~panacea.util.exceptions.ControllerException`
+        If the status code is not OK (not within the 200s)
+
     """
     if not (200 <= r.status_code < 300):
         print r.text
