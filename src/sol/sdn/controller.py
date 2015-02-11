@@ -177,7 +177,6 @@ class OpenDaylightInterface(object):
         assert blockbits <= ipbits - srcnet.prefixlen
         assert blockbits <= ipbits - dstnet.prefixlen
         numblocks = len(srcnet) * len(dstnet) / (2 ** (2 * blockbits))
-        print 'numblocks', numblocks
         newmask1 = srcnet.prefixlen + blockbits
         newmask2 = srcnet.prefixlen + blockbits
         blockweight = 1.0 / numblocks
@@ -188,6 +187,7 @@ class OpenDaylightInterface(object):
             path = paths[index]
             for block in itertools.product(srcnet.subnet(newmask1),
                                            dstnet.subnet(newmask2)):
+                # TODO: prettify
                 if index >= len(paths):
                     raise Exception('no bueno')
 
@@ -253,13 +253,13 @@ class OpenDaylightInterface(object):
                     sources, dests = zip(*assigned[path])
                     subsrcprefix = netaddr.cidr_merge(sources)
                     subdstprefix = netaddr.cidr_merge(dests)
-                    assert len(subsrcprefix) == 1
-                    assert len(subdstprefix) == 1
                     # print path, subsrcprefix, subdstprefix
-                    routeList.append((convertPath(path, offset=convertoffset),
-                                      daylightGraph,
-                                      str(subsrcprefix[0]),
-                                      str(subdstprefix[0])))
+
+                    #TODO: test the correctness of this better
+                    assert len(subsrcprefix) == len(subdstprefix)
+                    for s, d in itertools.izip(subsrcprefix, subdstprefix):
+                        routeList.append((convertPath(path, offset=convertoffset),
+                                          daylightGraph, str(s), str(d)))
             else:
                 routeList.append((convertPath(pptc[k][0], offset=convertoffset),
                                   daylightGraph,
@@ -306,7 +306,6 @@ class OpenDaylightInterface(object):
     #     return routeList
 
     # def updateRoutes(self, routeList):
-    #     # TODO: be more clever, not just delete all flows
     #     self.deleteAllFlows()
     #     self.pushRoutes(routeList)
 
