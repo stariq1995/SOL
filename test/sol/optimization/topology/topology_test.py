@@ -29,6 +29,5 @@ def testGetNumNodes():
     assert topo.getNumNodes() == 8
     assert topo.getNumNodes('switch') == 8
     assert topo.getNumNodes('middlebox') == 0
-    # todo: test get numnodes
 
 
