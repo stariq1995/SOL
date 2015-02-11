@@ -2,3 +2,5 @@
 *.pyc
 SOL.egg-info
 doc/build
+*.log
+.coverage
