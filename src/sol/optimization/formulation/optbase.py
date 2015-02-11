@@ -130,6 +130,7 @@ class Optimization(object):
         pass
 
     def parseSymbolicEq(self, eq):
+        #TODO: symbolic eq parsing
         pass
 
     @abstractmethod
@@ -388,3 +389,11 @@ class Optimization(object):
         :return: a dictionary of all variable values
         :rtype: dict
         """
+
+    @abstractmethod
+    def getVariableNames(self):
+        """
+        :return the list of all variable names in the optimization
+
+        """
+        pass

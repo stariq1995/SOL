@@ -77,9 +77,9 @@ class OptimizationCPLEX(Optimization):
             [cplex.SparsePair(ind=var, val=mults)],
             senses=['E'], rhs=[const])
 
+    @overrides(Optimization)
     def defineVarSymbolic(self, name, symbolicEq):
-        # TODO: support symbolic variable addition
-        pass
+        raise NotImplementedError
 
     @overrides(Optimization)
     def setObjectiveCoeff(self, coeffs, sense):
@@ -564,4 +564,7 @@ class OptimizationCPLEX(Optimization):
 
         # def saveBasis(self):
         # self.cplexprob.start
+
+    def getVariableNames(self):
+        return self.cplexprob.variables.get_names()
 

@@ -20,9 +20,9 @@ def getOptimization(backend=DEFAULT_OPTIMIZER):
     :return: the :py:class:`~Optimization` object
     :raise InvalidConfigException: if the provided backend is not supported
     """
-    if backend == CPLEX:
+    if backend.lower() == CPLEX:
         return OptimizationCPLEX()
-    elif backend == GUROBI:
+    elif backend.lower() == GUROBI:
         return OptimizationGurobi()
     else:
         raise InvalidConfigException('Unsupported optimization backend')
