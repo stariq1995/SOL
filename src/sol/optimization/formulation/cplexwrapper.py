@@ -218,6 +218,7 @@ class OptimizationCPLEX(Optimization):
             var = []
             for pi in range(len(pptc[tc])):
                 var.append(varindex[self.xp(tc, pi)])
+                mults.append(1/tc.priority)
             mults = [1] * len(var)
             var.append(varindex[self.al(tc)])
             mults.append(-1)
