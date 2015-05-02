@@ -89,16 +89,6 @@ class OpenDaylightInterface(object):
         assert networkx.is_connected(G.to_undirected())
         return G
 
-    # def getFlowStats(self):
-    #     """
-    #     Get the flow statistics from OpenDaylight
-    #
-    #     :return:
-    #     """
-    #     r = self._session.get(self._buildURL('statistics') + '/flow')
-    #     checkErr(r)
-    #     return r.json()
-
     def getRoutes(self):
         """
         Returns currently installed routes in the network by querying OpenDaylight
@@ -237,20 +227,27 @@ class OpenDaylightInterface(object):
 
     def generateRoutes(self, pptc, daylightGraph, blockbits=5, convertoffset=0):
         """
+        Take the output of the optimization and generate OpenDaylight routes.
 
-        :param pptc: path per traffic class obtained from the optimization
-        :param daylightGraph: the openDaylight topology
+        :param pptc: path per traffic class obtained from the optimization.
+            .. warning::
+                Assumes that that all non-flow-carrying paths have been filtered
+                out.
+
+        :param daylightGraph: the OpenDaylight topology
         :param blockbits: How many bits define a block of IP adresses.
             The smaller the number, the more fine-grained splitting is.
+            Default is 5 bits.
 
         :param convertoffset: offset to use when converting paths.
             If you have topology that uses with nodeID of 0, set this to 1.
-        :return:
+        :return: a list of routes to be installed on the switches.
         """
         routeList = []
         for k in pptc:
             numpaths = len(pptc[k])
             if numpaths > 1:
+                # The complex case, need to compute a split between paths
                 assigned = self._computeSplit(k, pptc[k], blockbits, False)
                 for path in assigned:
                     sources, dests = zip(*assigned[path])
@@ -264,6 +261,7 @@ class OpenDaylightInterface(object):
                         routeList.append((convertPath(path, offset=convertoffset),
                                           daylightGraph, str(s), str(d)))
             else:
+                # Easy case, only one flow-carrying path
                 routeList.append((convertPath(pptc[k][0], offset=convertoffset),
                                   daylightGraph,
                                   k.srcprefix, k.dstprefix))
