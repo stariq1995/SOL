@@ -216,6 +216,7 @@ class OptimizationCPLEX(Optimization):
         varindex = dict(izip(v, range(len(v))))
         for tc in pptc:
             var = []
+            mults = []
             for pi in range(len(pptc[tc])):
                 var.append(varindex[self.xp(tc, pi)])
                 mults.append(1/tc.priority)
