@@ -30,4 +30,6 @@ def testGetNumNodes():
     assert topo.getNumNodes('switch') == 8
     assert topo.getNumNodes('middlebox') == 0
 
-
+def testServiceTypes():
+    # todo: test code that deals with service types & middleboxes
+    pass
