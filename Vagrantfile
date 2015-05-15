@@ -65,18 +65,29 @@ Vagrant.configure(2) do |config|
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
-    sudo apt-get update
-    sudo apt-get install -y python mininet python-pip
-    git clone https://gerrit.onosproject.org/onos
     sudo add-apt-repository ppa:webupd8team/java -y
     sudo apt-get update
-    sudo apt-get install oracle-java8-installer oracle-java8-set-default maven -y
-    cd onos
-    mvn clean install --skip-tests
+    sudo apt-get install -y debconf-utils
+    sudo debconf-set-selections <<< "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true"
+    sudo debconf-set-selections <<< "oracle-java8-installer shared/accepted-oracle-license-v1-1 seen true"
+    sudo apt-get install -y git-core python python-dev mininet python-pip oracle-java8-installer oracle-java8-set-default maven
+    
     mkdir Downloads Applications
+    cd Downloads
     wget http://download.nextag.com/apache/karaf/3.0.3/apache-karaf-3.0.3.tar.gz
     tar -zxvf apache-karaf-3.0.3.tar.gz -C ../Applications/
-    sed -i '/^featuresRepositories=/ s/$/,mvn:org.onosproject\/onos-features\/1.2.0-SNAPSHOT\/xml\/features/' ~/Applications/apache-karaf-3.0.3/etc/org.apache.karaf.features.cfg
+    cd $HOME
+    sudo sed -i '/^featuresRepositories=/ s/$/,mvn:org.onosproject\/onos-features\/1.2.0-SNAPSHOT\/xml\/features/' ~/Applications/apache-karaf-3.0.3/etc/org.apache.karaf.features.cfg
+
+    git clone https://gerrit.onosproject.org/onos
+    cd onos
+    mvn clean install -DskipTests=true
+
+    cd $HOME
+    wget https://nexus.opendaylight.org/content/groups/public/org/opendaylight/integration/distribution-karaf/0.2.3-Helium-SR3/distribution-karaf-0.2.3-Helium-SR3.tar.gz
+    tar xzf distribution-karaf-0.2.3-Helium-SR3.tar.gz
+
+    sudo pip install ryu
   SHELL
   config.vm.provision "shell", run: "always", inline: <<-SHELL
     export ONOS_ROOT=~/onos
@@ -84,9 +95,4 @@ Vagrant.configure(2) do |config|
     export ONOS_USER=vagrant
     export ONOS_GROUP=vagrant
   SHELL
-    # s.inline = "sudo pip install -e /vagrant/"
-  end
-  # config.vm.provision "docker" do |d|
-  #   d.pull_images "sdnhub/onos"
-  # end
 end
