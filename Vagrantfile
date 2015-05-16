@@ -87,7 +87,7 @@ Vagrant.configure(2) do |config|
     wget https://nexus.opendaylight.org/content/groups/public/org/opendaylight/integration/distribution-karaf/0.2.3-Helium-SR3/distribution-karaf-0.2.3-Helium-SR3.tar.gz
     tar xzf distribution-karaf-0.2.3-Helium-SR3.tar.gz
 
-    sudo pip install ryu
+    sudo pip install ryu networkx requests netaddr numpy
   SHELL
   config.vm.provision "shell", run: "always", inline: <<-SHELL
     export ONOS_ROOT=~/onos
