@@ -1,0 +1,78 @@
+[
+    {
+        "nodes": [
+            0, 
+            1
+        ], 
+        "numFlows": 1.0, 
+        "useMBoxes": [
+            0, 
+            1
+        ], 
+        "PathWithMbox": true
+    }, 
+    {
+        "nodes": [
+            0, 
+            1, 
+            2
+        ], 
+        "numFlows": 1.0, 
+        "useMBoxes": [
+            0, 
+            1
+        ], 
+        "PathWithMbox": true
+    }, 
+    {
+        "nodes": [
+            1, 
+            2, 
+            0
+        ], 
+        "numFlows": 1.0, 
+        "useMBoxes": [
+            1, 
+            2
+        ], 
+        "PathWithMbox": true
+    }, 
+    {
+        "nodes": [
+            1, 
+            2
+        ], 
+        "numFlows": 1.0, 
+        "useMBoxes": [
+            1, 
+            2
+        ], 
+        "PathWithMbox": true
+    }, 
+    {
+        "nodes": [
+            2, 
+            1, 
+            0
+        ], 
+        "numFlows": 1.0, 
+        "useMBoxes": [
+            2, 
+            0
+        ], 
+        "PathWithMbox": true
+    }, 
+    {
+        "nodes": [
+            2, 
+            0, 
+            1
+        ], 
+        "numFlows": 1.0, 
+        "useMBoxes": [
+            2, 
+            0
+        ], 
+        "PathWithMbox": true
+    }
+]

@@ -1,0 +1,80 @@
+{
+    "devices": [
+        {
+            "available": true, 
+            "chassisId": "1", 
+            "sw": "2.0.2", 
+            "hw": "Open vSwitch", 
+            "annotations": {
+                "channelId": "192.168.56.101:39354", 
+                "protocol": "OF_10"
+            }, 
+            "mfr": "Nicira, Inc.", 
+            "role": "MASTER", 
+            "serial": "None", 
+            "type": "SWITCH", 
+            "id": "of:0000000000000001"
+        }, 
+        {
+            "available": true, 
+            "chassisId": "4", 
+            "sw": "2.0.2", 
+            "hw": "Open vSwitch", 
+            "annotations": {
+                "channelId": "192.168.56.101:39357", 
+                "protocol": "OF_10"
+            }, 
+            "mfr": "Nicira, Inc.", 
+            "role": "MASTER", 
+            "serial": "None", 
+            "type": "SWITCH", 
+            "id": "of:0000000000000004"
+        }, 
+        {
+            "available": true, 
+            "chassisId": "5", 
+            "sw": "2.0.2", 
+            "hw": "Open vSwitch", 
+            "annotations": {
+                "channelId": "192.168.56.101:39358", 
+                "protocol": "OF_10"
+            }, 
+            "mfr": "Nicira, Inc.", 
+            "role": "MASTER", 
+            "serial": "None", 
+            "type": "SWITCH", 
+            "id": "of:0000000000000005"
+        }, 
+        {
+            "available": true, 
+            "chassisId": "2", 
+            "sw": "2.0.2", 
+            "hw": "Open vSwitch", 
+            "annotations": {
+                "channelId": "192.168.56.101:39355", 
+                "protocol": "OF_10"
+            }, 
+            "mfr": "Nicira, Inc.", 
+            "role": "MASTER", 
+            "serial": "None", 
+            "type": "SWITCH", 
+            "id": "of:0000000000000002"
+        }, 
+        {
+            "available": true, 
+            "chassisId": "3", 
+            "sw": "2.0.2", 
+            "hw": "Open vSwitch", 
+            "annotations": {
+                "channelId": "192.168.56.101:39356", 
+                "protocol": "OF_10"
+            }, 
+            "mfr": "Nicira, Inc.", 
+            "role": "MASTER", 
+            "serial": "None", 
+            "type": "SWITCH", 
+            "id": "of:0000000000000003"
+        }
+    ]
+}
+
