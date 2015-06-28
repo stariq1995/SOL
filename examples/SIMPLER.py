@@ -19,7 +19,7 @@ from sol.optimization.topology.provisioning import generateTrafficClasses
 
 
 if __name__=='__main__':
-	topo=generators.generateCompleteTopology(3)
+	topo = generators.extractTopo('192.168.56.101')
 	generators.forceSwitchLabels(topo)
 	
 	for node,data in topo.nodes():

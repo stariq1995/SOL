@@ -120,4 +120,4 @@ if __name__ == '__main__':
 
     # Print the objective function
     print opt.getSolvedObjective()
-    print opt.getPathFractions()
+    print opt.getPathFractions(pptc)

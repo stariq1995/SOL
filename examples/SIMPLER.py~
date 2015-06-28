@@ -122,7 +122,7 @@ if __name__=='__main__':
 	print "Extracted from dump :-"
 	for tc in tc_from_dump:
 		print tc
-	for paths in paths_from_dump
+	for paths in paths_from_dump:
 		print paths
 	
 	
