@@ -12,7 +12,7 @@ import org.onosproject.net.intent.PathIntent;
 import org.onosproject.net.intent.SolIntent;
 //import org.onosproject.net.provider.ProviderId;
 import org.onosproject.net.resource.link.LinkResourceAllocations;
-import org.onosproject.net.intent.SolIntent;
+//import org.onosproject.net.intent.SolIntent;
 import org.onosproject.sol.SolToOnos;
 
 //import java.util.ArrayList;

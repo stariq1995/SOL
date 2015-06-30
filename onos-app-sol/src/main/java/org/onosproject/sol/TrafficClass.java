@@ -1,5 +1,5 @@
 package org.onosproject.sol;
-import java.util.List;
+
 public class TrafficClass 
 {
 	String srcAppPorts,dstAppPorts,srcIPPrefix,dstIPPrefix,name;

@@ -24,11 +24,12 @@ import org.slf4j.Logger;
 import static org.slf4j.LoggerFactory.getLogger;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
-import org.onlab.packet.Ethernet;
+//import org.onlab.packet.Ethernet;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.Host;
-import org.onosproject.net.HostId;
+import org.onosproject.net.ConnectPoint;
+//import org.onosproject.net.Host;
+//import org.onosproject.net.HostId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -36,22 +37,28 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.host.HostService;
-import org.onosproject.net.intent.HostToHostIntent;
+import org.onosproject.net.intent.SolIntent;
 import org.onosproject.net.intent.IntentService;
-import org.onosproject.net.packet.DefaultOutboundPacket;
-import org.onosproject.net.packet.InboundPacket;
-import org.onosproject.net.packet.OutboundPacket;
-import org.onosproject.net.packet.PacketContext;
-import org.onosproject.net.packet.PacketPriority;
-import org.onosproject.net.packet.PacketProcessor;
-import org.onosproject.net.packet.PacketService;
+//import org.onosproject.net.packet.DefaultOutboundPacket;
+//import org.onosproject.net.packet.InboundPacket;
+//import org.onosproject.net.packet.OutboundPacket;
+//import org.onosproject.net.packet.PacketContext;
+//import org.onosproject.net.packet.PacketPriority;
+//import org.onosproject.net.packet.PacketProcessor;
+//import org.onosproject.net.packet.PacketService;
+//import org.onosproject.net.intent
 import org.onosproject.net.topology.TopologyService;
+import java.util.ArrayList;
+import java.io.IOException;
+import org.json.simple.parser.ParseException;
+import java.util.Iterator;
+
 
 /**
  * Skeletal ONOS application component.
  */
 @Component(immediate = true)
-public class IntentSol {
+public class SolApp {
 
     private final Logger log = getLogger(getClass());
 
@@ -61,8 +68,8 @@ public class IntentSol {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected TopologyService topologyService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected PacketService packetService;
+    //@Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    //protected PacketService packetService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected IntentService intentService;
@@ -73,32 +80,62 @@ public class IntentSol {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected FlowRuleService flowRuleService;
 
-    private ReactivePacketProcessor processor = new ReactivePacketProcessor();
+    //private ReactivePacketProcessor processor = new ReactivePacketProcessor();
     private ApplicationId appId;
+    private ArrayList<TrafficClass> trafficClassList = new ArrayList<TrafficClass>();
 
     @Activate
     public void activate() {
-        appId = coreService.registerApplication("org.onosproject.ifwd");
+        appId = coreService.registerApplication("org.onosproject.sol");
 
-        packetService.addProcessor(processor, PacketProcessor.ADVISOR_MAX + 2);
+        //packetService.addProcessor(processor, PacketProcessor.ADVISOR_MAX + 2);
+        ParseSol parseSol = new ParseSol();
+        try {
+        	trafficClassList = parseSol.getTrafficClassesFromSol();
+        } catch(IOException | ParseException e) {
+        	log.info("Exception occurred while Parsing SOL generated JSON files. Not activating app.");
+        	return;
+        }
+        //TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
+        //selector.matchEthType(Ethernet.TYPE_IPV4);
+        TrafficSelector selector = DefaultTrafficSelector.emptySelector();
+        TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
+        Iterator<TrafficClass> tc_iter = trafficClassList.iterator();
+        ConnectPoint srcId, dstId;
+        SolToOnos S2O = new SolToOnos();
+        
+        while(tc_iter.hasNext()) {
+        	TrafficClass tc = tc_iter.next();
+        	srcId = new ConnectPoint(S2O.toDeviceId(tc.src), PortNumber.ALL);
+        	dstId = new ConnectPoint(S2O.toDeviceId(tc.dst), PortNumber.ALL);
+        	SolIntent intent = SolIntent.builder()
+                    .appId(appId)
+                    .ingressPoint(srcId)
+                    .egressPoint(dstId)
+                    .selector(selector)
+                    .treatment(treatment)
+                    .priority(100)
+                    .build();
 
-        TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        selector.matchEthType(Ethernet.TYPE_IPV4);
-        packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
-
-        log.info("Started");
+            intentService.submit(intent);
+        }
+        	
+         //packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
+        System.out.println("Activated!! See if the intents have installed.");
+        log.info("Started. All intents installed!");
     }
 
     @Deactivate
     public void deactivate() {
-        packetService.removeProcessor(processor);
-        processor = null;
+        //packetService.removeProcessor(processor);
+        //processor = null;
+    	System.out.println("Deactivated!! Intents would still be there!");
         log.info("Stopped");
     }
     /**
      * Packet processor responsible for forwarding packets along their paths.
      */
-    private class ReactivePacketProcessor implements PacketProcessor {
+   /* private class ReactivePacketProcessor implements PacketProcessor {
 
         @Override
         public void process(PacketContext context) {
@@ -154,21 +191,21 @@ public class IntentSol {
         packetService.emit(packet);
         log.info("sending packet: {}", packet);
     }
-
+	
     // Install a rule forwarding the packet to the specified port.
-    private void setUpConnectivity(PacketContext context, HostId srcId, HostId dstId) {
+    private void setUpConnectivity(PacketContext context, ConnectPoint srcId, ConnectPoint dstId) {
         TrafficSelector selector = DefaultTrafficSelector.emptySelector();
         TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
 
-        HostToHostIntent intent = HostToHostIntent.builder()
+        SolIntent intent = SolIntent.builder()
                 .appId(appId)
-                .one(srcId)
-                .two(dstId)
+                .ingressPoint(srcId)
+                .egressPoint(dstId)
                 .selector(selector)
                 .treatment(treatment)
                 .build();
 
         intentService.submit(intent);
-    }
+    }*/
 
 }

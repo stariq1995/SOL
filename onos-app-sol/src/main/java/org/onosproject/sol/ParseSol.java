@@ -15,8 +15,8 @@ public class ParseSol
 	{
 		
 		JSONParser parser = new JSONParser();
-		Object obj1 = parser.parse(new FileReader("/home/dipayan/onos/apps/onos-app-sol/src/main/java/org/onosproject/sol/f1.json"));
-		Object obj2 = parser.parse(new FileReader("/home/dipayan/onos/apps/onos-app-sol/src/main/java/org/onosproject/sol/f2.json"));
+		Object obj1 = parser.parse(new FileReader("$ONOS_ROOT/apps/onos-app-sol/src/main/java/org/onosproject/sol/f1.json"));
+		Object obj2 = parser.parse(new FileReader("$ONOS_ROOT/onos/apps/onos-app-sol/src/main/java/org/onosproject/sol/f2.json"));
 		JSONArray arr1 = (JSONArray)obj1;
 		JSONArray arr2 = (JSONArray)obj2;
 		ArrayList<TrafficClass> tclist = new ArrayList<TrafficClass>(); 

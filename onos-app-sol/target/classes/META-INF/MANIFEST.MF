@@ -1,0 +1,34 @@
+Manifest-Version: 1.0
+Bnd-LastModified: 1435692020742
+Build-Jdk: 1.8.0_45
+Built-By: dipayan
+Bundle-ClassPath: jars/json-simple-1.1.1.jar
+Bundle-Description: App to implement SOL
+Bundle-License: http://www.apache.org/licenses/LICENSE-2.0.txt
+Bundle-ManifestVersion: 2
+Bundle-Name: onos-app-sol
+Bundle-SymbolicName: com.googlecode.json-simple
+Bundle-Version: 1.3.0.SNAPSHOT
+Created-By: Apache Maven Bundle Plugin
+Embed-Dependency: json-simple
+Embed-Directory: jars
+Embed-Transitive: true
+Embedded-Artifacts: jars/json-simple-1.1.1.jar;g="com.googlecode.json-si
+ mple";a="json-simple";v="1.1.1"
+Export-Package: org.json.simple;version="1.1.1",org.json.simple.parser;v
+ ersion="1.1.1"
+Require-Capability: osgi.service;effective:=active;filter:="(objectClass
+ =org.onosproject.net.flow.FlowRuleService)",osgi.service;effective:=act
+ ive;filter:="(objectClass=org.onosproject.net.host.HostService)",osgi.s
+ ervice;effective:=active;filter:="(objectClass=org.onosproject.net.topo
+ logy.TopologyService)",osgi.service;effective:=active;filter:="(objectC
+ lass=org.onosproject.net.intent.IntentService)",osgi.service;effective:
+ =active;filter:="(objectClass=org.onosproject.core.CoreService)",osgi.s
+ ervice;effective:=active;filter:="(objectClass=org.onosproject.net.topo
+ logy.PathService)",osgi.service;effective:=active;filter:="(objectClass
+ =org.onosproject.net.resource.link.LinkResourceService)",osgi.service;e
+ ffective:=active;filter:="(objectClass=org.onosproject.net.intent.Inten
+ tExtensionService)",osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=1.2))"
+Service-Component: OSGI-INF/org.onosproject.sol.SolApp.xml,OSGI-INF/org.
+ onosproject.net.intent.impl.compiler.SolIntentCompiler.xml
+Tool: Bnd-2.4.0.201411031534
