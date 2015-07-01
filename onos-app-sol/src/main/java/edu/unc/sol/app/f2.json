@@ -1,0 +1,257 @@
+[
+  {
+    "nodes": [
+      3,
+      4,
+      2
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      3,
+      4
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      0,
+      4,
+      1
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      0,
+      4
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      0,
+      1,
+      2
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      1,
+      2
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      1,
+      4
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      1,
+      4
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      0,
+      3
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      0,
+      3
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      2,
+      3,
+      0
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      2,
+      0
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      0,
+      4
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      0,
+      4
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      2,
+      4,
+      1
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      2,
+      4
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      1,
+      0
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      1,
+      0
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      3,
+      2,
+      4
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      2,
+      4
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      2,
+      1,
+      3
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      2,
+      1
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      1,
+      3,
+      2
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      1,
+      3
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      4,
+      3,
+      0
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      4,
+      3
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      2,
+      0,
+      4
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      2,
+      0
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      1,
+      3
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      1,
+      3
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      4,
+      3,
+      1
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      3,
+      1
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      3,
+      1,
+      0
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      1,
+      0
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      4,
+      0,
+      2
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      0,
+      2
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      3,
+      4,
+      1
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      3,
+      4
+    ],
+    "PathWithMbox": true
+  },
+  {
+    "nodes": [
+      4,
+      2,
+      3
+    ],
+    "numFlows": 1.0,
+    "useMBoxes": [
+      2,
+      3
+    ],
+    "PathWithMbox": true
+  }
+]
