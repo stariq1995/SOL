@@ -1,56 +1,81 @@
 #!/usr/bin/python
-import urllib2
 import json
+import httplib2
+import sys
+import errno
+from collections import namedtuple
 import networkx as nx
-from networkx.readwrite import json_graph
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-def device_to_num(device_list,device_name):
+class Extracttopo:
+    
+    def __init__(self):
+        self.g = nx.Graph()
+        
+    def Httpcon(self,uid,password):
+        h = httplib2.Http(".cache")
+        h.add_credentials(uid, password)
+        return h
 
-	chassisid=0
-	for device in device_list:
-		if device['id'] == device_name:
-			chassisid = int(device['chassisId'])
-			break
-	return chassisid-1 
+    def getODLTopoDict(self,h):
+        odl_ip = "127.0.0.1"
+        odl_port = "8080";
+        request_string = "http://"+odl_ip+":"+odl_port+"/controller/nb/v2/topology/default"
+        resp,content =  h.request(request_string,"GET");
+        status = resp['status'];
+        if status != '200':
+            err_str =  'Error in HTTP GET ('+str(resp['content-location'])+') error-code:'+str(status)
+            tkMessageBox.showerror("The Cable Guy", err_str)
+            sys.exit(0)
+            
+        edgeProperties = json.loads(content)
+        odlEdges = edgeProperties['edgeProperties']
+        EdgeObject = namedtuple("EdgeObject","dpid portnum")
+        ODLDict = { }
+        
+        for edge in odlEdges:
+            ODLkey = EdgeObject(dpid = edge['edge']['headNodeConnector']['node']['id'],
+                                portnum = edge['edge']['headNodeConnector']['id'])
+            ODLval = EdgeObject(dpid = edge['edge']['tailNodeConnector']['node']['id'],
+                                portnum = edge['edge']['tailNodeConnector']['id'])
+            ODLDict[ODLkey] = ODLval
+            
+        return ODLDict
+    
+    def macToNode(self,mac):
+        nums = mac.split(':')
+        return int(nums[7],16) + int(nums[6],16) 
+    
+    def getGraph(self,ODLDict):
+        # g.add_edge(1,2)
+        for node1 in ODLDict.keys():
+            node2 = ODLDict[node1]
+            print "%d->%d"%(self.macToNode(node1.dpid), self.macToNode(node2.dpid))
+            self.g.add_edge(self.macToNode(node1.dpid), self.macToNode(node2.dpid))
 
-def extractGraph(controllerIP):
-
-	devices_dict = json.load(urllib2.urlopen("http://%s:8181/onos/v1/devices" %controllerIP))
-	links_dict = json.load(urllib2.urlopen("http://%s:8181/onos/v1/links" %controllerIP))
-	hosts_dict = json.load(urllib2.urlopen("http://%s:8181/onos/v1/hosts" %controllerIP))
-	device_list = devices_dict['devices']
-	link_list = links_dict['links']
-	host_list = hosts_dict['hosts']
-
-	no_of_devs = len(device_list)
-
-	Grph=dict()
-	Grph['directed'] = True
-	Grph['graph'] = [['name','complete_graph(%d)'%(no_of_devs)]]
-	Grph['nodes'] = []
-
-	for device in device_list:
-		Grph['nodes'].append({'id' : (int(device['chassisId']) - 1)})
-
-	Grph['links'] = []
-
-	for link in link_list:		
-		Grph['links'].append({'source' : device_to_num(device_list,link['src']['device']),
-							  'target' : device_to_num(device_list,link['dst']['device'])}) 
-	
-	Grph['multigraph'] = False
-	G = json_graph.node_link_graph(json.loads(json.dumps(Grph,indent=4)))
-	#plt.show(nx.draw(G))
-	return G
+        return self.g
+    
+    def main(self):
+        h = self.Httpcon('admin','admin')
+        ODLDict = self.getODLTopoDict(h)
+        
+        '''for k in ODLDict.keys():
+            print "%s : %s"%(k,ODLDict[k])
+        '''
+        self.getGraph(ODLDict)
+        nx.draw(self.g)
+        plt.show()
+        
+if __name__ == "__main__":
+    topo = Extracttopo()
+    topo.main()
+    
+    
+            
+        
+            
+        
 
 
 
-
-
-
-
-
-
-
-
+    
