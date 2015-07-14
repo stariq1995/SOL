@@ -10,7 +10,7 @@ import networkx as nx
 
 from sol.optimization.topology.topology import Topology
 
-from sol.optimization.topology import extracttopo
+from sol.optimization.topology.extracttopo import Extracttopo
 
 
 def forceSwitchLabels(topology):
@@ -87,10 +87,11 @@ def generateCompleteTopology(n, name='complete'):
     return t
 
 def extractTopo(controllerIP='localhost',name='onos-topo'):
-	G = extracttopo.extractGraph(controllerIP)
-	t = Topology(name,G)
-	forceSwitchLabels(t)
-	return t
+    topo = Extracttopo()
+    G = topo.getGraph(controllerIP)
+    t = Topology(name,G)
+    forceSwitchLabels(t)
+    return t
 	
 
 

@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     # Let's create a topology first, as an example
     # ============================================
-    topo = generators.extractTopo('192.168.56.101')
+    topo = generators.extractTopo()
     # label our switches
     generators.forceSwitchLabels(topo)
     # For the sake of example, set middleboxes everywhere
