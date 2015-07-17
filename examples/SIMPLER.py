@@ -14,9 +14,7 @@ from sol.optimization.path.select import chooserand
 from sol.optimization.topology import generators
 from sol.optimization.topology import provisioning
 from sol.optimization.topology.provisioning import generateTrafficClasses
-
-
-
+from sol.sdn.controller_new import OpenDayLightController
 
 if __name__=='__main__':
 	topo = generators.extractTopo()
@@ -92,10 +90,23 @@ if __name__=='__main__':
 									  
 	opt.solve()
 
+	
 	gpf=opt.getPathFractions(pptc)
+	
+	#odl = OpenDayLightController()
+	#odl.pushODLPath(pptc,gpf)
+
+	'''
+	r = input("Do you want to delete all flows?")
+	if r=='y' :
+		odl.delFlow(flowUrlList) 
+	'''
+	'''
 	print gpf
+	
 	list_of_tc=[]
 	list_of_paths=[]
+	
 	print "\nBefore optimization :-"
 	for tc,paths in pptc.iteritems():
 		list_of_tc.append(tc.__dict__)
@@ -112,7 +123,7 @@ if __name__=='__main__':
 		for path in gpf[tc]:
 			print path.encode()
 			list_of_paths.append(path.encode())
-
+			
 	json.dump(list_of_tc,open('f1.json','w'),indent=4)
 	json.dump(list_of_paths,open('f2.json','w'),indent=4)
 	
@@ -124,7 +135,7 @@ if __name__=='__main__':
 		print tc
 	for paths in paths_from_dump:
 		print paths
-	
+	'''
 	
 	
 	
