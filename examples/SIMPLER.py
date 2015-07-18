@@ -14,7 +14,7 @@ from sol.optimization.path.select import chooserand
 from sol.optimization.topology import generators
 from sol.optimization.topology import provisioning
 from sol.optimization.topology.provisioning import generateTrafficClasses
-from sol.sdn.controller_new import OpenDayLightController
+from sol.sdn.controller_lithium import OpenDayLightController
 
 if __name__=='__main__':
 	topo = generators.extractTopo()
@@ -93,8 +93,8 @@ if __name__=='__main__':
 	
 	gpf=opt.getPathFractions(pptc)
 	
-	#odl = OpenDayLightController()
-	#odl.pushODLPath(pptc,gpf)
+	odl = OpenDayLightController()
+	odl.pushODLPath(pptc,gpf)
 
 	'''
 	r = input("Do you want to delete all flows?")
