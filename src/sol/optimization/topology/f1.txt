@@ -1,0 +1,45 @@
+{
+    "flow": [
+        {
+            "id": "1",
+            "match": {
+                "in-port": "4",
+                "ethernet-match": {
+                    "ethernet-type": {
+                        "type": "2048"
+                    }
+                },
+                "ip-match": {
+                    "ip-proto": "ipv4"
+                },
+                "ipv4-source": "10.0.0.1/32",
+                "ipv4-destination": "10.0.0.2/32"
+            },
+            "instructions": {
+                "instruction": [
+                    {
+                        "order": "6555"
+                    },
+                    {
+                        "order": "0",
+                        "apply-actions": {
+                            "action": [
+                                {
+                                    "output-action": {
+                                        "output-node-connector": "2"
+                                    },
+                                    "order": "0"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "flow-name": "sampleFlow",
+            "installHw": "false",
+            "priority": "14856",
+            "idle-timeout": "12000",
+            "table_id": "0"
+        }
+    ]
+}
