@@ -90,7 +90,7 @@ def computeGravityTrafficMatrixPerIE(iepairs, totalFlows, populationDict):
 
 
 def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
-                           classBytesDict):
+                           classBytesDict, topology):
     """
     Generate traffic classes from given ingress-egress pairs and traffic matrix
 
@@ -112,6 +112,7 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
             classBytesDict = {'web': 100, 'ssh': 200, 'voip': 200}
 
         means that each web flow is 100 bytes, each ssh flow is 200 bytes and so on.
+    :param topology: A Networkx graph object that stores the entire topology information.
     :return: a list of traffic classes
     """
     trafficClasses = []
@@ -122,7 +123,8 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
             volflows = fraction * trafficMatrix[ie]
             volbytes = volflows * classBytesDict[classname]
             trafficClasses.append(TrafficClass(index, classname, i, e, volflows,
-                                               volbytes))
+                                               volbytes, srcIPPrefix = topology.edge[i][e]['srcIPPrefix'],
+                                               dstIPPrefix = topology.edge[i][e]['dstIPPrefix']))
             index += 1
     return trafficClasses
 

@@ -5,5 +5,7 @@ encoding//src/sol/optimization/formulation/optbase.py=utf-8
 encoding//src/sol/optimization/path/generate.py=utf-8
 encoding//src/sol/optimization/topology/generators.py=utf-8
 encoding//src/sol/optimization/topology/provisioning.py=utf-8
+encoding//src/sol/optimization/topology/topology.py=utf-8
 encoding//src/sol/optimization/topology/traffic.py=utf-8
 encoding//src/sol/sdn/controller.py=utf-8
+encoding//src/sol/sdn/mnTopo.py=utf-8

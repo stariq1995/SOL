@@ -5,7 +5,7 @@ import itertools
 import json
 import networkx
 import re
-
+import time
 from sol.optimization.formulation import getOptimization
 from sol.optimization.formulation.funcs import defaultLinkFunc, defaultLinkFuncNoNormalize
 from sol.optimization.path.generate import generatePathsPerTrafficClass
@@ -17,6 +17,7 @@ from sol.optimization.topology.provisioning import generateTrafficClasses
 from sol.sdn.controller_lithium import OpenDayLightController
 
 if __name__=='__main__':
+	start_time = time.time()
 	topo = generators.extractTopo()
 	generators.forceSwitchLabels(topo)
 	
@@ -25,26 +26,26 @@ if __name__=='__main__':
 		topo.setServiceTypes(node,['switch','fw','ids'])
 	#======Data============
 	iePairs=provisioning.generateIEpairs(topo)
-	print "All Ingress-Egress pairs are :-"
-	print iePairs
+	#print "All Ingress-Egress pairs are :-"
+	#print iePairs
 	trafficMatrix=provisioning.computeUniformTrafficMatrixPerIE(iePairs, 10 ** 4)
-	trafficClasses=generateTrafficClasses(iePairs,trafficMatrix,{'Everything':1},{'Everything':200})
-	print "All Traffic Classes :-"
-	print trafficClasses
+	trafficClasses=generateTrafficClasses(iePairs,trafficMatrix,{'Everything':1},{'Everything':200},topo._graph)
+	#print "All Traffic Classes :-"
+	#print trafficClasses
 	for t in trafficClasses:
 		t.cpuCost=10
 	maxCPUCap=provisioning.computeMaxIngressLoad(trafficClasses,{t:t.cpuCost for t in trafficClasses})
-	print "Maximum Node capacities = %d"%(maxCPUCap)
+	#print "Maximum Node capacities = %d"%(maxCPUCap)
 	nodeCaps=dict()
 	nodeCaps['cpu']={node:maxCPUCap*2 for node,data in topo.nodes() if 'fw' or 'ids' in topo.getServiceTypes(node)}
-	print "All CPU Capacities :-"
-	print nodeCaps['cpu']
+	#print "All CPU Capacities :-"
+	#print nodeCaps['cpu']
 	nodeCaps['tcam']={node:1000 for node,data in topo.nodes()}
-	print "All Node TCAM capacities :-"
-	print nodeCaps['tcam']
+	#print "All Node TCAM capacities :-"
+	#print nodeCaps['tcam']
 	linkCaps=provisioning.provisionLinks(topo,trafficClasses,3)
-	print "Link Capacities :-"
-	print linkCaps
+	#print "Link Capacities :-"
+	#print linkCaps
 	
 	#==========Conditions============
 	
@@ -71,12 +72,12 @@ if __name__=='__main__':
 									  networkx.diameter(topo.getGraph())*1.5,
 									  1000,functools.partial(useMboxModifier, chainLength=2))
 
-	print "Before choosing :-"
-	print pptc							
+	#print "Before choosing :-"
+	#print pptc							
 	
 	pptc=chooserand(pptc,5)
-	print "After choosing :-"
-	print pptc
+	#print "After choosing :-"
+	#print pptc
 	
 	opt.addDecisionVariables(pptc)
 	opt.addBinaryVariables(pptc,topo,['path','node'])
@@ -90,12 +91,29 @@ if __name__=='__main__':
 									  
 	opt.solve()
 
+	tclist=[]
+	for tc,path in pptc.iteritems():
+		tclist.append(tc)
+		#print tc
 	
 	gpf=opt.getPathFractions(pptc)
 	
 	odl = OpenDayLightController()
 	odl.pushODLPath(pptc,gpf)
-
+	#print odl.pathDict
+	'''
+	pathList = odl.generateAllPaths(pptc,gpf)
+	for p in pathList:
+		if type(p[0]) is list:
+			print p[0][0]._nodes
+		else:
+			print p[0]._nodes
+	'''
+	
+	#ass = odl._computeSplit(k = tclist[0], paths = gpf[tclist[0]] , blockbits = 5, mindiff = False)
+	#print ass
+	
+	print("Execution Time = %s secs" % (time.time() - start_time))
 	'''
 	r = input("Do you want to delete all flows?")
 	if r=='y' :

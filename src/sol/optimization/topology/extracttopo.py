@@ -16,18 +16,25 @@ class ExtractTopo:
         self.httpreq.add_credentials(uid, password)
         self.controllerIp = controllerIp
         self.controllerPort = controllerPort
+        self.topoDataODL = {}
+        self.nodeDataODL = {}
     
-    def getJsonDataFromODL(self,obj):
-        url = self.odlUrl + obj
+    def getTopoDataFromODL(self):
+        url = self.odlUrl + 'operational/network-topology:network-topology/'
         #print url
         resp, content = self.httpreq.request(url,'GET')
-        content = json.loads(content)
-        return content
+        self.topoDataODL = json.loads(content)
+
+    def getNodeDataFromODL(self):
+        url = self.odlUrl + 'operational/opendaylight-inventory:nodes/'
+        resp, content = self.httpreq.request(url,'GET')
+        self.nodeDataODL = json.loads(content)
         
     def parseNode(self):
-        nodeobj = self.getJsonDataFromODL('operational/opendaylight-inventory:nodes/')
+        #nodeobj = self.getTopoDataFromODL()
+        self.getNodeDataFromODL()
         nodelist={}
-        nodelist = nodeobj['nodes']['node']
+        nodelist = self.nodeDataODL['nodes']['node']
         allswitch=[]
         for node in nodelist:
             switch = {}
@@ -53,10 +60,62 @@ class ExtractTopo:
         #print allswitch
         return allswitch
     
-    def parseTopology(self):
-        topobj = self.getJsonDataFromODL('operational/network-topology:network-topology/')
-        edgelist = (topobj['network-topology']['topology'])[0]['link']
+    def parseHosts(self):
+        hostList = []
+        #print json.dumps(self.topoDataODL,indent=4)
+        nodelist = (self.topoDataODL['network-topology']['topology'])[0]['node']
         
+        for node in nodelist:
+            host={}
+            host['id'] = node['node-id']
+            if host['id'].find('host') == -1 :
+                continue
+            host['ip'] = node["host-tracker-service:addresses"][0]['ip']
+            host['toSwitch'] = self.getNodeId(node["host-tracker-service:attachment-points"][0]['tp-id'])
+            host['toSwitchPort'] = self.getPortNum(node["host-tracker-service:attachment-points"][0]['tp-id'])
+            host['mac'] =  node["host-tracker-service:addresses"][0]['mac']
+            hostList.append(host)
+        return hostList
+            
+    def getNodeId(self,id):
+        temp = id.split(':')
+        return temp[0]+':'+temp[1]
+    
+    def getIPPrefix(self,nodeId,hostList):
+        hosts = self.getAllHostsOfSwitch(nodeId, hostList)
+        hostIp = []
+        ipPrefix = '0.0.0.0/0'
+        cidr = 32
+        for host in hosts:
+            ip = host['ip']
+            hostIp.append(ip)
+            temp = ip.split('.')
+            if int(temp[0]) >= 0 and int(temp[0]) < 128:
+                if cidr > 8:
+                    cidr = 8
+                    ipPrefix = temp[0]+'.0.0.0/'+str(cidr)
+            elif int(temp[0]) >= 128 and int(temp[0]) < 192:
+                if cidr > 16:
+                    cidr = 16
+                    ipPrefix = temp[0]+'.'+temp[1]+'.0.0/'+str(cidr)
+            elif int(temp[0]) >= 192 and int(temp[0]) < 224:
+                if cidr > 24:
+                    cidr = 24
+                    ipPrefix = temp[0]+'.'+temp[1]+'.'+temp[2]+'.0/'+str(cidr)
+        return ipPrefix
+        
+    def getAllHostsOfSwitch(self,nodeId,hostList):
+        attachedHostList = []
+        for host in hostList:
+            if host['toSwitch'] == nodeId:
+                attachedHostList.append(host)
+        return attachedHostList
+    
+    def parseTopology(self):
+        self.getTopoDataFromODL()
+        #print json.dumps(topobj,indent=4)
+        edgelist = (self.topoDataODL['network-topology']['topology'])[0]['link']
+        hostList = self.parseHosts()
         alledges=[]
         for i in edgelist:
             edge={}
@@ -71,6 +130,8 @@ class ExtractTopo:
             edge['dstnode'] = self.getNodeNum(i['destination']['dest-node']) 
             edge['srcport'] = self.getPortNum(i['source']['source-tp'])
             edge['dstport'] = self.getPortNum(i['destination']['dest-tp'])
+            edge['srcIPPrefix'] = self.getIPPrefix(edge['srcnode_odl'], hostList)
+            edge['dstIPPrefix'] = self.getIPPrefix(edge['destnode_odl'], hostList)
             alledges.append(edge)
             
         return alledges
@@ -95,6 +156,8 @@ class ExtractTopo:
             edge_rev['srcnode'] = edge['dstnode'] 
             edge_rev['dstport'] = edge['srcport']
             edge_rev['srcport'] = edge['dstport']
+            edge_rev['srcIPPrefix'] = edge['dstIPPrefix']
+            edge_rev['dstIPPrefix'] = edge['srcIPPrefix']
             l = (v,u,edge_rev)
             edge_list.append(l)
         
@@ -121,8 +184,14 @@ class ExtractTopo:
         for edge in edgelist:
             print edge
         '''
-        G = self.getGraph()
-        plt.show(nx.draw(G))
+        #G = self.getGraph()
+        #plt.show(nx.draw(G))
+        #self.parseTopology()
+        #self.getTopoDataFromODL()
+        #hostList = self.parseHosts()
+        #self.getIPPrefix('openflow:1', hostList)
+        
+        
             
 
 if __name__ == '__main__':

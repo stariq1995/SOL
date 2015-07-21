@@ -3,7 +3,9 @@ import httplib2
 import json
 from sol.optimization.topology.extracttopo import ExtractTopo
 import networkx as nx
-from networkx.release import url
+import netaddr
+from collections import defaultdict
+import itertools
 
 class OpenDayLightController(object):
     
@@ -18,18 +20,115 @@ class OpenDayLightController(object):
         self.odlurl = 'http://'+controllerIP+':'+controllerPort+'/restconf'
         self.topo = ExtractTopo(controllerIp = controllerIP)
         self.G = self.topo.getGraph()
-        
-    def generateAllPaths(self,pptc,optPaths):
-        optPath=[]
-        paths = []
-        for tc,path in pptc.iteritems():
-            paths.append(optPaths[tc][0]._nodes)
-        return paths
+        self.pathDict={}
+        self.pptc={}
     
-    def pushODLPath(self,pptc,optPaths):
+    def filterPaths(self,pptc,optPaths):
+        for tc,path in pptc.iteritems():
+            self.pptc[tc] = optPaths[tc]
+        
+
+    def generateAllPaths(self,pptc,optPaths,blockbits=5):
+        pathList = []
+        self.filterPaths(pptc,optPaths)
+        pptc = self.pptc
+        for tc in pptc:
+            numpath = len(pptc[tc])
+            if numpath <= 1:
+                pathList.append((pptc[tc],tc.srcIPPrefix,tc.dstIPPrefix))
+            else:
+                assigned = self._computeSplit(tc, pptc[tc], blockbits, False)
+                for path in assigned:
+                    sources, dests = zip(*assigned[path])
+                    subsrcprefix = netaddr.cidr_merge(sources)
+                    subdstprefix = netaddr.cidr_merge(dests)
+                    # print path, subsrcprefix, subdstprefix
+
+                    #TODO: test the correctness of this better
+                    assert len(subsrcprefix) == len(subdstprefix)
+                    for s, d in itertools.izip(subsrcprefix, subdstprefix):
+                        pathList.append((path,str(s), str(d)))
+        
+        return pathList
+        
+    def _computeSplit(self, k, paths, blockbits, mindiff):
+        srcnet = netaddr.IPNetwork(k.srcIPPrefix)
+        dstnet = netaddr.IPNetwork(k.dstIPPrefix)
+        # Diffenrent length of the IP address based on the version
+        ipbits = 32
+        if srcnet.version == 6:
+            ipbits = 128
+        # Set up our blocks. Block is a pair of src-dst prefixes
+        assert blockbits <= ipbits - srcnet.prefixlen
+        assert blockbits <= ipbits - dstnet.prefixlen
+        numblocks = len(srcnet) * len(dstnet) / (2 ** (2 * blockbits))
+        #print "Number of blocks = ",numblocks
+        newmask1 = srcnet.prefixlen + blockbits
+        newmask2 = srcnet.prefixlen + blockbits
+        blockweight = 1.0 / numblocks # This is not volume-aware
+        assigned = defaultdict(lambda: [])
+        if not mindiff:
+            # This is the basic version, no min-diff required.
+            assweight = 0
+            index = 0
+            path = paths[index]
+            # Iterate over the blocks and pack then into paths
+            for block in itertools.product(srcnet.subnet(newmask1),
+                                           dstnet.subnet(newmask2)):
+                if index >= len(paths):
+                    raise Exception('no bueno')
+
+                assigned[path].append(block)
+                assweight += blockweight
+                if assweight >= path.getNumFlows():
+                    # print path.getNumFlows(), assweight
+                    assweight = 0
+                    index += 1
+                    if index < len(paths):
+                        path = paths[index]
+        else:
+            leftovers = []
+            # iteration one, remove any exess blocks and put them into leftover
+            # array
+            for p in paths:
+                #oldsrc, olddst = self._pathmap[p]
+                oldweight = len(oldsrc) * len(olddst) / (2 ** blockbits)
+                if p.getNumFlows() < oldweight:
+                    assweight = 0
+                    for block in itertools.product(oldsrc.subnet(newmask1),
+                                                   olddst.subnet(newmask2)):
+                        assigned[p].append(block)
+                        assweight += blockweight
+                        if assweight >= p.getNumFlows():
+                            leftovers.append(block)
+            # iteration two, use the leftovers to pad paths where fractions
+            # are too low
+            for p in paths:
+                #oldsrc, olddst = self._pathmap[p]
+                oldweight = len(oldsrc) * len(olddst) / (2 ** blockbits)
+                if p.getNumFlows() > oldweight:
+                    assweight = oldweight
+                    while leftovers:
+                        block = leftovers.pop(0)
+                        assigned[p].append(block)
+                        assweight += blockweight
+                        if assweight >= p.getNumFlows():
+                            break
+            assert len(leftovers) == 0
+        return assigned
+    
+    def pushODLPath(self,pptc,optPaths,blockbits=5,
+                    installHw=True,priority=500):
+        
         paths = self.generateAllPaths(pptc, optPaths)
-        for j,path in enumerate(paths):
-            print path
+        
+        for j,p in enumerate(paths):
+            #print p[0]
+            if type(p[0]) is list:
+                path = p[0][0]._nodes
+            else:
+                path = p[0]._nodes
+        
             for i,node in enumerate(path):
                 flowName = 'Dipayan_Path%d_%d'%(j,i)
                 srcNode = path[0]
@@ -47,17 +146,23 @@ class OpenDayLightController(object):
                 else:
                     outPort = self.G.edge[node][path[i+1]]['srcport']
                 
-                newFlow = self.buildFlow(flowName, tableId=i, flowId=j, inPort=inPort, 
-                                         outPort=outPort, srcNode=srcNode, dstNode=dstNode)
+                srcIpPrefix = p[1] 
+                dstIpPrefix = p[2]
+                newFlow = self.buildFlow(flowName=flowName, tableId=i, flowId=j, inPort=inPort, 
+                                         outPort=outPort, srcNode=srcNode, dstNode=dstNode,
+                                         srcIpPrefix=srcIpPrefix, dstIpPrefix=dstIpPrefix,
+                                         installHw=installHw,priority=priority)
                 
                 url = self.odlurl+'/config/opendaylight-inventory:nodes/node/'+nodeId+'/table/'+str(i)+'/flow/'+str(j)
-                print url
-                #print json.dumps(newFlow,indent=4)
+                #print newFlow
+                #print url
                 resp, content = self.putFlow(url,newFlow)
-                #print 'Response =%s\nContent=%s'%(resp,content)
                 if resp['status'] != '200':
                     print 'Response =%s\nContent=%s'%(resp,content)
                 
+                self.pathDict['nodeId'] = newFlow
+        print "Installed %d flows!"%(j)
+        
     def putFlow(self,url,newFlow):
         resp,content = self.httpreq.request(uri = url,
                                             method = 'PUT',
@@ -65,15 +170,15 @@ class OpenDayLightController(object):
                                             headers = {'content-type' : 'application/json'}) 
         return resp,content
     
-    def buildFlow(self,flowName='blah',tableId=0,flowId=0,inPort=1,outPort=2,srcNode=1,dstNode=4):
-        srcIp = '10.0.0.'+str(srcNode)+'/24'
-        dstIp = '10.0.0.'+str(dstNode)+'/24'
-        defaultPriority = "500"
+    def buildFlow(self,installHw,priority,flowName,tableId,flowId,inPort,outPort,
+                  srcNode,dstNode,srcIpPrefix, dstIpPrefix):
+        #srcIpPrefix = '10.0.0.'+str(srcNode)+'/24'
+        #dstIpPrefix = '10.0.0.'+str(dstNode)+'/24'
         
         newFlow = {'flow':[]}
         newFlow['flow'].append({'flow-name' : flowName,
                                 'installHw' : 'true',
-                                'priority' : defaultPriority,
+                                'priority' : priority,
                                 'table_id' : str(tableId),
                                 'id' : str(flowId),
                                #'match' : {},
@@ -94,8 +199,8 @@ class OpenDayLightController(object):
                                                      #'ip-dscp' : '2',
                                                      #'ip-ecn' : '2'
                                                     },
-                                       "ipv4-source" : srcIp,
-                                       "ipv4-destination" : dstIp
+                                       "ipv4-source" : srcIpPrefix,
+                                       "ipv4-destination" : dstIpPrefix
                                        }
         newFlow['flow'][0]['instructions']['instruction'].append({'order' : '0',
                                                                   'apply-actions' : 
@@ -133,9 +238,11 @@ class OpenDayLightController(object):
         if resp['status'] == '200':
             print "All flows deleted!"    
         return resp, content
-
+    
+    
+    
     def main(self):
-        newFlow = self.buildFlow()
+        #newFlow = self.buildFlow()
         #print json.dumps(newFlow,indent = 4)
         '''
         flows = self.getAllFlowsbyNode()

@@ -88,7 +88,7 @@ def generateCompleteTopology(n, name='complete'):
 
 def extractTopo(controllerIP='localhost',name='onos-topo'):
     topo = ExtractTopo(controllerIp = controllerIP)
-    G = topo.getGraph().to_directed()
+    G = topo.getGraph()#.to_directed()
     t = Topology(name,G)
     forceSwitchLabels(t)
     return t
