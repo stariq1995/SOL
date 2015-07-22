@@ -90,15 +90,17 @@ if __name__=='__main__':
 	opt.setPredefinedObjective('minmaxnodeload', resource='cpu')
 									  
 	opt.solve()
-
+	
+	'''
 	tclist=[]
 	for tc,path in pptc.iteritems():
 		tclist.append(tc)
 		#print tc
+	'''
 	
 	gpf=opt.getPathFractions(pptc)
-	
-	odl = OpenDayLightController()
+	#print("Execution Time = %s secs" % (time.time() - start_time))
+	odl = OpenDayLightController(graph = topo._graph, parallel=True)
 	odl.pushODLPath(pptc,gpf)
 	#print odl.pathDict
 	'''

@@ -6,28 +6,32 @@ import networkx as nx
 import netaddr
 from collections import defaultdict
 import itertools
+#from threading import Thread,Lock,Condition
+#import time
+from multiprocessing import Process
 
 class OpenDayLightController(object):
     
     def __init__(self, uid='admin',password='admin',
                  controllerIP='localhost',
-                 controllerPort = '8181'):
+                 controllerPort = '8181',graph=None,parallel=False):
         
         self.httpreq =  httplib2.Http(".cache")
         self.httpreq.add_credentials(uid, password)
         self.controllerIP = controllerIP
         self.controllerPort = controllerPort
         self.odlurl = 'http://'+controllerIP+':'+controllerPort+'/restconf'
-        self.topo = ExtractTopo(controllerIp = controllerIP)
-        self.G = self.topo.getGraph()
+        self.G = graph
         self.pathDict={}
         self.pptc={}
+        self.parallel=False
+        #self.maxFlows = (len(self.G.nodes()))**2 - len(self.G.nodes()) - 1
+        #self.numFlows = 0
     
     def filterPaths(self,pptc,optPaths):
         for tc,path in pptc.iteritems():
             self.pptc[tc] = optPaths[tc]
         
-
     def generateAllPaths(self,pptc,optPaths,blockbits=5):
         pathList = []
         self.filterPaths(pptc,optPaths)
@@ -119,9 +123,12 @@ class OpenDayLightController(object):
     
     def pushODLPath(self,pptc,optPaths,blockbits=5,
                     installHw=True,priority=500):
-        
+        #start_time = time.time()
         paths = self.generateAllPaths(pptc, optPaths)
-        
+        if self.parallel:
+            allProcs=[]
+        #print 'Max number of flows = %d'%self.maxFlows
+            
         for j,p in enumerate(paths):
             #print p[0]
             if type(p[0]) is list:
@@ -156,19 +163,35 @@ class OpenDayLightController(object):
                 url = self.odlurl+'/config/opendaylight-inventory:nodes/node/'+nodeId+'/table/'+str(i)+'/flow/'+str(j)
                 #print newFlow
                 #print url
-                resp, content = self.putFlow(url,newFlow)
-                if resp['status'] != '200':
-                    print 'Response =%s\nContent=%s'%(resp,content)
-                
-                self.pathDict['nodeId'] = newFlow
-        print "Installed %d flows!"%(j)
+                if self.parallel:
+                    process = Process(target=self.putFlow,args=(url,newFlow))
+                    process.start()
+                    allProcs.append(process)
+                else:
+                    self.putFlow(url,newFlow)
+        
+        if self.parallel:    
+            for p in allProcs:
+                p.join() 
+        print "Installed %d flows!"%(j+1)
+        #print "Time taken to push all flows = %d"%(self.sumtime)
+        #print("Execution Time = %s secs" % (time.time() - start_time))
         
     def putFlow(self,url,newFlow):
+        #start_time = time.time()
+        #print 'url=%s!'%url
         resp,content = self.httpreq.request(uri = url,
                                             method = 'PUT',
                                             body = json.dumps(newFlow), 
-                                            headers = {'content-type' : 'application/json'}) 
-        return resp,content
+                                            headers = {'content-type' : 'application/json'})
+        self.pathDict['nodeId'] = newFlow
+        if resp['status'] != '200':
+                    print 'Response =%s\nContent=%s'%(resp,content)
+        #self.flowLock.acquire()
+        #self.flowLock.release()
+        #self.sumtime = self.sumtime + time.time() - start_time
+        #print("%s" % (time.time() - start_time))
+        #return resp,content
     
     def buildFlow(self,installHw,priority,flowName,tableId,flowId,inPort,outPort,
                   srcNode,dstNode,srcIpPrefix, dstIpPrefix):

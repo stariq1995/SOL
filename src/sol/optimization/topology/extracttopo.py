@@ -6,6 +6,7 @@ import errno
 from collections import namedtuple
 import networkx as nx
 import matplotlib.pyplot as plt
+#import time
 
 class ExtractTopo:
     
@@ -137,6 +138,7 @@ class ExtractTopo:
         return alledges
     
     def getGraph(self):
+        #start_time = time.time()
         alledges = self.parseTopology()
         G = nx.DiGraph()
         edge_list=[]
@@ -162,6 +164,7 @@ class ExtractTopo:
             edge_list.append(l)
         
         G.add_edges_from(edge_list)
+        #print("Execution Time = %s secs" % (time.time() - start_time))
         return G 
         
     def getPortNum(self,id):
