@@ -128,14 +128,18 @@ class OpenDayLightController(object):
         if self.parallel:
             allProcs=[]
         #print 'Max number of flows = %d'%self.maxFlows
-            
+        flowId=0
         for j,p in enumerate(paths):
-            #print p[0]
+            
             if type(p[0]) is list:
                 path = p[0][0]._nodes
             else:
                 path = p[0]._nodes
-        
+            
+            #ethSrc = self.G.edge[path[0]]
+            print 'Path = ',path
+            srcIpPrefix = p[1] 
+            dstIpPrefix = p[2]
             for i,node in enumerate(path):
                 flowName = 'Dipayan_Path%d_%d'%(j,i)
                 srcNode = path[0]
@@ -153,14 +157,17 @@ class OpenDayLightController(object):
                 else:
                     outPort = self.G.edge[node][path[i+1]]['srcport']
                 
-                srcIpPrefix = p[1] 
-                dstIpPrefix = p[2]
-                newFlow = self.buildFlow(flowName=flowName, tableId=i, flowId=j, inPort=inPort, 
+                #srcIpPrefix = p[1] 
+                #dstIpPrefix = p[2]
+                print 'Installing following rule in ',nodeId,' :-'
+                print 'SRC IP = %s, DST IP = %s, Input Port = %s, Output Port = %s'%(srcIpPrefix,dstIpPrefix,inPort,outPort)
+                newFlow = self.buildFlow(flowName=flowName, tableId=0, flowId=flowId, inPort=inPort, 
                                          outPort=outPort, srcNode=srcNode, dstNode=dstNode,
                                          srcIpPrefix=srcIpPrefix, dstIpPrefix=dstIpPrefix,
-                                         installHw=installHw,priority=priority)
+                                         installHw=installHw,priority=priority,nodeId=nodeId,etherType='2048')
                 
-                url = self.odlurl+'/config/opendaylight-inventory:nodes/node/'+nodeId+'/table/'+str(i)+'/flow/'+str(j)
+                url = self.odlurl+'/config/opendaylight-inventory:nodes/node/'+nodeId+'/table/0/flow/'+str(flowId)
+                flowId = flowId + 1
                 #print newFlow
                 #print url
                 if self.parallel:
@@ -194,10 +201,14 @@ class OpenDayLightController(object):
         #return resp,content
     
     def buildFlow(self,installHw,priority,flowName,tableId,flowId,inPort,outPort,
-                  srcNode,dstNode,srcIpPrefix, dstIpPrefix):
-        #srcIpPrefix = '10.0.0.'+str(srcNode)+'/24'
-        #dstIpPrefix = '10.0.0.'+str(dstNode)+'/24'
-        
+                  srcNode,dstNode,srcIpPrefix, dstIpPrefix, nodeId, etherType,
+                  ethDst='', ethSrc=''):
+        srcIpPrefix = '10.0.0.'+str(srcNode)+'/32'
+        dstIpPrefix = '10.0.0.'+str(dstNode)+'/32'
+        #inPort = nodeId+':'+str(inPort)
+        #outPort = nodeId+':'+str(outPort)
+        ethDst = '00:00:00:00:00:0'+str(dstNode)
+        ethSrc = '00:00:00:00:00:0'+str(srcNode)
         newFlow = {'flow':[]}
         newFlow['flow'].append({'flow-name' : flowName,
                                 'installHw' : 'true',
@@ -208,20 +219,20 @@ class OpenDayLightController(object):
                                 'instructions': {'instruction' : []},
                                 'strict' : 'false',
                                 'cookie_mask' : '255',
-                                'hard-timeout' : '12',
+                                #'hard-timeout' : '12',
                                 'cookie' : '5',
-                                'idle-timeout' : '34',
+                                #'idle-timeout' : '34',
                                 'barrier' : 'false'})
         
-        newFlow['flow'][0]['match'] = {"ethernet-match" : {'ethernet-type' : {'type' : '2048'}
-                                                           #'ethernet-destination' : {'address' : 'ff:ff:ff:ff:ff:ff'},
-                                                           #'ethernet-source' : {'address' : 'ff:ff:ff:ff:ff:ff'}
-                                                           },
+        newFlow['flow'][0]['match'] = {"ethernet-match" : {'ethernet-type' : {'type' : etherType},
+                                                           'ethernet-destination' : {'address' : ethDst},
+                                                           'ethernet-source' : {'address' : ethSrc}
+                                                          },
                                        'in-port' : str(inPort),
-                                       'ip-match' : {'ip-proto' : 'ipv4'
+                                       #'ip-match' : #{'ip-protocol' : '1'
                                                      #'ip-dscp' : '2',
                                                      #'ip-ecn' : '2'
-                                                    },
+                                                    #,
                                        "ipv4-source" : srcIpPrefix,
                                        "ipv4-destination" : dstIpPrefix
                                        }
@@ -230,15 +241,15 @@ class OpenDayLightController(object):
                                                                     {'action' : 
                                                                         [{'order' : '0',
                                                                           'output-action' : 
-                                                                                {"output-node-connector" : str(outPort),
-                                                                                 'max-length' : '60'}
-                                                                                }
+                                                                                {"output-node-connector" : str(outPort)}
+                                                                                 #'max-length' : '60'}
+                                                                            }
                                                                          ]
                                                                      }
                                                                   }
                                                                  )        
         return newFlow
-    
+
     def getAllFlowsbyNode(self):
         url = self.odlurl+'/config/opendaylight-inventory:nodes/'
         resp,content = self.httpreq.request(uri=url, method='GET',
