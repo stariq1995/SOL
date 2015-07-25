@@ -83,10 +83,6 @@ class ExtractTopo:
     
     def main(self):
         
-        
-        '''for k in ODLDict.keys():
-            print "%s : %s"%(k,ODLDict[k])
-        '''
         g=self.getGraph('localhost')
         #print g.edges(data=True)
         

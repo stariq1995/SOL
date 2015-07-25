@@ -133,6 +133,9 @@ class ExtractTopo:
             edge['dstport'] = self.getPortNum(i['destination']['dest-tp'])
             edge['srcIPPrefix'] = self.getIPPrefix(edge['srcnode_odl'], hostList)
             edge['dstIPPrefix'] = self.getIPPrefix(edge['destnode_odl'], hostList)
+            edge['srcNodeHostList'] = self.getAllHostsOfSwitch(edge['srcnode_odl'], hostList)
+            edge['dstNodeHostList'] = self.getAllHostsOfSwitch(edge['destnode_odl'], hostList)
+            
             alledges.append(edge)
             
         return alledges
@@ -160,6 +163,8 @@ class ExtractTopo:
             edge_rev['srcport'] = edge['dstport']
             edge_rev['srcIPPrefix'] = edge['dstIPPrefix']
             edge_rev['dstIPPrefix'] = edge['srcIPPrefix']
+            edge_rev['srcNodeHostList'] = edge['dstNodeHostList']
+            edge_rev['dstNodeHostList'] = edge['srcNodeHostList']
             l = (v,u,edge_rev)
             edge_list.append(l)
         
@@ -182,11 +187,11 @@ class ExtractTopo:
         
     def main(self):
         #self.parseNode()
-        '''
+        
         edgelist = self.parseTopology()
         for edge in edgelist:
             print edge
-        '''
+        
         #G = self.getGraph()
         #plt.show(nx.draw(G))
         #self.parseTopology()

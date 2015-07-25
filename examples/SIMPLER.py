@@ -100,7 +100,7 @@ if __name__=='__main__':
 	
 	gpf=opt.getPathFractions(pptc)
 	#print("Execution Time = %s secs" % (time.time() - start_time))
-	odl = OpenDayLightController(graph = topo._graph, parallel=False)
+	odl = OpenDayLightController(graph = topo._graph, parallel=True)
 	odl.pushODLPath(pptc,gpf)
 	#print odl.pathDict
 	'''
