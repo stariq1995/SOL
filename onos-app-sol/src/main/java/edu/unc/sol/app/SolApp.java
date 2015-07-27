@@ -1,20 +1,8 @@
-/*
- * Copyright 2014 Open Networking Laboratory
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package edu.unc.sol.app;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IpPrefix;
 import org.onlab.rest.BaseResource;
@@ -37,6 +25,8 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 import static org.slf4j.LoggerFactory.getLogger;
@@ -45,7 +35,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 @javax.ws.rs.Path("/")
 public class SolApp extends BaseResource {
 
-    private final static Logger log = getLogger(SolApp.class.getClass());
+    private final static Logger log = getLogger(SolApp.class.getSimpleName());
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CoreService coreService;
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
@@ -93,27 +83,36 @@ public class SolApp extends BaseResource {
 
     @GET
     @javax.ws.rs.Path("hi")
-    public Response helloWold() {
-        return Response.ok("Hi, I am sol app").build();
+    public Response helloWorld() {
+        return Response.ok("Hi, I am SOL app").build();
     }
 
     @POST
     @javax.ws.rs.Path("install")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response installSOLPaths(SolPath[] solPaths) {
-        boolean success = true;
-        for (SolPath p : solPaths) {
+    public Response installSOLPaths(InputStream input) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            SolPath p = mapper.readValue(input, SolPath.class);
             log.info(p.toString());
-            success = submitPath(p);
-            if (!success) {
-                break;
-            }
+            submitPath(p);
+        } catch (IOException e) {
+            log.error(e.getMessage());
         }
-        if (success) {
-            return Response.ok().build();
-        } else {
-            return Response.serverError().build();
-        }
+        return Response.ok("ok").build();
+//        boolean success = true;
+//        for (SolPath p : solPaths) {
+//            log.info(p.toString());
+//            success = submitPath(p);
+//            if (!success) {
+//                break;
+//            }
+//        }
+//        if (success) {
+//            return Response.ok().build();
+//        } else {
+//            return Response.serverError().build();
+//        }
     }
 //    public DeviceId toDeviceId(long devno) {
 //        return DeviceId.deviceId(String.format("of:00000000000000%02X", devno));
