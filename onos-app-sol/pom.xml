@@ -30,6 +30,7 @@
         <onos.app.name>edu.unc.sol</onos.app.name>
         <!-- <checkstyle.skip>true</checkstyle.skip> -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <web.context>/sol</web.context>
     </properties>
 
     <dependencies>
@@ -38,15 +39,25 @@
             <artifactId>onos-core-net</artifactId>
             <version>1.2.1</version>
         </dependency>
-        <dependency>
-            <groupId>com.googlecode.json-simple</groupId>
-            <artifactId>json-simple</artifactId>
-            <version>1.1.1</version>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>com.googlecode.json-simple</groupId>-->
+            <!--<artifactId>json-simple</artifactId>-->
+            <!--<version>1.1.1</version>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.annotations</artifactId>
             <version>1.9.8</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-servlet</artifactId>
+            <version>1.19</version>
         </dependency>
     </dependencies>
     <build>
@@ -69,6 +80,32 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <version>2.5.3</version>
                 <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <_wab>src/main/webapp/</_wab>
+                        <Bundle-SymbolicName>
+                            ${project.groupId}.${project.artifactId}
+                        </Bundle-SymbolicName>
+                        <Import-Package>
+                            org.slf4j,
+                            org.osgi.framework,
+                            javax.ws.rs,javax.ws.rs.core,
+                            com.sun.jersey.api.core,
+                            com.sun.jersey.spi.container.servlet,
+                            com.sun.jersey.server.impl.container.servlet,
+                            com.fasterxml.jackson.databind,
+                            com.fasterxml.jackson.databind.node,
+                            <!--org.apache.commons.lang.math.*,-->
+                            <!--com.google.common.*,-->
+                            org.onlab.packet.*,
+                            org.onlab.rest.*,
+                            org.onosproject.*,
+                            <!--org.onlab.util.*,-->
+                            <!--org.jboss.netty.util.*-->
+                        </Import-Package>
+                        <Web-ContextPath>${web.context}</Web-ContextPath>
+                    </instructions>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

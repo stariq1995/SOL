@@ -15,192 +15,188 @@
  */
 package edu.unc.sol.app;
 
-import edu.unc.sol.intent.SolIntent;
 import org.apache.felix.scr.annotations.*;
-import org.json.simple.parser.ParseException;
+import org.onlab.packet.IpPrefix;
+import org.onlab.rest.BaseResource;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.ConnectPoint;
-import org.onosproject.net.PortNumber;
-import org.onosproject.net.flow.*;
-import org.onosproject.net.host.HostService;
+import org.onosproject.net.DefaultPath;
+import org.onosproject.net.Link;
+import org.onosproject.net.Path;
+import org.onosproject.net.flow.DefaultTrafficSelector;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.intent.IntentService;
-import org.onosproject.net.topology.TopologyService;
+import org.onosproject.net.intent.PathIntent;
+import org.onosproject.net.link.LinkService;
+import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
 
-import java.io.IOException;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
-//import org.apache.felix.scr.annotations.Service;
-//import org.slf4j.LoggerFactory;
-//import org.onlab.packet.Ethernet;
-//import org.onosproject.net.Host;
-//import org.onosproject.net.HostId;
-//import org.onosproject.net.packet.DefaultOutboundPacket;
-//import org.onosproject.net.packet.InboundPacket;
-//import org.onosproject.net.packet.OutboundPacket;
-//import org.onosproject.net.packet.PacketContext;
-//import org.onosproject.net.packet.PacketPriority;
-//import org.onosproject.net.packet.PacketProcessor;
-//import org.onosproject.net.packet.PacketService;
-//import org.onosproject.net.intent
-
-
-/**
- * Skeletal ONOS application component.
- */
 @Component(immediate = true)
-public class SolApp {
+@javax.ws.rs.Path("/")
+public class SolApp extends BaseResource {
 
-    private final Logger log = getLogger(getClass());
-
+    private final static Logger log = getLogger(SolApp.class.getClass());
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CoreService coreService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected TopologyService topologyService;
-
-    //@Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    //protected PacketService packetService;
-
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected IntentService intentService;
-
+    PathIntent.Builder pathBuilder = PathIntent.builder();
+    TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected HostService hostService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    protected FlowRuleService flowRuleService;
-
-    //private ReactivePacketProcessor processor = new ReactivePacketProcessor();
+    LinkService linkService;
     private ApplicationId appId;
-    private ArrayList<TrafficClass> trafficClassList = new ArrayList<TrafficClass>();
 
     @Activate
     public void activate() {
-        appId = coreService.registerApplication("org.onosproject.app");
-
-        //packetService.addProcessor(processor, PacketProcessor.ADVISOR_MAX + 2);
-        ParseSol parseSol = new ParseSol();
-        try {
-            trafficClassList = parseSol.getTrafficClassesFromSol();
-        } catch (IOException | ParseException e) {
-            log.info("Exception occurred while Parsing SOL generated JSON files. Not activating app.");
-            return;
-        }
-        //TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
-        //selector.matchEthType(Ethernet.TYPE_IPV4);
-        TrafficSelector selector = DefaultTrafficSelector.emptySelector();
-        TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
-        Iterator<TrafficClass> tc_iter = trafficClassList.iterator();
-        ConnectPoint srcId, dstId;
-        SolToOnos S2O = new SolToOnos();
-
-        while (tc_iter.hasNext()) {
-            TrafficClass tc = tc_iter.next();
-            srcId = new ConnectPoint(S2O.toDeviceId(tc.src), PortNumber.ALL);
-            dstId = new ConnectPoint(S2O.toDeviceId(tc.dst), PortNumber.ALL);
-            SolIntent intent = SolIntent.builder()
-                    .appId(appId)
-                    .ingressPoint(srcId)
-                    .egressPoint(dstId)
-                    .selector(selector)
-                    .treatment(treatment)
-                    .priority(100)
-                    .build();
-
-            intentService.submit(intent);
-        }
-
-        //packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
-        System.out.println("Activated!! See if the intents have installed.");
-        log.info("Started. All intents installed!");
+        String myname = "edu.unc.sol";
+        appId = coreService.registerApplication(myname);
+        log.info("Activating SOL");
     }
 
     @Deactivate
     public void deactivate() {
-        //packetService.removeProcessor(processor);
-        //processor = null;
-        System.out.println("Deactivated!! Intents would still be there!");
-        log.info("Stopped");
-    }
-    /**
-     * Packet processor responsible for forwarding packets along their paths.
-     */
-   /* private class ReactivePacketProcessor implements PacketProcessor {
-
-        @Override
-        public void process(PacketContext context) {
-            // Stop processing if the packet has been handled, since we
-            // can't do any more to it.
-            if (context.isHandled()) {
-                return;
-            }
-
-            InboundPacket pkt = context.inPacket();
-            Ethernet ethPkt = pkt.parsed();
-
-            if (ethPkt == null) {
-                return;
-            }
-
-            HostId srcId = HostId.hostId(ethPkt.getSourceMAC());
-            HostId dstId = HostId.hostId(ethPkt.getDestinationMAC());
-
-            // Do we know who this is for? If not, flood and bail.
-            Host dst = hostService.getHost(dstId);
-            if (dst == null) {
-                flood(context);
-                return;
-            }
-
-            // Otherwise forward and be done with it.
-            setUpConnectivity(context, srcId, dstId);
-            forwardPacketToDst(context, dst);
-        }
+        log.info("Deactivating. Intents will remain");
     }
 
-    // Floods the specified packet if permissible.
-    private void flood(PacketContext context) {
-        if (topologyService.isBroadcastPoint(topologyService.currentTopology(),
-                                             context.inPacket().receivedFrom())) {
-            packetOut(context, PortNumber.FLOOD);
-        } else {
-            context.block();
-        }
-    }
+    public boolean submitPath(SolPath p) {
 
-    // Sends a packet out the specified port.
-    private void packetOut(PacketContext context, PortNumber portNumber) {
-        context.treatmentBuilder().setOutput(portNumber);
-        context.send();
-    }
-
-    private void forwardPacketToDst(PacketContext context, Host dst) {
-        TrafficTreatment treatment = DefaultTrafficTreatment.builder().setOutput(dst.location().port()).build();
-        OutboundPacket packet = new DefaultOutboundPacket(dst.location().deviceId(),
-                                                          treatment, context.inPacket().unparsed());
-        packetService.emit(packet);
-        log.info("sending packet: {}", packet);
-    }
-	
-    // Install a rule forwarding the packet to the specified port.
-    private void setUpConnectivity(PacketContext context, ConnectPoint srcId, ConnectPoint dstId) {
-        TrafficSelector selector = DefaultTrafficSelector.emptySelector();
-        TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
-
-        SolIntent intent = SolIntent.builder()
-                .appId(appId)
-                .ingressPoint(srcId)
-                .egressPoint(dstId)
-                .selector(selector)
-                .treatment(treatment)
+        TrafficSelector s = selectorBuilder.matchIPSrc(IpPrefix.valueOf(p.srcprefix))
+                .matchIPDst(IpPrefix.valueOf(p.dstprefix))
                 .build();
+        //TODO: more parameters for port matching
+        PathIntent pi = pathBuilder.appId(appId)
+                .selector(s)
+                .path(convertPath(p))
+                .build();
+        intentService.submit(pi);
+        return true;
+    }
 
-        intentService.submit(intent);
-    }*/
+    protected Path convertPath(SolPath p) {
+        ArrayList<Link> links = new ArrayList<>();
+        for (int i = 0; i < p.nodes.length - 1; i++) {
+            links.add(linkService.getLink(ConnectPoint.deviceConnectPoint(p.nodes[i]),
+                    ConnectPoint.deviceConnectPoint(p.nodes[i + 1])));
+        }
+        return new DefaultPath(ProviderId.NONE, links, links.size());
+    }
 
+    @GET
+    @javax.ws.rs.Path("hi")
+    public Response helloWold() {
+        return Response.ok("Hi, I am sol app").build();
+    }
+
+    @POST
+    @javax.ws.rs.Path("install")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response installSOLPaths(SolPath[] solPaths) {
+        boolean success = true;
+        for (SolPath p : solPaths) {
+            log.info(p.toString());
+            success = submitPath(p);
+            if (!success) {
+                break;
+            }
+        }
+        if (success) {
+            return Response.ok().build();
+        } else {
+            return Response.serverError().build();
+        }
+    }
+//    public DeviceId toDeviceId(long devno) {
+//        return DeviceId.deviceId(String.format("of:00000000000000%02X", devno));
+//    }
+//
+//    public HostId toHostId(long hostno) {
+//        int i;
+//        byte[] b = new byte[6];
+//        for (i = 0; i < 5; i++)
+//            b[i] = 0;
+//        b[i] = (byte) hostno;
+//        MacAddress mac = new MacAddress(b);
+//        return HostId.hostId(mac);
+//    }
+//
+//    public int toDevno(DeviceId devid) {
+//        String dev = devid.toString();
+//        int len = dev.length();
+//        int Devno = Integer.parseInt(dev.substring(len - 3), 16);
+//        return Devno;
+//    }
+//
+//    public ArrayList<DeviceId> getDeviceListPerTrafficClass(TrafficClass trafficClass) {
+//        ArrayList<DeviceId> devlist = new ArrayList<DeviceId>();
+//        int i;
+//        for (i = 0; i < trafficClass.pathlen; i++) {
+//            DeviceId dev = toDeviceId(trafficClass.nodes_on_path[i]);
+//            devlist.add(dev);
+//        }
+//        return devlist;
+//    }
+
+//    public org.onosproject.net.Path getPathSol(ConnectivityIntent intent, DeviceId one, DeviceId two) {
+//
+//        Set<org.onosproject.net.Path> paths = pathManager.getPaths(one, two);
+//        Iterator<org.onosproject.net.Path> path_iter = paths.iterator();
+//        Iterator<TrafficClass> tc_iter = trafficClassList.iterator();
+//        TrafficClass trafficClass = new TrafficClass();
+//        long devno1, devno2;
+//        ArrayList<DeviceId> devlist;
+//        devno1 = toDevno(one);
+//        devno2 = toDevno(two);
+//        while (tc_iter.hasNext()) {
+//            trafficClass = tc_iter.next();
+//            if (devno1 == trafficClass.src && devno2 == trafficClass.dst)
+//                break;
+//        }
+//        devlist = getDeviceListPerTrafficClass(trafficClass);
+//        while (path_iter.hasNext()) {
+//            List<Link> linklist;
+//            org.onosproject.net.Path path = path_iter.next();
+//            linklist = path.links();
+//            if (isSolPathLink(linklist, devlist))
+//                return path;
+//        }
+//        //SolPath not found
+//        return null;
+//    }
+//
+//    public boolean isSolPathLink(List<Link> linklist, ArrayList<DeviceId> devlist) {
+//        Iterator<Link> link_iter = linklist.iterator();
+//        Iterator<DeviceId> dev_iter = devlist.iterator();
+//        DeviceId dev1 = null, dev2 = null;
+//        if (dev_iter.hasNext())
+//            dev1 = dev_iter.next();
+//        if (dev_iter.hasNext())
+//            dev2 = dev_iter.next();
+//        if (dev1 == null || dev2 == null)
+//            return false;
+//        while (link_iter.hasNext() && dev2 != null) {
+//            Link link = link_iter.next();
+//            if (!(link.src().deviceId().equals(dev1)) ||
+//                    !(link.dst().deviceId().equals(dev2)))
+//                return false;
+//            dev1 = dev2;
+//            if (dev_iter.hasNext())
+//                dev2 = dev_iter.next();
+//            else
+//                dev2 = null;
+//        }
+//        if (link_iter.hasNext() == false && dev2 == null)
+//            return true;
+//        else
+//            return false;
+//    }
 }
