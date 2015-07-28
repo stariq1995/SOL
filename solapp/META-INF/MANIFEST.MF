@@ -1,0 +1,23 @@
+Manifest-Version: 1.0
+Bnd-LastModified: 1438104780348
+Build-Jdk: 1.8.0_45-internal
+Built-By: dipayan
+Bundle-Activator: org.cmu.solapp.Activator
+Bundle-ManifestVersion: 2
+Bundle-Name: solapp
+Bundle-SymbolicName: org.cmu.solapp
+Bundle-Version: 0.1.0
+Created-By: Apache Maven Bundle Plugin
+Export-Package: org.cmu.solapp;uses:="org.slf4j,org.opendaylight.control
+ ler.switchmanager,org.opendaylight.controller.sal.core,org.opendaylight
+ .controller.sal.flowprogrammer,org.apache.felix.dm,org.codehaus.jettiso
+ n.json,org.opendaylight.controller.sal.action,org.opendaylight.controll
+ er.sal.match,org.opendaylight.controller.sal.utils";version="0.1.0"
+Import-Package: org.apache.felix.dm;version="[3.0,4)",org.codehaus.jetti
+ son.json;version="[1.3,2)",org.opendaylight.controller.sal.action;versi
+ on="[0.7,1)",org.opendaylight.controller.sal.core;version="[0.7,1)",org
+ .opendaylight.controller.sal.flowprogrammer;version="[0.7,1)",org.opend
+ aylight.controller.sal.match;version="[0.7,1)",org.opendaylight.control
+ ler.sal.utils;version="[0.7,1)",org.opendaylight.controller.switchmanag
+ er;version="[0.7,1)",org.slf4j;version="[1.7,2)"
+Tool: Bnd-1.50.0

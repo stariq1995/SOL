@@ -14,7 +14,7 @@ from sol.optimization.path.select import chooserand
 from sol.optimization.topology import generators
 from sol.optimization.topology import provisioning
 from sol.optimization.topology.provisioning import generateTrafficClasses
-from sol.sdn.controller_lithium import OpenDayLightController
+from sol.sdn.controller_hydrogen import OpenDayLightController
 
 if __name__=='__main__':
 	start_time = time.time()
@@ -101,7 +101,7 @@ if __name__=='__main__':
 	gpf=opt.getPathFractions(pptc)
 	#print("Execution Time = %s secs" % (time.time() - start_time))
 	odl = OpenDayLightController(graph = topo._graph, parallel=True)
-	odl.pushODLPath(pptc,gpf)
+	odl.writeJsonPath(pptc,gpf)
 	#print odl.pathDict
 	'''
 	pathList = odl.generateAllPaths(pptc,gpf)

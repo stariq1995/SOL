@@ -10,7 +10,7 @@ import networkx as nx
 
 from sol.optimization.topology.topology import Topology
 
-from sol.optimization.topology.extracttopo import ExtractTopo
+from sol.optimization.topology.extracttopo_hydrogen import ExtractTopo
 
 
 def forceSwitchLabels(topology):

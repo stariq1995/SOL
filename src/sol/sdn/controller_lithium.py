@@ -203,6 +203,7 @@ class OpenDayLightController(object):
         print "Installed %d flows!"%(flowId+1)
         #print "Time taken to push all flows = %d"%(self.sumtime)
         #print("Execution Time = %s secs" % (time.time() - start_time))
+    
         
     def putFlow(self,url,newFlow):
         resp,content = self.httpreq.request(uri = url,
@@ -212,8 +213,9 @@ class OpenDayLightController(object):
         #self.pathDict['nodeId'] = newFlow
         if resp['status'] != '200':
                     print 'Response =%s\nContent=%s'%(resp,content)
-        
     
+        
+        
     def buildFlow(self,installHw,priority,flowName,tableId,flowId,inPort,outPort,
                   ethSrc,ethDst,srcIpPrefix, dstIpPrefix, nodeId, etherType):
         

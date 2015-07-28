@@ -1,0 +1,11 @@
+status: 200
+content-location: http://localhost:8080/controller/nb/v2/hosttracker/default/hosts/active/
+set-cookie: JSESSIONIDSSO=198F10E0D57AF1CE59761733848319BE;
+ Path=/, JSESSIONID=23B7FA3A6D1537958DE7F4A1BCDA2080; Path=/
+expires: Wed, 31 Dec 1969 16:00:00 PST
+server: Apache-Coyote/1.1
+cache-control: private
+date: Tue, 28 Jul 2015 17:36:43 GMT
+content-type: application/json
+
+{"hostConfig":[{"dataLayerAddress":"00:00:00:00:00:01","nodeType":"OF","nodeId":"00:00:00:00:00:00:00:01","nodeConnectorType":"OF","nodeConnectorId":"1","vlan":"0","staticHost":false,"networkAddress":"10.0.0.1"},{"dataLayerAddress":"00:00:00:00:00:04","nodeType":"OF","nodeId":"00:00:00:00:00:00:00:04","nodeConnectorType":"OF","nodeConnectorId":"1","vlan":"0","staticHost":false,"networkAddress":"10.0.0.4"},{"dataLayerAddress":"00:00:00:00:00:03","nodeType":"OF","nodeId":"00:00:00:00:00:00:00:03","nodeConnectorType":"OF","nodeConnectorId":"1","vlan":"0","staticHost":false,"networkAddress":"10.0.0.3"},{"dataLayerAddress":"00:00:00:00:00:05","nodeType":"OF","nodeId":"00:00:00:00:00:00:00:05","nodeConnectorType":"OF","nodeConnectorId":"1","vlan":"0","staticHost":false,"networkAddress":"10.0.0.5"},{"dataLayerAddress":"00:00:00:00:00:02","nodeType":"OF","nodeId":"00:00:00:00:00:00:00:02","nodeConnectorType":"OF","nodeConnectorId":"1","vlan":"0","staticHost":false,"networkAddress":"10.0.0.2"}]}
