@@ -1,13 +1,15 @@
 package edu.unc.sol.app;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IpPrefix;
 import org.onlab.rest.BaseResource;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.*;
+import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.DefaultPath;
+import org.onosproject.net.Link;
+import org.onosproject.net.Path;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.intent.IntentService;
@@ -24,7 +26,6 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.List;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
