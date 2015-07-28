@@ -1,17 +1,13 @@
 package edu.unc.sol.app;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IpPrefix;
 import org.onlab.rest.BaseResource;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.ConnectPoint;
-import org.onosproject.net.DefaultPath;
-import org.onosproject.net.Link;
-import org.onosproject.net.Path;
+import org.onosproject.net.*;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.intent.IntentService;
@@ -28,6 +24,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -93,29 +90,30 @@ public class SolApp extends BaseResource {
     public Response installSOLPaths(InputStream input) {
         ObjectMapper mapper = new ObjectMapper();
         try {
-            SolPath p = mapper.readValue(input, SolPath.class);
-            log.info(p.toString());
-            submitPath(p);
+            SolPath[] paths = mapper.readValue(input, SolPath[].class);
+            boolean success = true;
+            for (SolPath p : paths) {
+                log.info(p.toString());
+                success = submitPath(p);
+                if (!success) {
+                    break;
+                }
+            }
+            if (success) {
+                return Response.ok().build();
+            } else {
+                return Response.serverError().build();
+            }
         } catch (IOException e) {
             log.error(e.getMessage());
         }
         return Response.ok("ok").build();
-//        boolean success = true;
-//        for (SolPath p : solPaths) {
-//            log.info(p.toString());
-//            success = submitPath(p);
-//            if (!success) {
-//                break;
-//            }
-//        }
-//        if (success) {
-//            return Response.ok().build();
-//        } else {
-//            return Response.serverError().build();
-//        }
+
     }
-//    public DeviceId toDeviceId(long devno) {
-//        return DeviceId.deviceId(String.format("of:00000000000000%02X", devno));
+
+
+//    public DeviceId toDeviceId(string devno) {
+//        return DeviceId.deviceId(String.format("of:00000000000000%02X", Integer.parseInt(devno)));
 //    }
 //
 //    public HostId toHostId(long hostno) {
