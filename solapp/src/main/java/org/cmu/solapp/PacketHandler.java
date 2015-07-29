@@ -4,10 +4,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
+//import java.util.Set;
+import java.util.HashMap;
 import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.Set;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.File;
@@ -49,7 +51,9 @@ import org.codehaus.jettison.json.JSONException;
 public class PacketHandler { //implements IListenDataPacket {
     
     private static final Logger log = LoggerFactory.getLogger(PacketHandler.class);
-    
+    long starttime;
+	long endtime;
+    ArrayList<Thread> tlist;
     
     //private IDataPacketService dataPacketService;
     private IFlowProgrammerService flowProgrammerService;
@@ -223,6 +227,7 @@ public class PacketHandler { //implements IListenDataPacket {
 
 	void start() throws IOException, InterruptedException {
 		log.trace("START called!");
+		tlist = new ArrayList<Thread>();
 		try {
 			this.installFlows();
 		}catch(JSONException e)
@@ -245,8 +250,13 @@ public class PacketHandler { //implements IListenDataPacket {
 		sol.waitFor();
 	}
     public ArrayList<FlowFromSol> getFlowsFromSol() throws IOException, InterruptedException
-    {
+    {	
+    	starttime = System.currentTimeMillis();
     	executeSolOptimization();
+    	endtime = System.currentTimeMillis();
+    	System.out.println("\n\n\nExecuting sol = "+(endtime-starttime)+" msecs!\n\n\n");
+    	starttime = System.currentTimeMillis();
+    	
     	File jsfile = new File("/home/dipayan/flows.json");
     	if(!(jsfile.exists())) {
     		System.out.println("JSON file could not be found!");
@@ -276,7 +286,7 @@ public class PacketHandler { //implements IListenDataPacket {
 				FlowFromSol f = new FlowFromSol();
 				f.flowName = obj.getString("flowName"); 
 		        f.outPort = obj.getString("outPort");
-		        f.cookie = obj.getString("cookie");
+		        //f.cookie = obj.getString("cookie");
 		        f.ethDst = obj.getString("ethDst");; 
 		        f.etherType = obj.getString("etherType");; 
 		        f.ethSrc = obj.getString("ethSrc"); 
@@ -286,7 +296,7 @@ public class PacketHandler { //implements IListenDataPacket {
 		        f.priority = obj.getString("priority"); 
 		        f.flowId = obj.getString("flowId");; 
 		        f.srcIpPrefix = obj.getString("srcIpPrefix"); 
-		        f.tableId = obj.getString("tableId"); 
+		        //f.tableId = obj.getString("tableId"); 
 		        f.dstIpPrefix = obj.getString("dstIpPrefix");
 			    flowList.add(f);
 			}
@@ -308,15 +318,22 @@ public class PacketHandler { //implements IListenDataPacket {
     	
     	//allswitches = switchManager.getNodes();
     	//Object[] nodeList = allswitches.toArray();
-    	final long starttime = System.currentTimeMillis();
+    	//final long starttime = System.currentTimeMillis();
+    	//final long starttime = System.currentTimeMillis();
     	ArrayList<FlowFromSol> flowList = getFlowsFromSol();
+    	
     	for(FlowFromSol f : flowList)
     	{
     		Node node = Node.fromString(f.nodeId);
-    		installFlowInNode(node,f);	
+    		InstallFlowThread  flowThread = new InstallFlowThread(node,f);
+            flowThread.start();
     	}
-    	final long endtime = System.currentTimeMillis();
-    	System.out.println("\n\n\nSOL Optimization done in "+(endtime-starttime)+" msecs!\n\n\n");
+    	for(Thread t : tlist)
+    		t.join();
+    	endtime = System.currentTimeMillis();
+    	System.out.println("\n\n\nInstalled "+flowList.size()+" flows!");
+    	System.out.println("\n\n\nRule install time = "+(endtime-starttime)+" msecs!\n\n\n");
+    	//System.out.println("\n\n\nSOL Optimization done in "+(endtime-starttime)+" msecs!\n\n\n");
     	/*
     	for(int i=0;i<nodeList.length;i++)
     	{
@@ -359,7 +376,7 @@ public class PacketHandler { //implements IListenDataPacket {
         }
         */
     }
-    
+    /*
     public void installFlowInNode(Node node, FlowFromSol f) throws JSONException
     {	
     	
@@ -377,8 +394,10 @@ public class PacketHandler { //implements IListenDataPacket {
         	
         List<Action> actions = new LinkedList<Action>();
         NodeConnector nodeConn = stringToNodeConnector(node, f.outPort);
-        
         actions.add(new Output(nodeConn));
+        //InstallFlowThread  flowThread = new InstallFlowThread(node,f,match,actions);
+        //flowThread.start();
+        
         Flow flow = new Flow(match, actions);
         flow.setId(Long.parseLong(f.flowId));
         flow.setPriority(Short.parseShort(f.priority));
@@ -392,12 +411,12 @@ public class PacketHandler { //implements IListenDataPacket {
         }
         //else
          //	System.out.println("Successfully installed flows in node "+node.toString());
-    }
+    }*/
     public class FlowFromSol
     {
     	String flowName; 
         String outPort;
-        String cookie;
+        //String cookie;
         String ethDst; 
         String etherType; 
         String ethSrc; 
@@ -407,139 +426,59 @@ public class PacketHandler { //implements IListenDataPacket {
         String priority; 
         String flowId; 
         String srcIpPrefix; 
-        String tableId; 
+        //String tableId; 
         String dstIpPrefix;
     }
-    /*
-    @Override
-    public PacketResult receiveDataPacket(RawPacket inPkt) {
-        // The connector, the packet came from ("port")
-        NodeConnector ingressConnector = inPkt.getIncomingNodeConnector();
-        // The node that received the packet ("switch")
-        Node node = ingressConnector.getNode();
-        
-        log.trace("Packet from " + node.getNodeIDString() + " " + ingressConnector.getNodeConnectorIDString());
-        
-        // Use DataPacketService to decode the packet.
-        Packet pkt = dataPacketService.decodeDataPacket(inPkt);
-        
-        if (pkt instanceof Ethernet) {
-            Ethernet ethFrame = (Ethernet) pkt;
-            Object l3Pkt = ethFrame.getPayload();
+    
+    public class InstallFlowThread implements Runnable
+    {
+    	private Thread t;
+    	Node node;
+    	FlowFromSol f;
+    	//Match match;
+    	//List<Action> actions;
+    	public InstallFlowThread(Node node, FlowFromSol f)
+    	{
+    		this.node = node;
+    		this.f = f;
+    		//this.match = match;
+    		//this.actions = actions;
+    	}
+    	public void run()
+    	{
+    		Match match = new Match();
+            match.setField(MatchType.DL_TYPE, Short.parseShort(f.etherType));
+            match.setField(MatchType.DL_DST, stringToByteMac(f.ethDst));
+            match.setField(MatchType.DL_SRC, stringToByteMac(f.ethSrc));
+            match.setField(MatchType.IN_PORT, stringToNodeConnector(node,f.inPort));
+            match.setField(MatchType.NW_SRC, stringToInetAddress(f.srcIpPrefix),convertMaskToInet(f.srcIpPrefix));
+            match.setField(MatchType.NW_DST, stringToInetAddress(f.dstIpPrefix),convertMaskToInet(f.dstIpPrefix));
+          	
+            List<Action> actions = new LinkedList<Action>();
+            NodeConnector nodeConn = stringToNodeConnector(node, f.outPort);
+            actions.add(new Output(nodeConn));
             
-            if (l3Pkt instanceof IPv4) {
-                IPv4 ipv4Pkt = (IPv4) l3Pkt;
-                InetAddress clientAddr = intToInetAddress(ipv4Pkt.getSourceAddress());
-                InetAddress dstAddr = intToInetAddress(ipv4Pkt.getDestinationAddress());
-                Object l4Datagram = ipv4Pkt.getPayload();
+            
+            Flow flow = new Flow(match, actions);
+            flow.setId(Long.parseLong(f.flowId));
+            flow.setPriority(Short.parseShort(f.priority));
                 
-                if (l4Datagram instanceof TCP) {
-                    TCP tcpDatagram = (TCP) l4Datagram;
-                    int clientPort = tcpDatagram.getSourcePort();
-                    int dstPort = tcpDatagram.getDestinationPort();
-                    
-                    if (publicInetAddress.equals(dstAddr) && dstPort == SERVICE_PORT) {
-                        log.info("Received packet for load balanced service");
-                        
-                        // Select one of the two servers round robin.
-                        
-                        InetAddress serverInstanceAddr;
-                        byte[] serverInstanceMAC;
-                        NodeConnector egressConnector;
-                        
-                        // Synchronize in case there are two incoming requests at the same time.
-                        synchronized (this) {
-                            if (serverNumber == 0) {
-                                log.info("Server 1 is serving the request");
-                                serverInstanceAddr = server1Address;
-                                serverInstanceMAC = SERVER1_MAC;
-                                egressConnector = switchManager.getNodeConnector(node, SERVER1_CONNECTOR_NAME);
-                                serverNumber = 1;
-                            } else {
-                                log.info("Server 2 is serving the request");
-                                serverInstanceAddr = server2Address;
-                                serverInstanceMAC = SERVER2_MAC;
-                                egressConnector = switchManager.getNodeConnector(node, SERVER2_CONNECTOR_NAME);
-                                serverNumber = 0;
-                            }
-                        }
-                                  
-                        // Create flow table entry for further incoming packets
-                        
-                        // Match incoming packets of this TCP connection 
-                        // (4 tuple source IP, source port, destination IP, destination port)
-                        Match match = new Match();
-                        match.setField(MatchType.DL_TYPE, (short) 0x0800);  // IPv4 ethertype
-                        match.setField(MatchType.NW_PROTO, (byte) 6);       // TCP protocol id
-                        match.setField(MatchType.NW_SRC, clientAddr);
-                        match.setField(MatchType.NW_DST, dstAddr);
-                        match.setField(MatchType.TP_SRC, (short) clientPort);
-                        match.setField(MatchType.TP_DST, (short) dstPort);
-                        
-                        // List of actions applied to the packet
-                        List<Action> actions = new LinkedList<Action>();
-                        
-                        // Re-write destination IP to server instance IP
-                        actions.add(new SetNwDst(serverInstanceAddr));
-                        
-                        // Re-write destination MAC to server instance MAC
-                        actions.add(new SetDlDst(serverInstanceMAC));
-                        
-                        // Output packet on port to server instance
-                        actions.add(new Output(egressConnector));
-                        
-                        // Create the flow
-                        Flow flow = new Flow(match, actions);
-                        
-                        // Use FlowProgrammerService to program flow.
-                        Status status = flowProgrammerService.addFlow(node, flow);
-                        if (!status.isSuccess()) {
-                            log.error("Could not program flow: " + status.getDescription());
-                            return PacketResult.CONSUME;
-                        }
-                                               
-                        // Create flow table entry for response packets from server to client
-                        
-                        // Match outgoing packets of this TCP connection 
-                        match = new Match();
-                        match.setField(MatchType.DL_TYPE, (short) 0x0800); 
-                        match.setField(MatchType.NW_PROTO, (byte) 6);
-                        match.setField(MatchType.NW_SRC, serverInstanceAddr);
-                        match.setField(MatchType.NW_DST, clientAddr);
-                        match.setField(MatchType.TP_SRC, (short) dstPort);
-                        match.setField(MatchType.TP_DST, (short) clientPort);
-                        
-                        // Re-write the server instance IP address to the public IP address
-                        actions = new LinkedList<Action>();
-                        actions.add(new SetNwSrc(publicInetAddress));
-                        actions.add(new SetDlSrc(SERVICE_MAC));
-                        
-                        // Output to client port from which packet was received
-                        actions.add(new Output(ingressConnector));
-                        
-                        flow = new Flow(match, actions);
-                        status = flowProgrammerService.addFlow(node, flow);
-                        if (!status.isSuccess()) {
-                            log.error("Could not program flow: " + status.getDescription());
-                            return PacketResult.CONSUME;
-                        }
-                        
-                        // Forward initial packet to selected server
-                      
-                        log.trace("Forwarding packet to " + serverInstanceAddr.toString() + " through port " + egressConnector.getNodeConnectorIDString());
-                        ethFrame.setDestinationMACAddress(serverInstanceMAC);
-                        ipv4Pkt.setDestinationAddress(serverInstanceAddr);
-                        inPkt.setOutgoingNodeConnector(egressConnector);                       
-                        dataPacketService.transmitDataPacket(inPkt);
-                        
-                        return PacketResult.CONSUME;
-                    }
-                }
+            Status status = flowProgrammerService.addFlow(node, flow);
+            if (!status.isSuccess()) {
+                log.error("Could not program flow: " + status.getDescription());
+                    System.out.println("Could not program flow in node "+node.toString()+": " + status.getDescription());
             }
-        }
-        
-        // We did not process the packet -> let someone else do the job.
-        return PacketResult.IGNORED;
-    }*/
-
+    	}
+    	
+    	public void start()
+    	{
+    		if(t==null)
+    		{
+    			t = new Thread(this);
+    			tlist.add(t);
+    			t.start();
+    		}
+    	}
+    	
+    }
 }
