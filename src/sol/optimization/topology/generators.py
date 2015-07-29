@@ -86,11 +86,3 @@ def generateCompleteTopology(n, name='complete'):
     forceSwitchLabels(t)
     return t
 
-def extractTopo(controllerIP='localhost',name='onos-topo'):
-	G = extracttopo.extractGraph(controllerIP)
-	t = Topology(name,G)
-	forceSwitchLabels(t)
-	return t
-	
-
-
