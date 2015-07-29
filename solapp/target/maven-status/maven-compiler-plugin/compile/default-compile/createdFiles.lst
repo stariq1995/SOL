@@ -1,4 +1,5 @@
 org/cmu/solapp/PacketHandler$FlowFromSol.class
+org/cmu/solapp/PacketHandler$Worker.class
 org/cmu/solapp/PacketHandler.class
 org/cmu/solapp/PacketHandler$InstallFlowThread.class
 org/cmu/solapp/Activator.class

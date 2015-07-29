@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
-Bnd-LastModified: 1438146940217
+Bnd-LastModified: 1438195917424
 Build-Jdk: 1.8.0_45-internal
 Built-By: dipayan
 Bundle-Activator: org.cmu.solapp.Activator
