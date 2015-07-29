@@ -1,5 +1,6 @@
 package edu.unc.sol.app;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.felix.scr.annotations.*;
 import org.onlab.packet.IpPrefix;
@@ -91,7 +92,8 @@ public class SolApp extends BaseResource {
     public Response installSOLPaths(InputStream input) {
         ObjectMapper mapper = new ObjectMapper();
         try {
-            SolPath[] paths = mapper.readValue(input, SolPath[].class);
+            JsonNode data = mapper.readTree(input).get("paths");
+            SolPath[] paths = mapper.treeToValue(data, SolPath[].class);
             boolean success = true;
             for (SolPath p : paths) {
                 log.info(p.toString());
