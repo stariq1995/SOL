@@ -6,3 +6,7 @@ doc/build
 .coverage
 .vagrant
 src/sol.egg-info
+.classpath
+.settings
+.project
+*.iml
