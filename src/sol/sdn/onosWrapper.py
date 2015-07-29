@@ -1,5 +1,8 @@
 # coding=utf-8
 
+import json
+import itertools
+
 import networkx
 import requests
 
@@ -12,11 +15,12 @@ class ONOSInterface(object):
 
     def pushRoutes(self, pathToPrefix):
         resp = requests.post("http://{}/sol/install".format(self._host),
-                             data={'paths': [{
-                                       "nodes": path.getNodes(),
-                                       "srcprefix": str(prefix[0]),
-                                       "dstprefix": str(prefix[1]),
-                                   } for path in pathToPrefix for prefix in pathToPrefix[path]]})
+                             data=json.dumps({'paths': [{
+                                                            "nodes": path.getNodes(),
+                                                            "srcprefix": str(prefix[0]),
+                                                            "dstprefix": str(prefix[1]),
+                                                        } for path in pathToPrefix for prefix in pathToPrefix[path]]}),
+                             headers={"content-type": "application/json"})
         resp.raise_for_status()
 
     def getTopology(self):
@@ -29,6 +33,7 @@ class ONOSInterface(object):
 
         G = networkx.Graph()
         G.add_nodes_from([x['id'] for x in devices['devices']])
-        G.add_edges_from([(x['src']['device'], x['dst']['device']) for x in links['links']])
+        G.add_edges_from([(x['src']['device'], x['dst']['device'],
+                           {"srcport": x['src']['port'], "dstport": x['dst']['port']}) for x in links['links']])
 
         return Topology('onosTopology', G.to_directed())

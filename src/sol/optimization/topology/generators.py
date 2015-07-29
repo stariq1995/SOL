@@ -10,8 +10,6 @@ import networkx as nx
 
 from sol.optimization.topology.topology import Topology
 
-from sol.optimization.topology import extracttopo
-
 
 def forceSwitchLabels(topology):
     """ Force all nodes to be labeled as switches

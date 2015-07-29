@@ -13,7 +13,7 @@ if __name__ == '__main__':
     # ==============
     # Fake some data
     # ==============
-    onos = ONOSInterface("192.168.99.100:8181")
+    onos = ONOSInterface("localhost:8181")
     topo = onos.getTopology()
     # topo = generateCompleteTopology(8)
     # ingress-egress pairs
@@ -25,11 +25,11 @@ if __name__ == '__main__':
     trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},
                                             {'allTraffic': 2000})
     for tc in trafficClasses:
-        tc.srcIPPrefix = "10.0.0.{}/32".format(int(tc.src.lstrip(":of")))
-        tc.dstIPPrefix = "10.0.0.{}/32".format(int(tc.dst.lstrip(":of")))
+        tc.srcIPPrefix = "10.0.0.{}/30".format(int(tc.src.lstrip(":of")))
+        tc.dstIPPrefix = "10.0.0.{}/30".format(int(tc.dst.lstrip(":of")))
     linkcaps = provisioning.provisionLinks(topo, trafficClasses, 1)
     # do not load links more than 50%
-    linkConstrCaps = {(u, v): .5 for u, v, data in topo.links()}
+    linkConstrCaps = {(u, v): 1 for u, v, data in topo.links()}
 
     # ==============
     # Optimize
@@ -49,6 +49,6 @@ if __name__ == '__main__':
 
     routes = {}
     for tc, paths in opt.getPathFractions(pptc).iteritems():
-        routes.update(computeSplit(tc, paths, 0, False))
+        routes.update(computeSplit(tc, paths, 0))
     print(routes)
     onos.pushRoutes(routes)
