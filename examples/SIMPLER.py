@@ -17,8 +17,12 @@ from sol.optimization.topology.provisioning import generateTrafficClasses
 from sol.sdn.controller_hydrogen import OpenDayLightController
 
 if __name__=='__main__':
-	start_time = time.time()
+	start_overall = time.time()
+	start_time = start_overall
 	topo = generators.extractTopo()
+	print("ExtractopoExecution Time = %s secs" % (time.time() - start_time))
+	
+	start_time = time.time()
 	generators.forceSwitchLabels(topo)
 	
 	for node,data in topo.nodes():
@@ -90,6 +94,7 @@ if __name__=='__main__':
 	opt.setPredefinedObjective('minmaxnodeload', resource='cpu')
 									  
 	opt.solve()
+	print("Sol Optimization Time = %s secs" % (time.time() - start_time))
 	
 	'''
 	tclist=[]
@@ -97,12 +102,15 @@ if __name__=='__main__':
 		tclist.append(tc)
 		#print tc
 	'''
-	
+	start_time = time.time()
 	gpf=opt.getPathFractions(pptc)
 	#print("Execution Time = %s secs" % (time.time() - start_time))
 	odl = OpenDayLightController(graph = topo._graph, parallel=True)
-	odl.writeJsonPath(pptc,gpf)
+	odl.writeJsonPath(pptc=pptc,optPaths=gpf,method='REST') #method = 'JAVA' or 'REST'
+	print("Sol Path generation + installation time = %s secs" % (time.time() - start_time))
+	print("Overall time = %s secs" % (time.time() - start_overall))
 	#print odl.pathDict
+	
 	'''
 	pathList = odl.generateAllPaths(pptc,gpf)
 	for p in pathList:
@@ -115,7 +123,7 @@ if __name__=='__main__':
 	#ass = odl._computeSplit(k = tclist[0], paths = gpf[tclist[0]] , blockbits = 5, mindiff = False)
 	#print ass
 	
-	print("Execution Time = %s secs" % (time.time() - start_time))
+	#print("Execution Time = %s secs" % (time.time() - start_time))
 	'''
 	r = input("Do you want to delete all flows?")
 	if r=='y' :

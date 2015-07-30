@@ -33,6 +33,9 @@ public class PacketHandler {
     
     private static final Logger log = LoggerFactory.getLogger(PacketHandler.class);
     private static final byte MAXTHREADS = 8;
+    static final String pathToJsonFile = "/tmp/";
+    static final String pathToSolApp = "/home/dipayan/sol/examples";
+    static final String appToExecute = "SIMPLER.py";
     long starttime;
 	long endtime;
     ArrayList<Thread> tlist;
@@ -165,9 +168,9 @@ public class PacketHandler {
     
 	private void executeSolOptimization() throws IOException, InterruptedException
 	{
-		String path = "/home/dipayan/sol/examples";
-		ProcessBuilder pb = new ProcessBuilder("python","SIMPLER.py");
-		pb.directory(new File(path));
+		//String path = "/home/dipayan/sol/examples";
+		ProcessBuilder pb = new ProcessBuilder("python",appToExecute);
+		pb.directory(new File(pathToSolApp));
 		pb.redirectError();
 		Process sol = pb.start();
 		sol.waitFor();
@@ -180,7 +183,7 @@ public class PacketHandler {
     	System.out.println("\n\n\nExecuting sol = "+(endtime-starttime)+" msecs!\n\n\n");
     	starttime = System.currentTimeMillis();
     	
-    	File jsfile = new File("/home/dipayan/flows.json");
+    	File jsfile = new File(pathToJsonFile);
     	if(!(jsfile.exists())) {
     		System.out.println("JSON file could not be found!");
     		return null;

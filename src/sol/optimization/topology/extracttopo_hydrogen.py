@@ -45,6 +45,7 @@ class ExtractTopo:
         content = json.loads(content)
         content = content['nodeProperties']
         self.nodeDataODL = content
+        return content
     
     def getHostDataODL(self):
         url = self.odlUrl + '/hosttracker/default/hosts/active/'
