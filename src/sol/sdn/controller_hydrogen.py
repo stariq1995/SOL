@@ -37,7 +37,7 @@ class OpenDayLightController(object):
         #self.pathDict={}
         self.pptc={}
         self.parallel=False
-	self.pathToJsonFile = '/home/dipayan/flow.json'
+	self.pathToJsonFile = '/tmp/flows.json'
     
     def filterPaths(self,pptc,optPaths):
         '''

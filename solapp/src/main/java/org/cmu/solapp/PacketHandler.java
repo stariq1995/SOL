@@ -34,7 +34,7 @@ public class PacketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PacketHandler.class);
     private static final byte MAXTHREADS = 8;
-    static final String pathToJsonFile = "/tmp/";
+    static final String pathToJsonFile = "/tmp/flows.json";
     static final String pathToSolApp = "/home/dipayan/sol/examples";
     static final String appToExecute = "SIMPLER.py";
     long starttime;
@@ -183,7 +183,7 @@ public class PacketHandler {
         }
         Scanner in;
         try {
-            in = new Scanner(new FileReader("/home/dipayan/flows.json"));
+            in = new Scanner(new FileReader(pathToJsonFile));
         } catch (FileNotFoundException e) {
             System.out.println("File Not Found");
             return null;
@@ -299,10 +299,11 @@ public class PacketHandler {
             flow.setPriority(Short.parseShort(f.priority));
 
             Status status = flowProgrammerService.addFlow(node, flow);
+            /*
             if (!status.isSuccess()) {
                 log.error("Could not program flow: " + status.getDescription());
                 System.out.println("Could not program flow in node " + node.toString() + ": " + status.getDescription());
-            }
+            }*/
         }
     }
 

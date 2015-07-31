@@ -105,7 +105,7 @@ if __name__ == '__main__':
     gpf = opt.getPathFractions(pptc)
     # print("Execution Time = %s secs" % (time.time() - start_time))
     odl = OpenDayLightController(graph=topo._graph, parallel=True)
-    odl.writeJsonPath(pptc=pptc, optPaths=gpf, method='REST')  # method = 'JAVA' or 'REST'
+    odl.writeJsonPath(pptc=pptc, optPaths=gpf, method='JAVA')  # method = 'JAVA' or 'REST'
     print("Sol Path generation + installation time = %s secs" % (time.time() - start_time))
     print("Overall time = %s secs" % (time.time() - start_overall))
     # print odl.pathDict
