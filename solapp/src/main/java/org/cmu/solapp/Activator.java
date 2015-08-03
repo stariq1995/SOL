@@ -22,19 +22,6 @@ public class Activator extends ComponentActivatorAbstractBase {
 
         if (imp.equals(PacketHandler.class)) {
 
-            // Define exported and used services for PacketHandler component.
-
-            //Dictionary<String, Object> props = new Hashtable<String, Object>();
-            //props.put("salListenerName", "mypackethandler");
-
-            // Export IListenDataPacket interface to receive packet-in events.
-            //c.setInterface(new String[] {IListenDataPacket.class.getName()}, props);
-
-            // Need the DataPacketService for encoding, decoding, sending data packets
-            /*c.add(createContainerServiceDependency(containerName)
-                    .setService(IDataPacketService.class)
-            		.setCallbacks("setDataPacketService", "unsetDataPacketService")
-            		.setRequired(true));*/
             c.setInterface(new String[]{PacketHandler.class.getName()}, null);
             c.add(createContainerServiceDependency(containerName)
                     .setService(IFlowProgrammerService.class)

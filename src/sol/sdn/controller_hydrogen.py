@@ -34,10 +34,9 @@ class OpenDayLightController(object):
         self.controllerPort = controllerPort
         self.odlUrl = 'http://'+controllerIP+':'+controllerPort+'/controller/nb/v2'
         self.G = graph
-        #self.pathDict={}
         self.pptc={}
         self.parallel=False
-	self.pathToJsonFile = '/tmp/flows.json'
+        self.pathToJsonFile = '/tmp/flows.json'
     
     def filterPaths(self,pptc,optPaths):
         '''
@@ -51,6 +50,11 @@ class OpenDayLightController(object):
             self.pptc[tc] = optPaths[tc]
         
     def generateAllPaths(self,pptc,optPaths,blockbits=5):
+        '''
+        Generate a path list containing all paths to be installed in ODL.
+        :param pptc: Dictionary of all paths represented as values for traffic classes as keys.
+        :param optPaths: all optimized paths per traffic class.
+        '''
         pathList = []
         self.filterPaths(pptc,optPaths)
         pptc = self.pptc
@@ -64,9 +68,6 @@ class OpenDayLightController(object):
                     sources, dests = zip(*assigned[path])
                     subsrcprefix = netaddr.cidr_merge(sources)
                     subdstprefix = netaddr.cidr_merge(dests)
-                    # print path, subsrcprefix, subdstprefix
-
-                    #TODO: test the correctness of this better
                     assert len(subsrcprefix) == len(subdstprefix)
                     for s, d in itertools.izip(subsrcprefix, subdstprefix):
                         pathList.append((path,str(s), str(d)))
@@ -142,63 +143,108 @@ class OpenDayLightController(object):
     
     def writeJsonPath(self,pptc,optPaths,blockbits=5,
                     installHw=True,priority=500,method='REST'):
-        #start_time = time.time()
+        
+        '''
+        Writing all the paths from generated path list into a JSON file to be
+        used by ODL's JAVA app or installing the flows directly into ODL
+        using its REST API.
+        :param pptc: Dictionary of all paths represented as values for traffic classes as keys.
+        :param optPaths: all optimized paths per traffic class.
+        :param installHw: Whether the path is to be installed in the switches.
+        :param priority: Flow priority. Default value is 500.
+        :param method: The method by which flow needs to be installed. 
+               Eg:- If method = 'REST', Flows will be installed using REST API.
+                   If method = "JAVA", flows will be installed using the 
+                   JAVA app. 
+        '''
+        #Generating all the paths to be installed.
         paths = self.generateAllPaths(pptc, optPaths)
+        
         flowList = []
-        #print 'Max number of flows = %d'%self.maxFlows
         flowId=0
         for p in paths:
+            # Storing path in path variable.
+            #Example: path = [1,3,2]
             if type(p[0]) is list:
                 path = p[0][0]._nodes
             else:
                 path = p[0]._nodes
             
+            #Storing source and destination IP addresses and nodes.
             srcIpPrefix = p[1] 
             dstIpPrefix = p[2]
             srcNode = path[0]
             dstNode = path[-1]
+            
+            #Fetching source and destination MAC addresses for the particular path.
+            #Fetching port number list of all ports of the source and destination
+            #nodes where hosts are attached.
             srcMacList=[]
             dstMacList = []
             for host in self.G.edge[srcNode][path[1]]['srcNodeHostList'] :
-                    srcMacList.append(host['mac'])
+                    srcMacPortList.append((host['mac'],host['toSwitchPort']))
             for host in self.G.edge[path[-2]][dstNode]['dstNodeHostList'] :
-                    dstMacList.append(host['mac'])
+                    dstMacPortList.append((host['mac'],host['toSwitchPort']))
         
             for i,node in enumerate(path):
                 flowName = 'Dipayan_Path%d'%(flowId)
                 
+                #Extracting source and destination nodeId's from Graph.
                 if node == srcNode:
-                    inPort = 1
                     nodeId = self.G.edge[node][path[i+1]]['srcnode_odl']
                     
                 else:
                     inPort = self.G.edge[path[i-1]][node]['dstport']
                     nodeId = self.G.edge[node][path[i-1]]['srcnode_odl']
                     
-                if node == dstNode:
-                    outPort = 1
-                else:
+                if node != dstNode:
                     outPort = self.G.edge[node][path[i+1]]['srcport']
                 
-                for ethSrc in srcMacList:
-                    for ethDst in dstMacList:
+                #Installing different rules for different source and dest MAC
+                #address list
+                for ethSrc,srcHostPort in srcMacPortList:
+                    for ethDst,dstHostPort in dstMacPortList:
                         #print 'Installing following rule in ',nodeId,' :-'
                         #print 'SRC IP = %s, DST IP = %s, Input Port = %s, Output Port = %s'%(srcIpPrefix,dstIpPrefix,inPort,outPort)
+                        if node == srcNode:
+                            inPort = srcHostPort
+                        if node == dstNode:
+                            outPort = dstHostPort
+                        
                         if method == 'JAVA':
-                            newFlow = self.buildFlow(flowName=flowName, tableId=0, flowId=flowId, inPort=inPort, 
-                                                 outPort=outPort, ethSrc=ethSrc, ethDst=ethDst,
-                                                 srcIpPrefix=srcIpPrefix, dstIpPrefix=dstIpPrefix,
-                                                 installHw=installHw,priority=priority,nodeId=nodeId,etherType='2048')
+                            newFlow = self.buildFlow(flowName=flowName, 
+                                                     tableId=0, 
+                                                     flowId=flowId, 
+                                                     inPort=inPort, 
+                                                     outPort=outPort, 
+                                                     ethSrc=ethSrc, 
+                                                     ethDst=ethDst,
+                                                     srcIpPrefix=srcIpPrefix, 
+                                                     dstIpPrefix=dstIpPrefix,
+                                                     installHw=installHw,
+                                                     priority=priority,
+                                                     nodeId=nodeId,
+                                                     etherType='2048')
+                            flowList.append(newFlow)
+                            
                         elif method == 'REST':
-                            newFlow = self.buildFlowForREST(flowName=flowName, tableId=0, flowId=flowId, inPort=inPort, 
-                                                 outPort=outPort, ethSrc=ethSrc, ethDst=ethDst,
-                                                 srcIpPrefix=srcIpPrefix, dstIpPrefix=dstIpPrefix,
-                                                 installHw=installHw,priority=priority,nodeId=nodeId,etherType=0x800)
+                            newFlow = self.buildFlowForREST(flowName=flowName, 
+                                                            tableId=0, 
+                                                            flowId=flowId, 
+                                                            inPort=inPort, 
+                                                            outPort=outPort, 
+                                                            ethSrc=ethSrc, 
+                                                            ethDst=ethDst,
+                                                            srcIpPrefix=srcIpPrefix, 
+                                                            dstIpPrefix=dstIpPrefix,
+                                                            installHw=installHw,
+                                                            priority=priority,
+                                                            nodeId=nodeId,
+                                                            etherType=0x800)
                             self.postFlow(newFlow)
-                        #url = self.odlurl+'/config/opendaylight-inventory:nodes/node/'+nodeId+'/table/0/flow/'+str(flowId)
                         flowId = flowId + 1
-                        #print url
-                        flowList.append(newFlow)
+        
+        #Dumping the entire flow list in json format in a file on disk
         if method == 'JAVA':
             f = open(self.pathToJsonFile,'w')
             json.dump(flowList,f,indent=4)
@@ -208,11 +254,15 @@ class OpenDayLightController(object):
             
     def buildFlow(self,installHw,priority,flowName,tableId,flowId,inPort,outPort,
                   ethSrc,ethDst,srcIpPrefix, dstIpPrefix, nodeId, etherType):
+        '''
+        This function is used to build a flow dictionary with all necessary
+        parameters. This dictionary is used for dumping the flows into JSON
+        file.
+        '''
         newFlow = {}
         newFlow['installHw'] = installHw
         newFlow['priority'] = priority
         newFlow['flowName'] = flowName
-        #newFlow['tableId'] = tableId
         newFlow['flowId'] = flowId
         newFlow['inPort'] = inPort
         newFlow['outPort'] = outPort
@@ -228,10 +278,16 @@ class OpenDayLightController(object):
     
     def buildFlowForREST(self,installHw,priority,flowName,tableId,flowId,inPort,outPort,
                   ethSrc,ethDst,srcIpPrefix, dstIpPrefix, nodeId, etherType):
+        
+        '''
+        This function is used to build a flow dictionary with all necessary
+        parameters. This dictionary is used for installing the flows directly
+        using REST API.
+        '''
+        
         newFlow = {}
         node={}
-        #print ethDst
-        #print ethSrc
+        
         parts = nodeId.split('|')
         newFlow = {'installInHw':'true'}
         newFlow.update({'name' : flowName})
@@ -241,10 +297,15 @@ class OpenDayLightController(object):
         newFlow.update({'actions':['OUTPUT=%s'%str(outPort)]})
         newFlow.update({'etherType': '0x800'})
         newFlow.update({'dlDst' : ethDst, 'dlSrc' : ethSrc})
-        #print json.dumps(newFlow,indent=4)
+        
         return newFlow
     
     def postFlow(self,newFlow):
+        '''
+        This function is used to install all the flows in ODL using its REST
+        API by using HTTP 'POST' method.
+        '''
+        
         nodeid = newFlow['node']['id']
         fname = newFlow['name']
         url = self.odlUrl + '/flowprogrammer/default/node/OF/' + nodeid + '/staticFlow/' + fname
@@ -254,33 +315,35 @@ class OpenDayLightController(object):
                                             body = json.dumps(newFlow), 
                                             headers = {'content-type' : 'application/json'})
         
+        #Error condition
         if resp['status'] != '201' and resp['status'] != '200':
             print 'Response =%s\nContent=%s'%(resp,content)
             
     
     def deleteAllFlows(self):
+        
+        '''
+        This function is used to delete all flows that have been installed in
+        ODL using its REST API.
+        '''
+        
         topo = ExtractTopo()
         nodelist = topo.getNodeDataFromODL()
-        #print nodelist
+        
         for node in nodelist:
             nodeid = node['node']['id']
-            #print nodeid
             url = 'http://localhost:8080/controller/nb/v2/flowprogrammer/default/node/OF/' + nodeid
             print url
             resp, content = self.httpreq.request(url, "GET")
             allFlows = json.loads(content)
-            #print allFlows
             flows = allFlows['flowConfig']
             # Delete all flows
             for fs in flows:
                 # Deleting flows
                 flowname = fs['name']
                 del_url = url + '/staticFlow/' + flowname
-                #logging.debug('del_url %s', del_url)
                 resp, content = self.httpreq.request(del_url, "DELETE")
-                #print resp
-                #print content
-                #logging.debug('resp %s content %s', resp, content)
+                
         print "All flows deleted!"
     
     def main(self):
@@ -290,8 +353,9 @@ class OpenDayLightController(object):
         flows = self.getAllFlowsbyNode()
         for node in flows:
             print node,' : ',flows[node]
-        ''' 
+        
         self.deleteAllFlows()
+        '''
 
 if __name__ == "__main__":
     controller = OpenDayLightController()

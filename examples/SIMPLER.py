@@ -95,12 +95,7 @@ if __name__ == '__main__':
     opt.solve()
     print("Sol Optimization Time = %s secs" % (time.time() - start_time))
 
-    '''
-    tclist=[]
-    for tc,path in pptc.iteritems():
-        tclist.append(tc)
-        #print tc
-    '''
+    
     start_time = time.time()
     gpf = opt.getPathFractions(pptc)
     # print("Execution Time = %s secs" % (time.time() - start_time))
@@ -110,56 +105,4 @@ if __name__ == '__main__':
     print("Overall time = %s secs" % (time.time() - start_overall))
     # print odl.pathDict
 
-    '''
-    pathList = odl.generateAllPaths(pptc,gpf)
-    for p in pathList:
-        if type(p[0]) is list:
-            print p[0][0]._nodes
-        else:
-            print p[0]._nodes
-    '''
-
-    # ass = odl._computeSplit(k = tclist[0], paths = gpf[tclist[0]] , blockbits = 5, mindiff = False)
-    # print ass
-
-    # print("Execution Time = %s secs" % (time.time() - start_time))
-    '''
-    r = input("Do you want to delete all flows?")
-    if r=='y' :
-        odl.delFlow(flowUrlList)
-    '''
-    '''
-    print gpf
-
-    list_of_tc=[]
-    list_of_paths=[]
-
-    print "\nBefore optimization :-"
-    for tc,paths in pptc.iteritems():
-        list_of_tc.append(tc.__dict__)
-        print tc	#All traffic classes
-        #print gpf[tc]	#All paths for each traffic class after optimization
-        #print tc.volBytes	#Number of bytes per class
-        for path in paths:
-            print path.encode() #path is an object of pathWithMBox
-
-
-    print "\nAfter optimization :-"
-    for tc,paths in pptc.iteritems():
-        print tc.__dict__
-        for path in gpf[tc]:
-            print path.encode()
-            list_of_paths.append(path.encode())
-
-    json.dump(list_of_tc,open('f1.json','w'),indent=4)
-    json.dump(list_of_paths,open('f2.json','w'),indent=4)
-
-    tc_from_dump=json.load(open('f1.json'))
-    paths_from_dump=json.load(open('f2.json'));
-
-    print "Extracted from dump :-"
-    for tc in tc_from_dump:
-        print tc
-    for paths in paths_from_dump:
-        print paths
-    '''
+    
