@@ -1,5 +1,5 @@
 """ Implements functions necessary to operate the OpenDaylight Lithium
-controller using their RESTful APIs
+controller using their RESTful APIs as well as JAVA app.
 """
 import httplib2
 import json
