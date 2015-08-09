@@ -11,11 +11,9 @@ import itertools
 #import time
 from multiprocessing import Process
 
-class OpenDayLightController(object):
+class ODLInterface(object):
     
-    def __init__(self, uid='admin',password='admin',
-                 controllerIP='localhost',
-                 controllerPort = '8181',graph=None,parallel=False):
+    def __init__(self, controllerhost="localhost:8181", user='admin',password='admin'):
         """
         Create a new controller
 
@@ -294,7 +292,7 @@ class OpenDayLightController(object):
         self.deleteAllFlows()
 
 if __name__ == "__main__":
-    controller = OpenDayLightController()
+    controller = ODLInterface()
     controller.main() 
         
     
