@@ -7,11 +7,16 @@ import org.onlab.packet.IpPrefix;
 import org.onlab.rest.BaseResource;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.*;
+import org.onosproject.net.DefaultPath;
+import org.onosproject.net.DeviceId;
+import org.onosproject.net.Link;
+import org.onosproject.net.Path;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.PathIntent;
+import org.onosproject.net.link.LinkEvent;
+import org.onosproject.net.link.LinkListener;
 import org.onosproject.net.link.LinkService;
 import org.onosproject.net.provider.ProviderId;
 import org.slf4j.Logger;
@@ -24,27 +29,28 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Set;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
 @Component(immediate = true)
+@Service
 @javax.ws.rs.Path("/")
-public class SolApp extends BaseResource {
+public class SolApp extends BaseResource implements SolInterface {
 
     private final static Logger log = getLogger(SolApp.class.getSimpleName());
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    private CoreService coreService;
+    protected CoreService coreService;
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    private IntentService intentService;
+    protected IntentService intentService;
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    private LinkService linkService;
+    protected LinkService linkService;
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
 
     private ApplicationId appId;
     private PathIntent.Builder pathBuilder = PathIntent.builder();
     private TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
+    protected Iterable<Link> links;
 
 
     @Activate
@@ -52,6 +58,13 @@ public class SolApp extends BaseResource {
         String myname = "edu.unc.sol";
         appId = coreService.registerApplication(myname);
         log.info("Activating SOL");
+        links = linkService.getLinks();
+        linkService.addListener(new LinkListener() {
+            @Override
+            public void event(LinkEvent linkEvent) {
+                log.debug("yo");
+            }
+        });
     }
 
     @Deactivate
@@ -74,14 +87,21 @@ public class SolApp extends BaseResource {
     }
 
     protected Path convertPath(SolPath p) {
-        ArrayList<Link> links = new ArrayList<>();
+        ArrayList<Link> pathlinks = new ArrayList<>();
         for (int i = 0; i < p.nodes.length - 1; i++) {
             log.info(DeviceId.deviceId(p.nodes[i]).toString());
-            Set<Link> s = linkService.getDeviceEgressLinks(DeviceId.deviceId(p.nodes[i]));
-            s.retainAll(linkService.getDeviceIngressLinks(DeviceId.deviceId(p.nodes[i + 1])));
-            links.add(s.iterator().next());
+            for (Link l : links) {
+                if (l.src().deviceId() == DeviceId.deviceId(p.nodes[i]) &&
+                        l.dst().deviceId() == DeviceId.deviceId(p.nodes[i + 1])) {
+                    pathlinks.add(l);
+                    break;
+                }
+            }
+//            Set<Link> s = linkService.getDeviceEgressLinks(DeviceId.deviceId(p.nodes[i]));
+//            s.retainAll(linkService.getDeviceIngressLinks(DeviceId.deviceId(p.nodes[i + 1])));
+//            links.add(s.iterator().next());
         }
-        return new DefaultPath(ProviderId.NONE, links, links.size());
+        return new DefaultPath(ProviderId.NONE, pathlinks, pathlinks.size());
     }
 
     @GET

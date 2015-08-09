@@ -116,6 +116,7 @@
                             com.fasterxml.jackson.databind,
                             com.fasterxml.jackson.databind.node,
                             com.fasterxml.jackson.core.*,
+                            org.apache.felix.*,
                             <!--org.apache.commons.lang.math.*,-->
                             <!--com.google.common.*,-->
                             org.onlab.packet.*,

@@ -13,7 +13,9 @@ if __name__ == '__main__':
     # ==============
     # Fake some data
     # ==============
-    onos = ONOSInterface("localhost:8181")
+    onos = ONOSInterface("192.168.99.102:8181")
+    # onos = ONOSInterface("localhost:8181")
+
     topo = onos.getTopology()
     # topo = generateCompleteTopology(8)
     # ingress-egress pairs
