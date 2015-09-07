@@ -122,9 +122,7 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
         for classname, fraction in classFractionDict.iteritems():
             volflows = fraction * trafficMatrix[ie]
             volbytes = volflows * classBytesDict[classname]
-            trafficClasses.append(TrafficClass(index, classname, i, e, volflows,
-                                               volbytes, srcIPPrefix = topology.edge[i][e]['srcIPPrefix'],
-                                               dstIPPrefix = topology.edge[i][e]['dstIPPrefix']))
+            trafficClasses.append(TrafficClass(index, classname, i, e, volflows, volbytes))
             index += 1
     return trafficClasses
 
