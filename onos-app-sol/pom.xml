@@ -28,7 +28,8 @@
 
     <properties>
         <onos.app.name>edu.unc.sol</onos.app.name>
-        <!-- <checkstyle.skip>true</checkstyle.skip> -->
+        <onos.app.origin>UNC</onos.app.origin>
+        <checkstyle.skip>true</checkstyle.skip>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <web.context>/sol</web.context>
     </properties>

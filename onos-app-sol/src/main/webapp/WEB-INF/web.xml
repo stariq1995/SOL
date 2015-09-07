@@ -15,7 +15,7 @@
         <init-param>
             <param-name>com.sun.jersey.config.property.classnames</param-name>
             <param-value>
-                edu.unc.sol.app.SolApp
+                edu.unc.sol.app.SolRestResource
             </param-value>
         </init-param>
         <load-on-startup>1</load-on-startup>
