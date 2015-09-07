@@ -13,22 +13,24 @@ if __name__ == '__main__':
     # ==============
     # Fake some data
     # ==============
-    onos = ONOSInterface("192.168.99.102:8181")
-    # onos = ONOSInterface("localhost:8181")
+    # onos = ONOSInterface("192.168.99.102:8181")
+    onos = ONOSInterface("localhost:8181")
 
     topo = onos.getTopology()
-    # topo = generateCompleteTopology(8)
     # ingress-egress pairs
     iePairs = provisioning.generateIEpairs(topo)
+    # nodes = list(topo.nodes(data=False))
+    # iePairs = [(nodes[0], nodes[1]), (nodes[1], nodes[0])]
+    print iePairs
     # generate traffic matrix
     trafficMatrix = provisioning.computeUniformTrafficMatrixPerIE(
         iePairs, 10 ** 6)
     # compute traffic classes, only one class
     trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},
-                                            {'allTraffic': 2000})
+                                            {'allTraffic': 2000}, topo.getGraph())
     for tc in trafficClasses:
-        tc.srcIPPrefix = "10.0.0.{}/30".format(int(tc.src.lstrip(":of")))
-        tc.dstIPPrefix = "10.0.0.{}/30".format(int(tc.dst.lstrip(":of")))
+        tc.srcIPPrefix = "10.0.0.{}/32".format(int(tc.src.lstrip(":of")))
+        tc.dstIPPrefix = "10.0.0.{}/32".format(int(tc.dst.lstrip(":of")))
     linkcaps = provisioning.provisionLinks(topo, trafficClasses, 1)
     # do not load links more than 50%
     linkConstrCaps = {(u, v): 1 for u, v, data in topo.links()}
@@ -52,5 +54,6 @@ if __name__ == '__main__':
     routes = {}
     for tc, paths in opt.getPathFractions(pptc).iteritems():
         routes.update(computeSplit(tc, paths, 0))
-    print(routes)
+    # print(routes)
     onos.pushRoutes(routes)
+    print("Done")
