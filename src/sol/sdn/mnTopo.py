@@ -14,7 +14,7 @@ class mnTopo(Topo):
     graphml files
     """
 
-    def __init__(self, topo,**params):
+    def __init__(self, topo, **params):
 
         Topo.__init__(self, **params)
 
@@ -24,11 +24,12 @@ class mnTopo(Topo):
             self.addSwitch(n)
             self.addHost('h{}'.format(n))
             self.addLink(n, 'h{}'.format(n))
-            if topo.hasMiddlebox(n):
-                self.addHost('m{}'.format(n))
-                self.addLink(n, 'm{}'.format(n))
+            # if topo.hasMiddlebox(n):
+            #     self.addHost('m{}'.format(n))
+            #     self.addLink(n, 'm{}'.format(n))
 
         # add links here:
         for u, v in topo.getGraph().to_undirected().edges_iter():
             self.addLink(offset(u, 1), offset(v, 1))
 
+topos = {'soltopo': (lambda x: mnTopo())}
