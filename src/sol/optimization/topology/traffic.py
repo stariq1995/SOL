@@ -82,8 +82,8 @@ class Path(object):
         """
         :return: Return an iterator over the links in this path
         """
-        # return itertools.izip(self._nodes, self._nodes[1:])
-        return self._links
+        return itertools.izip(self._nodes, self._nodes[1:])
+        # return self._links
 
     def encode(self):
         """
@@ -121,8 +121,8 @@ class Path(object):
         else:
             return False
 
-    def __hash__(self):
-        return hash(self.__key())
+    # def __hash__(self):
+    #     return hash(self.__key())
 
     def __getitem__(self, i):
         return self._nodes[i]
