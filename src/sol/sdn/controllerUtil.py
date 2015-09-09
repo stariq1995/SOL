@@ -15,20 +15,26 @@ def computeSplit(k, paths, blockbits):
         assigned[paths[0]].append((srcnet, dstnet))
         return assigned
 
-    # otherwise we have to do the block-splitting business
-
-    # Diffenrent length of the IP address based on the version
+    # Different length of the IP address based on the version
     ipbits = 32
     if srcnet.version == 6:
         ipbits = 128
+
+    # If we have a single host to single host flow, we don't really split it
+    # TODO: find a more elegant solution to this:
+    if srcnet.prefixlen == ipbits and dstnet.prefixlen == ipbits:
+        assigned[paths[0]].append((srcnet, dstnet))
+        return assigned
+
+    # otherwise we have to do the block-splitting business
+
     # Set up our blocks. Block is a pair of src-dst prefixes
     assert blockbits <= ipbits - srcnet.prefixlen
     assert blockbits <= ipbits - dstnet.prefixlen
     numblocks = len(srcnet) * len(dstnet) / (2 ** (2 * blockbits))
-    newmask1 = srcnet.prefixlen + blockbits
-    newmask2 = srcnet.prefixlen + blockbits
+    newmask1 = ipbits - blockbits
+    newmask2 = ipbits - blockbits
     blockweight = 1.0 / numblocks  # This is not volume-aware
-    # if not mindiff:
     # This is the basic version, no min-diff required.
     assweight = 0
     index = 0
@@ -36,8 +42,6 @@ def computeSplit(k, paths, blockbits):
     # Iterate over the blocks and pack then into paths
     for block in itertools.product(srcnet.subnet(newmask1),
                                    dstnet.subnet(newmask2)):
-        if index >= len(paths):
-            raise Exception('no bueno')
 
         assigned[path].append(block)
         assweight += blockweight
@@ -47,6 +51,41 @@ def computeSplit(k, paths, blockbits):
             index += 1
             if index < len(paths):
                 path = paths[index]
+
+    for path in assigned:
+        sources, dests = zip(*assigned[path])
+        subsrcprefix = netaddr.cidr_merge(sources)
+        subdstprefix = netaddr.cidr_merge(dests)
+
+        def split(bigger, smaller):
+            while len(bigger) != len(smaller):
+                l = map(len, smaller)
+                maxind = l.index(max(l))
+                item = smaller.pop(maxind)
+                smaller.extend(list(item.subnet(item.prefixlen+1)))
+        if len(subsrcprefix) != len(subdstprefix):
+            if len(subsrcprefix) > len(subdstprefix):
+                split(subsrcprefix, subdstprefix)
+            else:
+                split(subdstprefix, subsrcprefix)
+        assert len(subsrcprefix) == len(subdstprefix)
+        assigned[path] = zip(subsrcprefix, subdstprefix)
+
+    return assigned
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # else:
     #     leftovers = []
     #     # iteration one, remove any exess blocks and put them into leftover
@@ -76,12 +115,3 @@ def computeSplit(k, paths, blockbits):
     #                 if assweight >= p.getNumFlows():
     #                     break
     #     assert len(leftovers) == 0
-    for path in assigned:
-        sources, dests = zip(*assigned[path])
-        subsrcprefix = netaddr.cidr_merge(sources)
-        subdstprefix = netaddr.cidr_merge(dests)
-        assert len(subsrcprefix) == len(subdstprefix)
-        assigned[path] = (subsrcprefix, subdstprefix)
-    return assigned
-    # TODO: implement more sophisticated volume-aware splitting
-    # TODO: corner case: splitting if just one IP per src/dst?
