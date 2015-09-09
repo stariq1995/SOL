@@ -2,8 +2,6 @@ package edu.unc.sol.app;
 
 import java.util.Arrays;
 
-//@XmlAccessorType(XmlAccessType.FIELD)
-//@XmlRootElement
 class SolPath {
     public String[] nodes;
     public String srcprefix;

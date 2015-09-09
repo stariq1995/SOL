@@ -7,7 +7,6 @@ import org.onosproject.net.Path;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
@@ -123,7 +122,6 @@ public class PacketProcessorHelper implements PacketProcessor {
             log.info(dst.toString());
             if (pkt.receivedFrom().deviceId().equals(dst.location().deviceId())) {
                 if (!pkt.receivedFrom().port().equals(dst.location().port())) {
-                    log.info("here");
                     flowObjectiveService.forward(pkt.receivedFrom().deviceId(), DefaultForwardingObjective.builder()
                                     .withSelector(DefaultTrafficSelector.builder()
                                             .matchEthType(Ethernet.TYPE_IPV4)

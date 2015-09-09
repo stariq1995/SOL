@@ -10,15 +10,15 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.Link;
 import org.onosproject.net.Path;
 import org.onosproject.net.device.DeviceService;
-import org.onosproject.net.flow.DefaultTrafficSelector;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.TrafficSelector;
+import org.onosproject.net.flow.*;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.host.HostService;
-import org.onosproject.net.intent.*;
+import org.onosproject.net.intent.Intent;
+import org.onosproject.net.intent.IntentService;
+import org.onosproject.net.intent.IntentState;
+import org.onosproject.net.intent.PathIntent;
 import org.onosproject.net.link.LinkService;
 import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketService;
@@ -56,24 +56,14 @@ public class SolApp {
     protected HostService hostService;
 
     private ApplicationId appId;
-    private PathIntent.Builder pathBuilder = PathIntent.builder();
-    private TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
     private List<Intent> allIntents = new ArrayList<>();
 
     private static SolApp instance = null;
+    private static long time = 0;
 
     @Activate
     public void activate() {
         appId = coreService.registerApplication("edu.unc.sol");
-        intentService.addListener(new IntentListener() {
-            @Override
-            public void event(IntentEvent intentEvent) {
-                if (intentEvent.type() == IntentEvent.Type.FAILED) {
-                    log.error("Failed to install intent " + intentEvent.subject().toString());
-                }
-            }
-        });
-
         packetService.addProcessor(new PacketProcessorHelper(hostService, topologyService, foService),
                 PacketProcessorHelper.ADVISOR_MAX + 2);
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder();
@@ -83,6 +73,26 @@ public class SolApp {
         packetService.requestPackets(selector.build(), PacketPriority.REACTIVE, appId);
 
         instance = this;
+
+//        new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                while (true) {
+//                    for (Intent i : intentService.getIntents()) {
+//                        if (i.appId().equals(appId)) {
+//                            if (intentService.getIntentState(i.key()) == IntentState.WITHDRAWN) {
+//                                intentService.purge(i);
+//                            }
+//                        }
+//                    }
+//                    try {
+//                        Thread.sleep(2000);
+//                    } catch (InterruptedException e) {
+//                        break;
+//                    }
+//                }
+//            }
+//        }).start();
         log.info("Activated SOL");
     }
 
@@ -90,7 +100,6 @@ public class SolApp {
     public void deactivate() {
         log.info("Deactivating SOL");
         removeAllIntents();
-        flowService.removeFlowRulesById(appId);
         instance = null;
     }
 
@@ -98,15 +107,17 @@ public class SolApp {
         return instance;
     }
 
-    public boolean submitPath(SolPath p) {
-        TrafficSelector s = selectorBuilder
+    public void submitPath(SolPath p) {
+        TrafficSelector s = DefaultTrafficSelector.builder()
                 .matchEthType(Ethernet.TYPE_IPV4)
                 .matchIPSrc(IpPrefix.valueOf(p.srcprefix))
                 .matchIPDst(IpPrefix.valueOf(p.dstprefix))
                 .build();
         //TODO: more parameters for port matching
+        long start = System.currentTimeMillis();
         Path onosPath = convertPath(p);
-        PathIntent pi = pathBuilder.appId(appId)
+        time += System.currentTimeMillis() - start;
+        PathIntent pi = PathIntent.builder().appId(appId)
                 .selector(s)
                 .path(onosPath)
                 .build();
@@ -120,36 +131,16 @@ public class SolApp {
                 .withTreatment(DefaultTrafficTreatment.builder().setOutput(onosPath.src().port()).build())
                 .withPriority(PacketProcessorHelper.DEFAULT_PRIORITY)
                 .fromApp(appId)
+                .makePermanent()
                 .withFlag(ForwardingObjective.Flag.VERSATILE).add());
 
         // Egress will get handled by the packet processor helper
-//        DeviceId lastnode = onosPath.dst().deviceId();
-        // FIXME: THIS IS AN UGLY HACK
-//        List<PortNumber> ports = new ArrayList<>();
-//        for (Port po : deviceService.getPorts(lastnode)) {
-//            ports.add(po.number());
-//        }
-//        for (Link l : linkService.getDeviceLinks(lastnode)) {
-//            ports.remove(l.src().port());
-//        }
-//        ports.remove(PortNumber.LOCAL);
-
-//        foService.forward(onosPath.dst().deviceId(), DefaultForwardingObjective.builder()
-//                        .withSelector(s)
-//                        .withTreatment(DefaultTrafficTreatment.builder().setOutput(ports.get(0)).build())
-//                        .withPriority(PacketProcessorHelper.DEFAULT_PRIORITY)
-//                        .fromApp(appId)
-//                        .withFlag(ForwardingObjective.Flag.VERSATILE).add()
-//        );
-
-        return true;
     }
 
     protected Path convertPath(SolPath p) {
         ArrayList<Link> pathlinks = new ArrayList<>();
         for (int i = 0; i < p.nodes.length - 1; i++) {
             for (Link l : linkService.getDeviceEgressLinks(DeviceId.deviceId(p.nodes[i]))) {
-//                log.info(l.toString());
                 // Note: currently no support for multi-graphs
                 if (l.dst().deviceId().equals(DeviceId.deviceId(p.nodes[i + 1]))) {
                     pathlinks.add(l);
@@ -167,6 +158,7 @@ public class SolApp {
             intentService.withdraw(pi);
             allIntents.remove(pi);
         }
+        flowService.removeFlowRulesById(appId);
         log.info("Clear took: " + since(start));
     }
 
@@ -177,4 +169,13 @@ public class SolApp {
     public ApplicationId getID() {
         return appId;
     }
+
+    public long getTime() {
+        long a = time;
+        time=0;
+        log.info("convert time: " + a);
+        return a;
+
+    }
+
 }
