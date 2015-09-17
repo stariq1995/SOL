@@ -44,15 +44,12 @@ public class SolRestResource extends BaseResource {
                 log.error("No instance of SolApp available");
                 return Response.serverError().build();
             }
-//            if (paths.length > 400) {
-//                Arrays.asList(paths).parallelStream().forEach((p) -> {
-//                    instance.submitPath(p);
-//                });
-//            } else {
             for (SolPath p : paths) {
-                instance.submitPath(p);
+                boolean success = instance.submitPath(p);
+                if (!success) { // Something went wrong
+                    return Response.serverError().entity("Failed when sumbitting path. See ONOS log for details.").build();
+                }
             }
-//            }
         } catch (IOException e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -68,9 +65,30 @@ public class SolRestResource extends BaseResource {
         return Response.ok("ok").build();
     }
 
+//    @GET
+//    @Path("time")
+//    public Response time() {
+//        return Response.ok(Long.toString(SolApp.getInstance().getTime())).build();
+//    }
+
     @GET
-    @Path("time")
-    public Response time() {
-        return Response.ok(Long.toString(SolApp.getInstance().getTime())).build();
+    @Path("shortest")
+    public Response installShortestPaths(){
+        SolApp.getInstance().installShortestPaths();
+        return Response.ok("ok").build();
+    }
+
+    @GET
+    @Path("cleanup")
+    public Response cleanupOldIntents() {
+        SolApp.getInstance().cleanupOldIntents();
+        return Response.ok("ok").build();
+    }
+
+    @GET
+    @Path("buildlinks")
+    public Response buildLinks() {
+        SolApp.getInstance().buildLinkMappings();
+        return Response.ok("ok").build();
     }
 }

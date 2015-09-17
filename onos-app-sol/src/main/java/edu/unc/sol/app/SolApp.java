@@ -5,12 +5,12 @@ import org.onlab.packet.Ethernet;
 import org.onlab.packet.IpPrefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.DefaultPath;
-import org.onosproject.net.DeviceId;
-import org.onosproject.net.Link;
-import org.onosproject.net.Path;
+import org.onosproject.net.*;
 import org.onosproject.net.device.DeviceService;
-import org.onosproject.net.flow.*;
+import org.onosproject.net.flow.DefaultTrafficSelector;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
@@ -27,7 +27,9 @@ import org.onosproject.net.topology.TopologyService;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -56,10 +58,29 @@ public class SolApp {
     protected HostService hostService;
 
     private ApplicationId appId;
-    private List<Intent> allIntents = new ArrayList<>();
 
     private static SolApp instance = null;
-    private static long time = 0;
+
+    private class StringLink {
+        private String src;
+        private String dst;
+
+        public StringLink(String src, String dst) {
+            this.src = src;
+            this.dst = dst;
+        }
+
+        public String getSrc() {
+            return src;
+        }
+
+        public String getDst() {
+            return dst;
+        }
+
+    }
+
+    private Map<StringLink, Link> nodesToLinks;
 
     @Activate
     public void activate() {
@@ -74,25 +95,9 @@ public class SolApp {
 
         instance = this;
 
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                while (true) {
-//                    for (Intent i : intentService.getIntents()) {
-//                        if (i.appId().equals(appId)) {
-//                            if (intentService.getIntentState(i.key()) == IntentState.WITHDRAWN) {
-//                                intentService.purge(i);
-//                            }
-//                        }
-//                    }
-//                    try {
-//                        Thread.sleep(2000);
-//                    } catch (InterruptedException e) {
-//                        break;
-//                    }
-//                }
-//            }
-//        }).start();
+        // Precompute link mappings:
+        buildLinkMappings();
+
         log.info("Activated SOL");
     }
 
@@ -107,21 +112,24 @@ public class SolApp {
         return instance;
     }
 
-    public void submitPath(SolPath p) {
+    public boolean submitPath(SolPath p) {
         TrafficSelector s = DefaultTrafficSelector.builder()
                 .matchEthType(Ethernet.TYPE_IPV4)
                 .matchIPSrc(IpPrefix.valueOf(p.srcprefix))
                 .matchIPDst(IpPrefix.valueOf(p.dstprefix))
                 .build();
         //TODO: more parameters for port matching
-        long start = System.currentTimeMillis();
-        Path onosPath = convertPath(p);
-        time += System.currentTimeMillis() - start;
+        Path onosPath = null;
+        try {
+            onosPath = convertPath(p);
+        } catch (NoSuchLinkException e) {
+            log.error("Could not convert SOL path to ONOS path. Please try re-building the link mapping");
+            return false;
+        }
         PathIntent pi = PathIntent.builder().appId(appId)
                 .selector(s)
                 .path(onosPath)
                 .build();
-        allIntents.add(pi);
         intentService.submit(pi);
 
         // Add the edge link treatment
@@ -135,47 +143,77 @@ public class SolApp {
                 .withFlag(ForwardingObjective.Flag.VERSATILE).add());
 
         // Egress will get handled by the packet processor helper
+
+        // Return ok
+        return true;
     }
 
-    protected Path convertPath(SolPath p) {
-        ArrayList<Link> pathlinks = new ArrayList<>();
+    protected Path convertPath(SolPath p) throws NoSuchLinkException {
+        ArrayList<Link> pathlinks = new ArrayList<>(p.nodes.length);
         for (int i = 0; i < p.nodes.length - 1; i++) {
-            for (Link l : linkService.getDeviceEgressLinks(DeviceId.deviceId(p.nodes[i]))) {
-                // Note: currently no support for multi-graphs
-                if (l.dst().deviceId().equals(DeviceId.deviceId(p.nodes[i + 1]))) {
-                    pathlinks.add(l);
-                    break;
-                }
+            Link l = nodesToLinks.get(new StringLink(p.nodes[i], p.nodes[i + 1]));
+            if (l == null) {
+                throw new NoSuchLinkException();
             }
+            pathlinks.add(l);
         }
         return new DefaultPath(ProviderId.NONE, pathlinks, pathlinks.size());
     }
 
     void removeAllIntents() {
-        long start = System.currentTimeMillis();
-        ArrayList<Intent> intentsCopy = new ArrayList<>(allIntents);
-        for (Intent pi : intentsCopy) {
-            intentService.withdraw(pi);
-            allIntents.remove(pi);
+        for (Intent i : intentService.getIntents()) {
+            if (i.appId().equals(appId)) {
+                intentService.withdraw(i);
+            }
         }
         flowService.removeFlowRulesById(appId);
-        log.info("Clear took: " + since(start));
     }
 
-    private long since(long t) {
-        return System.currentTimeMillis() - t;
+    void cleanupOldIntents() {
+        for (Intent i : intentService.getIntents()) {
+            if (i.appId().equals(appId) && intentService.getIntentState(i.key()) == IntentState.WITHDRAWN) {
+                intentService.purge(i);
+            }
+        }
+    }
+
+    void installShortestPaths() {
+        Iterable<Device> devices = deviceService.getDevices();
+        for (Device d1 : devices) {
+            for (Device d2 : devices) {
+                if (d1.equals(d2)) continue;
+                Collection<Path> paths = topologyService.getPaths(topologyService.currentTopology(), d1.id(), d2.id());
+                if (paths.isEmpty()) {
+                    log.error("No path between " + d1.toString() + " and " + d2.toString());
+                    return;
+                }
+//                log.info(paths.toString());
+                Path p = (Path) paths.toArray()[0];
+//                log.info(p.toString());
+                intentService.submit(PathIntent.builder()
+                        .appId(appId)
+                        .path(p)
+                        .priority(100)
+                        .selector(DefaultTrafficSelector.builder().matchEthType(Ethernet.TYPE_IPV4).build())
+                        .build());
+            }
+        }
     }
 
     public ApplicationId getID() {
         return appId;
     }
 
-    public long getTime() {
-        long a = time;
-        time=0;
-        log.info("convert time: " + a);
-        return a;
-
+    public void buildLinkMappings() {
+        nodesToLinks = new HashMap<>(topologyService.currentTopology().linkCount());
+        for (Device d : deviceService.getDevices()) {
+            DeviceId src = d.id();
+            String strid = src.toString();
+            for (Link l : linkService.getDeviceEgressLinks(src)) {
+                // Note: currently no support for multi-graphs
+                nodesToLinks.put(new StringLink(strid, l.dst().deviceId().toString()), l);
+            }
+        }
     }
 
 }
