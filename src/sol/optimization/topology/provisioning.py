@@ -127,7 +127,7 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
 
 
 def provisionLinks(topology, trafficClasses, overprovision=3,
-                   setAttr=True):
+                   setAttr=False):
     """ Provision the links in the topology based on the traffic classes.
     Computes shortest path routing for given traffic classes, uses the maximum
     load, scaled by *overprovision*, as the link capacity
@@ -160,16 +160,18 @@ def provisionLinks(topology, trafficClasses, overprovision=3,
         return loads
 
     bg = computeBackgroundLoad(topology, trafficClasses)
+
     maxBackground = max(bg.itervalues())
     capacities = {}
     G = topology.getGraph()
-    for u, v, data in topology.links():
+    for u, v in G.edges_iter():
+        # print u,v
         link = (u, v)
         mult = 1
         if 'capacitymult' in G.edge[u][v]:
             mult = G.edge[u][v]['capacitymult']
         capacities[link] = float(overprovision * maxBackground * mult)
-
+        #FIXME: look into this, sometimes it multiplies number of links
         if setAttr:
             G.edge[u][v]['capacity'] = capacities[link]
     return capacities
