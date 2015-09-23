@@ -5,7 +5,7 @@ import itertools
 import netaddr
 
 
-def computeSplit(k, paths, blockbits):
+def computeSplit(k, paths, blockbits, oldSplit=None):
     srcnet = netaddr.IPNetwork(k.srcIPPrefix)
     dstnet = netaddr.IPNetwork(k.dstIPPrefix)
     assigned = defaultdict(lambda: [])
@@ -72,16 +72,6 @@ def computeSplit(k, paths, blockbits):
         assigned[path] = zip(subsrcprefix, subdstprefix)
 
     return assigned
-
-
-
-
-
-
-
-
-
-
 
 
 
