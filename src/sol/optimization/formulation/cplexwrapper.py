@@ -205,7 +205,7 @@ class OptimizationCPLEX(Optimization):
                 names=['Coverage.tc.{}'.format(tc.ID)])
 
     @overrides(Optimization)
-    def addAllocateFlowConstraint(self, pptc):
+    def addAllocateFlowConstraint(self, pptc, allocation=None):
         v = self.cplexprob.variables.get_names()
         for tc in pptc:
             name = self.al(tc)
@@ -214,19 +214,27 @@ class OptimizationCPLEX(Optimization):
                 self.allocationVars.append(name)
         v = self.cplexprob.variables.get_names()
         varindex = dict(izip(v, range(len(v))))
-        for tc in pptc:
-            var = []
-            mults = []
-            for pi in range(len(pptc[tc])):
-                var.append(varindex[self.xp(tc, pi)])
-                mults.append(1/tc.priority)
-            mults = [1] * len(var)
-            var.append(varindex[self.al(tc)])
-            mults.append(-1)
-            self.cplexprob.linear_constraints.add(
-                [cplex.SparsePair(var, mults)],
-                senses=['E'], rhs=[0],
-                names=['Allocation.tc.{}'.format(tc.ID)])
+        if allocation is not None:
+            for tc in pptc:
+                var = []
+                mults = []
+                for pi in range(len(pptc[tc])):
+                    var.append(varindex[self.xp(tc, pi)])
+                    mults.append(1/tc.priority)
+                mults = [1] * len(var)
+                var.append(varindex[self.al(tc)])
+                mults.append(-1)
+                self.cplexprob.linear_constraints.add(
+                    [cplex.SparsePair(var, mults)],
+                    senses=['E'], rhs=[0],
+                    names=['Allocation.tc.{}'.format(tc.ID)])
+        else:
+            for tc in pptc:
+                self.cplexprob.linear_constraints.add(
+                    [cplex.SparsePair(varindex[self.al(tc)], [1])],
+                    senses=['E'], rhs=[allocation],
+                    names=['Allocation.tc.{}'.format(tc.ID)])
+
 
     @overrides(Optimization)
     def addNodeCapacityConstraint(self, pptc, resource, nodecaps,

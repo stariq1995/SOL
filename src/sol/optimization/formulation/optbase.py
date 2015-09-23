@@ -203,11 +203,13 @@ class Optimization(object):
         pass
 
     @abstractmethod
-    def addAllocateFlowConstraint(self, pptc):
+    def addAllocateFlowConstraint(self, pptc, allocation=None):
         """
         Allocate flow for each traffic class
 
         :param pptc: paths per traffic class
+        :param allocation: specified allocation for given traffic classes. Useful when a set of traffic classes
+            is already "saturated"
         """
         pass
 
