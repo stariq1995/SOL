@@ -19,6 +19,8 @@ import org.onosproject.net.intent.Intent;
 import org.onosproject.net.intent.IntentService;
 import org.onosproject.net.intent.IntentState;
 import org.onosproject.net.intent.PathIntent;
+import org.onosproject.net.link.LinkEvent;
+import org.onosproject.net.link.LinkListener;
 import org.onosproject.net.link.LinkService;
 import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketService;
@@ -78,6 +80,32 @@ public class SolApp {
             return dst;
         }
 
+        @Override
+        public String toString() {
+            return "StringLink{" +
+                    "src='" + src + '\'' +
+                    ", dst='" + dst + '\'' +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            StringLink that = (StringLink) o;
+
+            if (!src.equals(that.src)) return false;
+            return dst.equals(that.dst);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = src.hashCode();
+            result = 31 * result + dst.hashCode();
+            return result;
+        }
     }
 
     private Map<StringLink, Link> nodesToLinks;
@@ -97,6 +125,12 @@ public class SolApp {
 
         // Precompute link mappings:
         buildLinkMappings();
+//        linkService.addListener(new LinkListener() {
+//            @Override
+//            public void event(LinkEvent linkEvent) {
+//
+//            }
+//        });
 
         log.info("Activated SOL");
     }
@@ -204,7 +238,7 @@ public class SolApp {
         return appId;
     }
 
-    public void buildLinkMappings() {
+    public synchronized void buildLinkMappings() {
         nodesToLinks = new HashMap<>(topologyService.currentTopology().linkCount());
         for (Device d : deviceService.getDevices()) {
             DeviceId src = d.id();
@@ -214,6 +248,7 @@ public class SolApp {
                 nodesToLinks.put(new StringLink(strid, l.dst().deviceId().toString()), l);
             }
         }
+        log.info(nodesToLinks.toString());
     }
 
 }
