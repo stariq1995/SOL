@@ -397,3 +397,10 @@ class Optimization(object):
 
         """
         pass
+
+    @abstractmethod
+    def isSolved(self):
+        """
+        :return: True if solutino was found successfully
+        """
+        pass

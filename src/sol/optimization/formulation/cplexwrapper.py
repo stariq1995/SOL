@@ -570,3 +570,8 @@ class OptimizationCPLEX(Optimization):
     def getVariableNames(self):
         return self.cplexprob.variables.get_names()
 
+    @overrides
+    def isSolved(self):
+        return self.cplexprob.solution.status in [cplex.Cplex.solution.status.optimal,
+                                                  cplex.Cplex.solution.status.optimal_tolerance,
+                                                  cplex.Cplex.solution.status.MIP_optimal]
