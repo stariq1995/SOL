@@ -5,7 +5,7 @@ import itertools
 import netaddr
 
 
-def computeSplit(k, paths, blockbits, oldSplit=None):
+def computeSplit(k, paths, blockbits, oldPaths=None):
     srcnet = netaddr.IPNetwork(k.srcIPPrefix)
     dstnet = netaddr.IPNetwork(k.dstIPPrefix)
     assigned = defaultdict(lambda: [])

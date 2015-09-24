@@ -406,3 +406,11 @@ class Optimization(object):
         :return: True if solutino was found successfully
         """
         pass
+
+    @abstractmethod
+    def save(self, fname):
+        pass
+
+    @abstractmethod
+    def load(self, fname):
+        pass

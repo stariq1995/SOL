@@ -214,7 +214,7 @@ class OptimizationCPLEX(Optimization):
                 self.allocationVars.append(name)
         v = self.cplexprob.variables.get_names()
         varindex = dict(izip(v, range(len(v))))
-        if allocation is not None:
+        if allocation is None:
             for tc in pptc:
                 var = []
                 mults = []
@@ -578,8 +578,17 @@ class OptimizationCPLEX(Optimization):
     def getVariableNames(self):
         return self.cplexprob.variables.get_names()
 
-    @overrides
+    @overrides(Optimization)
     def isSolved(self):
         return self.cplexprob.solution.status in [cplex.Cplex.solution.status.optimal,
                                                   cplex.Cplex.solution.status.optimal_tolerance,
                                                   cplex.Cplex.solution.status.MIP_optimal]
+
+    @overrides(Optimization)
+    def save(self, fname):
+        #TODO: add support for ILP/MIP starts
+        return self.cplexprob.solution.basis.write(fname)
+
+    @overrides(Optimization)
+    def load(self, fname):
+        return self.cplexprob.start.read_basis(fname)

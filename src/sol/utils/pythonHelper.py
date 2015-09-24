@@ -126,4 +126,4 @@ def overrides(interface_class):
 class alwaysOneDict(object):
     """ Dictionary that returns one for any key. Only supports *get* operation """
     def __getitem__(self, key):
-        return 1
+        return 1.

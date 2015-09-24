@@ -113,7 +113,7 @@ class Path(object):
                                                     self._numFlows)
 
     def __key(self):
-        return tuple(self._nodes), self._numFlows
+        return tuple(self._nodes)
 
     def __eq__(self, other):
         if isinstance(other, Path):
@@ -121,8 +121,8 @@ class Path(object):
         else:
             return False
 
-    # def __hash__(self):
-    #     return hash(self.__key())
+    def __hash__(self):
+        return hash(self.__key())
 
     def __getitem__(self, i):
         return self._nodes[i]
