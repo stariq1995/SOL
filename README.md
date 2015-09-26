@@ -1,19 +1,19 @@
 ## What is SOL?
-SOL stands for <b>S</b>DN <b>O</b>ptimization <b>L</b>ayer and is a framework for developing networking applications.
+SOL stands for SDN Optimization Layer and is a framework for developing networking applications.
 Many modern SDN applications rely on creating optimizations in order to compute the optimal way to route traffic. SOL makes this much simpler by abstracting away
 
 ## How do I try it?
-- Since code is still in development you have to clone the repo first:
+- Since code is still in development you have to clone the repo first, there is no option to use PyPi yet:
 
     `git clone https://progwriter@bitbucket.org/progwriter/sol.git`
 
 - Install dependencies.
     * First you need CPLEX. We cannot distribute it, but you can get a free academic license from IBM [here](http://www-01.ibm.com/support/docview.wss?uid=swg21419058)
     Install both the binaries and the python library.
-    * Install python dependencies. *We strongly recommend the use of python [virtualenv](https://virtualenv.pypa.io/en/latest/)*
+    * Install python dependencies. **We strongly recommend** the use of python [virtualenv](https://virtualenv.pypa.io/en/latest/)
 
     `pip intall -r requirements.txt`
-- Install SOL in *dev* mode:
+- Install SOL in *development* mode.
 
     `pip install -e .`
 
