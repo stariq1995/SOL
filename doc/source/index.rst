@@ -26,7 +26,6 @@ Take a look at the following:
     funchowto
     funcs
     examples
-    sdn
 
 API
 ---
@@ -35,7 +34,7 @@ API
     :maxdepth: 3
 
     api
-    
+
 Optimization Summary
 --------------------
 
