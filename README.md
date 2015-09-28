@@ -21,6 +21,7 @@ there is no option to use PyPi yet:
 - Install SOL in *development* mode.
 
     `pip install -e .`
+
 - Tinker!
     * Look at & run some examples from the *examples* folder
     * Write your own applications with the supplied

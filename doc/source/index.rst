@@ -6,12 +6,10 @@
 Welcome to SOL's documentation!
 ===============================
 
-Getting and Installing SOL
---------------------------
+Getting SOL
+-----------
 
-Source code will be available soon!
-
-.. https://bitbucket.org/progwriter/sol
+Source code is available here: http://bitbucket.org/progwriter/sol
 
 Using SOL
 ---------
@@ -26,6 +24,7 @@ Take a look at the following:
     funchowto
     funcs
     examples
+    sdn
 
 API
 ---

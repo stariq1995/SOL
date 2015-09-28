@@ -1,8 +1,6 @@
 SDN API
 =======
 
-.. py:currentmodule:: sol.sdn.controller
-.. autoclass:: OpenDaylightInterface
+.. py:currentmodule:: sol.sdn.onosWrapper
+.. autoclass:: ONOSInterface
     :members:
-.. autofunction:: convertPath
-.. autofunction:: checkErr
