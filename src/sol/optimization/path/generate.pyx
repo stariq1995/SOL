@@ -33,7 +33,7 @@ def generatePathsPerIE(source, sink, topology, predicate, cutoff,
     """
     G = topology.getGraph()
     paths = []
-    num = 0
+    cdef int num = 0
 
     for p in nx.all_simple_paths(G, source, sink, cutoff):
         if modifyFunc is None:

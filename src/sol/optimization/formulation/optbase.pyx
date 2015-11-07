@@ -111,7 +111,7 @@ class Optimization(object):
         pass
 
     @abstractmethod
-    def defineVar(self, name, coeffs, const, lowerBound, upperBound):
+    def defineVar(self, name, coeffs, cons, lowerBound, upperBound):
         """
         Utility function to define an (almost) arbitrary variable.
         :param name: name of the variable
@@ -123,14 +123,6 @@ class Optimization(object):
         :param lowerBound: lower bound on the variable
         :param upperBound: upper bound on the variable
         """
-        pass
-
-    @abstractmethod
-    def defineVarSymbolic(self, name, symbolicEq):
-        pass
-
-    def parseSymbolicEq(self, eq):
-        #TODO: symbolic eq parsing
         pass
 
     @abstractmethod
@@ -315,7 +307,7 @@ class Optimization(object):
         """
         Add a budget constraint on the number of enabled nodes
 
-        :type topology: :py:class:`~sol.optimization.topology.Topology`
+        :type topology: :py:class:`~sol.optimization.topology.topology`
         :param topology: our topology
         :param budgetFunc: a callable object that computes the cost (per node). Must be of the form::
             budgetFunc(nodeID)

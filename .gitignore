@@ -11,3 +11,5 @@ src/sol.egg-info
 .project
 *.iml
 *~
+*.c
+*.so

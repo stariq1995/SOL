@@ -58,7 +58,7 @@ class OptimizationCPLEX(Optimization):
         return self.cplexprob.solve()
 
     @overrides(Optimization)
-    def defineVar(self, name, coeffs=None, const=0, lowerBound=None,
+    def defineVar(self, name, coeffs=None, cons=0, lowerBound=None,
                   upperBound=None):
         self.cplexprob.variables.add(names=[name])
         if lowerBound is not None:
@@ -75,11 +75,7 @@ class OptimizationCPLEX(Optimization):
         mults.append(-1.0)
         self.cplexprob.linear_constraints.add(
             [cplex.SparsePair(ind=var, val=mults)],
-            senses=['E'], rhs=[const])
-
-    @overrides(Optimization)
-    def defineVarSymbolic(self, name, symbolicEq):
-        raise NotImplementedError
+            senses=['E'], rhs=[cons])
 
     @overrides(Optimization)
     def setObjectiveCoeff(self, coeffs, sense):

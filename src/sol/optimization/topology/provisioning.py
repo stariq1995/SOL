@@ -14,7 +14,7 @@ def generateIEpairs(topology):
     Default way of generating ingress-egress pairs. Generates all possible n*(n-1) node combinations
 
     :param topology: the topology to work with
-    :type topology: sol.optimization.topology.Topology
+    :type topology: sol.optimization.topology.topology
     :return: list of ingress-egress pairs (as tuples)
     """
     return [pair for pair in

@@ -3,4 +3,4 @@
     and the prototype of the SDN component
 """
 
-__version__ = 0.3
+__version__ = 0.4

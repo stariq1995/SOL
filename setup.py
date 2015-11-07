@@ -1,6 +1,7 @@
 # coding=utf-8
 
-from distutils.core import setup, Command
+from distutils.core import setup, Command, Extension
+from Cython.Build import cythonize
 
 class PyTest(Command):
     user_options = []
@@ -16,15 +17,14 @@ class PyTest(Command):
         errno = subprocess.call([sys.executable, 'runtests.py'])
         raise SystemExit(errno)
 
-
-
 setup(
     name='sol',
-    version='1.1',
+    version='0.4',
     package_dir={'': 'src'},
     packages=['sol'],
     author='Victor Heorhiadi',
     url='https://bitbucket.org/progwriter/sol',
-    requires=['networkx', 'requests', 'netaddr', 'pytest', 'numpy'],
+    requires=['networkx', 'requests', 'netaddr', 'pytest', 'numpy', 'cython'],
     cmdclass={'test': PyTest},
+    ext_modules = cythonize("src/sol/**/*.pyx")
 )
