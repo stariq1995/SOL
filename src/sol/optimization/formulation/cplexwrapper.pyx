@@ -4,6 +4,7 @@ generation logic, and the low-level API. Uses CPLEX under the hood"""
 
 from __future__ import division
 import copy
+from six.moves import zip
 
 from sol.optimization.formulation.optbase import Optimization
 from sol.utils.exceptions import InvalidConfigException, \
@@ -19,8 +20,6 @@ except ImportError as ex:
     print 'Need IBM CPLEX API, ' \
           'make sure it is installed and in your pythonpath'
     raise ex
-from itertools import izip
-
 
 class OptimizationCPLEX(Optimization):
     """
@@ -47,7 +46,7 @@ class OptimizationCPLEX(Optimization):
         :rtype: dict
         """
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         return varindex
 
     @overrides(Optimization)
@@ -68,7 +67,7 @@ class OptimizationCPLEX(Optimization):
         if coeffs is None:
             return
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         var = coeffs.keys()
         mults = coeffs.values()
         var.append(varindex[name])
@@ -193,7 +192,7 @@ class OptimizationCPLEX(Optimization):
     @overrides(Optimization)
     def addRouteAllConstraint(self, pptc):
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         for tc in pptc:
             self.cplexprob.linear_constraints.add(
                 [cplex.SparsePair([varindex[self.al(tc)]], [1])],
@@ -209,7 +208,7 @@ class OptimizationCPLEX(Optimization):
                 self.cplexprob.variables.add(names=[name], lb=[0], ub=[1])
                 self.allocationVars.append(name)
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         if allocation is None:
             for tc in pptc:
                 var = []
@@ -241,7 +240,7 @@ class OptimizationCPLEX(Optimization):
             self.cplexprob.variables.add(names=[loadstr])
 
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         for node in nodecaps:
             cap = nodecaps[node]
             loadstr = 'Load_{}_{}'.format(resource, node)
@@ -309,7 +308,7 @@ class OptimizationCPLEX(Optimization):
                 self.cplexprob.variables.add(names=[loadstr])
 
         vn = self.cplexprob.variables.get_names()
-        varindex = dict(izip(vn, range(len(vn))))
+        varindex = dict(zip(vn, range(len(vn))))
         for link in linkcaps:
             cap = linkcaps[link]
             if cap > 0:
@@ -340,7 +339,7 @@ class OptimizationCPLEX(Optimization):
             self.cplexprob.variables.add(names=[loadstr])
 
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         for node in nodecaps:
             cap = nodecaps[node]
             loadstr = 'DLoad_{}_{}'.format(resource, node)
@@ -370,7 +369,7 @@ class OptimizationCPLEX(Optimization):
     @overrides(Optimization)
     def addPathDisableConstraint(self, pptc, trafficClasses=None):
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         if trafficClasses is None:
             trafficClasses = pptc.keys()
         for tc in trafficClasses:
@@ -384,7 +383,7 @@ class OptimizationCPLEX(Optimization):
     @overrides(Optimization)
     def addRequireAllNodesConstraint(self, pptc, trafficClasses=None):
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         if trafficClasses is None:
             trafficClasses = pptc.keys()
         for tc in trafficClasses:
@@ -399,7 +398,7 @@ class OptimizationCPLEX(Optimization):
     @overrides(Optimization)
     def addRequireAllEdgesConstraint(self, pptc, trafficClasses=None):
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         if trafficClasses is None:
             trafficClasses = pptc.keys()
         for tc in trafficClasses:
@@ -415,7 +414,7 @@ class OptimizationCPLEX(Optimization):
     @overrides(Optimization)
     def addRequireSomeNodesConstraint(self, pptc, trafficClasses=None, some=1):
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         if trafficClasses is None:
             trafficClasses = pptc.keys()
         for tc in trafficClasses:
@@ -432,7 +431,7 @@ class OptimizationCPLEX(Optimization):
     @overrides(Optimization)
     def addBudgetConstraint(self, topology, budgetFunc, bound):
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         G = topology.getGraph()
         self.cplexprob.linear_constraints.add(
             [cplex.SparsePair([varindex[self.bn(n)] for n in G.nodes_iter()],
@@ -443,7 +442,7 @@ class OptimizationCPLEX(Optimization):
     @overrides(Optimization)
     def addEnforceSinglePath(self, pptc, trafficClasses=None):
         v = self.cplexprob.variables.get_names()
-        varindex = dict(izip(v, range(len(v))))
+        varindex = dict(zip(v, range(len(v))))
         if trafficClasses is None:
             trafficClasses = pptc.keys()
         for tc in trafficClasses:
@@ -470,7 +469,7 @@ class OptimizationCPLEX(Optimization):
             self.cplexprob.variables.add(names=['maxdiff'], lb=[0], ub=[1])
             v = self.cplexprob.variables.get_names()
             # print v
-            varindex = dict(izip(v, range(len(v))))
+            varindex = dict(zip(v, range(len(v))))
             for x in names:
                 self.cplexprob.linear_constraints.add(
                     [cplex.SparsePair([varindex[x], varindex[epsdict[x]]],
@@ -496,10 +495,10 @@ class OptimizationCPLEX(Optimization):
                 else -diffFactor)
         else:
             self.cplexprob.variables.set_lower_bounds(
-                izip(names, [max(1, -epsilon + prevSolution[x])
+                zip(names, [max(1, -epsilon + prevSolution[x])
                              for x in names]))
             self.cplexprob.variables.set_upper_bounds(
-                izip(names, [min(0, epsilon + prevSolution[x])
+                zip(names, [min(0, epsilon + prevSolution[x])
                              for x in names]))
 
     @overrides(Optimization)
