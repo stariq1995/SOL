@@ -2,3 +2,4 @@ networkx
 requests
 netaddr
 numpy
+six
