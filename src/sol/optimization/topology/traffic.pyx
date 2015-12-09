@@ -4,7 +4,7 @@ network path, traffic matrix, and network commodities
 """
 import random
 
-import itertools
+from six.moves import zip
 
 
 class Path(object):
@@ -82,7 +82,7 @@ class Path(object):
         """
         :return: Return an iterator over the links in this path
         """
-        return itertools.izip(self._nodes, self._nodes[1:])
+        return zip(self._nodes, self._nodes[1:])
         # return self._links
 
     def encode(self):
@@ -206,10 +206,14 @@ class TrafficMatrix(dict):
         for i, k in enumerate(self.iterkeys()):
             self[k] = v[i]
 
-
-class TrafficClass(object):
+class TrafficClass:
     """ Represents a traffic class. All members are public
     """
+
+    # cdef public int ID, priority
+    # cdef public char* name
+    # cdef public double volFlows, volBytes
+    # cdef public src, dst, srcIPPrefix, dstIPPrefix, srcAppPorts, dstAppPorts
 
     def __init__(self, ID, name, src, dst, volFlows=0, volBytes=0, priority=1,
                  srcIPPrefix=None, dstIPPrefix=None, srcAppPorts=None,
@@ -269,15 +273,26 @@ class TrafficClass(object):
         """
         return self.src, self.dst
 
-    def __key(self):
-        """ Return the "identity of this object, so to speak"""
-        return self.ID,
+    # def __key(self):
+    #     """ Return the "identity of this object, so to speak"""
+    #     return self.ID,
+    #
+    # def __hash__(self):
+    #     return hash(self.__key())
+    #
+    # def __eq__(self, other):
+    #     if not isinstance(other, TrafficClass):
+    #         return False
+    #     else:
+    #         return self.ID == other.ID
 
     def __hash__(self):
-        return hash(self.__key())
+        return self.ID
 
-    def __eq__(self, other):
-        if not isinstance(other, TrafficClass):
-            return False
+    def __richcmp__(x, y, op):
+        if op == 2:
+            return x.ID == y.ID
+        elif op == 3:
+            return x.ID != y.ID
         else:
-            return self.ID == other.ID
+            raise NotImplementedError

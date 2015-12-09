@@ -1,11 +1,12 @@
 # coding=utf-8
+from __future__ import division
+import itertools
 from collections import defaultdict
 
 import networkx
 import numpy
-
-import itertools
 from sol.optimization.topology.traffic import TrafficClass, TrafficMatrix, Path
+import six
 from sol.utils.pythonHelper import deprecated
 
 
@@ -42,32 +43,32 @@ def computeLogNormalTrafficMatrixPerIE(iepairs, meanFlows):
     :return: the traffic matrix
     """
     dist = numpy.random.lognormal(0, .5)
-    return TrafficMatrix({ie: meanFlows * d for ie, d in itertools.izip(iepairs, dist)})
+    return TrafficMatrix({ie: meanFlows * d for ie, d in six.zip(iepairs, dist)})
 
-
-@deprecated
-def computeUnifromPlusNormalODTM(iepairs, totalFlows, std=.5):
-    """
-    .. warning::
-        deprecated
-
-    A so-so way of generating the traffic matrix.
-    Draw from a normal distribution centered around the uniform-mean.
-    (That is, the mean is what uniform traffic matrix would be like)
-    Then, values that fall outside of the standard deviation are clipped.
-
-    :param iepairs: ingress-egress pairs
-    :param totalFlows: total number of flow desired (only used to compute the uniform mean)
-    :param std: standrard deviation of the normal distribution (as a fraction)
-    :return: the new traffic matrix
-    """
-    tm = dict()
-    uniform = totalFlows / len(iepairs)
-    vals = numpy.random.normal(uniform, scale=std * uniform, size=len(iepairs))
-    vals = numpy.clip(vals, std * uniform, (1 + std) * uniform)
-    for index, ie in enumerate(iepairs):
-        tm[ie] = vals[index]
-    return TrafficMatrix(tm)
+#
+# @deprecated
+# def computeUnifromPlusNormalODTM(iepairs, totalFlows, std=.5):
+#     """
+#     .. warning::
+#         deprecated
+#
+#     A so-so way of generating the traffic matrix.
+#     Draw from a normal distribution centered around the uniform-mean.
+#     (That is, the mean is what uniform traffic matrix would be like)
+#     Then, values that fall outside of the standard deviation are clipped.
+#
+#     :param iepairs: ingress-egress pairs
+#     :param totalFlows: total number of flow desired (only used to compute the uniform mean)
+#     :param std: standrard deviation of the normal distribution (as a fraction)
+#     :return: the new traffic matrix
+#     """
+#     tm = dict()
+#     uniform = totalFlows / len(iepairs)
+#     vals = numpy.random.normal(uniform, scale=std * uniform, size=len(iepairs))
+#     vals = numpy.clip(vals, std * uniform, (1 + std) * uniform)
+#     for index, ie in enumerate(iepairs):
+#         tm[ie] = vals[index]
+#     return TrafficMatrix(tm)
 
 
 def computeGravityTrafficMatrixPerIE(iepairs, totalFlows, populationDict):
@@ -90,7 +91,7 @@ def computeGravityTrafficMatrixPerIE(iepairs, totalFlows, populationDict):
 
 
 def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
-                           classBytesDict):
+                           classBytesDict, asdict=False):
     """
     Generate traffic classes from given ingress-egress pairs and traffic matrix
 
@@ -115,13 +116,20 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
     :return: a list of traffic classes
     """
     trafficClasses = []
-    index = 1
+    if asdict:
+        trafficClasses = defaultdict(lambda: [])
+    cdef int index = 1
+    cdef double fraction, volflows, volbytes
     for ie in iepairs:
         i, e = ie
         for classname, fraction in classFractionDict.iteritems():
             volflows = fraction * trafficMatrix[ie]
             volbytes = volflows * classBytesDict[classname]
-            trafficClasses.append(TrafficClass(index, classname, i, e, volflows, volbytes))
+            tc = TrafficClass(index, classname, i, e, volflows, volbytes)
+            if asdict:
+                trafficClasses[classname].append(tc)
+            else:
+                trafficClasses.append(tc)
             index += 1
     return trafficClasses
 
@@ -161,7 +169,7 @@ def provisionLinks(topology, trafficClasses, overprovision=3,
 
     bg = computeBackgroundLoad(topology, trafficClasses)
 
-    maxBackground = max(bg.itervalues())
+    maxBackground = max(bg.values())
     capacities = {}
     G = topology.getGraph()
     for u, v in G.edges_iter():
@@ -171,7 +179,6 @@ def provisionLinks(topology, trafficClasses, overprovision=3,
         if 'capacitymult' in G.edge[u][v]:
             mult = G.edge[u][v]['capacitymult']
         capacities[link] = float(overprovision * maxBackground * mult)
-        #FIXME: look into this, sometimes it multiplies number of links
         if setAttr:
             G.edge[u][v]['capacity'] = capacities[link]
     return capacities
