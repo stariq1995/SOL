@@ -1,14 +1,13 @@
-import json
 import pytest
-from sol.optimization.formulation import getOptimization, kickStartOptimization
-from sol.optimization.path.predicates import nullPredicate
-from sol.optimization.topology import provisioning
-from sol.optimization.topology.generators import generateCompleteTopology
-from sol.optimization.topology.provisioning import generateTrafficClasses
 
-__author__ = 'victor'
+from sol.opt import kickStartOptimization
+from sol.topology import provisioning
+from sol.path.predicates import nullPredicate
+from sol.topology.generators import generateCompleteTopology
+from sol.topology.provisioning import generateTrafficClasses
 
 _backends = ['cplex']
+
 
 @pytest.mark.parametrize("backend", _backends)
 def testMaxFlow(backend):

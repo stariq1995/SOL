@@ -73,9 +73,6 @@ def computeSplit(k, paths, blockbits, oldPaths=None):
 
     return assigned
 
-
-
-
     # else:
     #     leftovers = []
     #     # iteration one, remove any exess blocks and put them into leftover

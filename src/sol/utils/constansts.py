@@ -1,0 +1,13 @@
+CPLEX = 'cplex'
+GUROBI = 'gurobi'
+DEFAULT_OPTIMIZER = CPLEX
+
+RES_COMPOSE_MAX = 1
+RES_COMPOSE_SUM = 2
+RES_COMPOSE_CONFLICT = 3
+
+MIN_LINK_LOAD = 'minlinkload'
+MIN_LATENCY = 'minlatency'
+
+SELECT_RANDOM = 'random'
+SELECT_SHORTEST = 'shortest'

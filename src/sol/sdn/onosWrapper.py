@@ -4,9 +4,8 @@ import json
 
 import networkx
 import requests
-import time
 
-from sol.optimization.topology.topology import Topology
+from ..topology import Topology
 
 
 class ONOSInterface(object):

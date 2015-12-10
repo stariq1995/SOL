@@ -3,12 +3,12 @@
 """
 
 
-class FormulationException(Exception):
+class SOLException(Exception):
     """ Base formulation exception class"""
     pass
 
 
-class InvalidConfigException(FormulationException):
+class InvalidConfigException(SOLException):
     """ Formulation received an invalid configuration
     """
     pass
@@ -31,5 +31,11 @@ class UnsupportedOperationException(Exception):
 class ControllerException(Exception):
     """
     Something went wrong with the SDN controller
+    """
+    pass
+
+class CompositionError(SOLException):
+    """
+    Something went wrong during composition of multiple applications
     """
     pass
