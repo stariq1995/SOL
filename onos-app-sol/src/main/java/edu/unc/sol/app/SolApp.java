@@ -248,7 +248,7 @@ public class SolApp {
                 nodesToLinks.put(new StringLink(strid, l.dst().deviceId().toString()), l);
             }
         }
-        log.info(nodesToLinks.toString());
+//        log.info(nodesToLinks.toString());
     }
 
 }
