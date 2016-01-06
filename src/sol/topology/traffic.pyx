@@ -121,8 +121,8 @@ class Path(object):
         else:
             return False
 
-    def __hash__(self):
-        return hash(self.__key())
+    # def __hash__(self):
+    #     return hash(self.__key())
 
     def __getitem__(self, i):
         return self._nodes[i]
