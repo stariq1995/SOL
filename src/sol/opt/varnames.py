@@ -1,5 +1,8 @@
 from sol.utils.pythonHelper import tup2str
 
+LINKLOAD_PREFIX = 'LinkLoad'
+LOAD_PREFIX = 'Load'
+
 
 def xp(trafficClass, pathIndex):
     """ Convenience method for formatting a decision variable
