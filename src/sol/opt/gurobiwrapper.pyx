@@ -1,6 +1,7 @@
 # coding=utf-8
 from __future__ import division, print_function
 
+import copy
 from collections import defaultdict
 
 import networkx as nx
@@ -307,3 +308,14 @@ class OptimizationGurobi(object):
         return self.opt.getVarByName(n)
 
     def getPathFractions(self, pptc, flowCarryingOnly=True):
+        result = {}
+        for tc, paths in pptc.iteritems():
+            result[tc] = []
+            for index, path in enumerate(paths):
+                newpath = copy.copy(path)
+                newpath.setNumFlows(self.opt.getVarByName(xp(tc, index)).x)
+                if newpath.getNumFlows() > 0 and flowCarryingOnly:
+                    result[tc].append(newpath)
+                elif not flowCarryingOnly:
+                    result[tc].append(newpath)
+        return result
