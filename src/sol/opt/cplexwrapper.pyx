@@ -395,7 +395,7 @@ class OptimizationCPLEX(object):
                                           [1, -1])],
                         rhs=[0], senses='L')
 
-    def addRequireSomeNodesConstraint(self, pptc, trafficClasses=None, some=1):
+    def addRequireSomeNodesConstraint(self, pptc, trafficClasses=None):
         v = self.cplexprob.variables.get_names()
         varindex = dict(zip(v, range(len(v))))
         if trafficClasses is None:
@@ -409,7 +409,7 @@ class OptimizationCPLEX(object):
                     mults.append(1)
                 self.cplexprob.linear_constraints.add(
                     [cplex.SparsePair(var, mults)],
-                    senses=['G'], rhs=[some - 1], names=['reqsomenodes.{}.{}'.format(tc.ID, pi)])
+                    senses=['G'], rhs=[1], names=['reqsomenodes.{}.{}'.format(tc.ID, pi)])
 
     def addBudgetConstraint(self, topology, budgetFunc, bound):
         v = self.cplexprob.variables.get_names()
