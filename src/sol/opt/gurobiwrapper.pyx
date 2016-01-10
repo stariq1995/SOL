@@ -1,17 +1,21 @@
 # coding=utf-8
 from __future__ import division, print_function
+
 from collections import defaultdict
+
 import networkx as nx
 from six import iterkeys
 from six.moves import range
-from ..utils.exceptions import SOLException
+
 from varnames import *
+from ..utils.exceptions import SOLException
 
 try:
     from gurobipy import *
 except ImportError as e:
     print("Cannot use Gurobi Python API. Please install Gurobi and gurobipy")
     raise e
+
 
 class OptimizationGurobi(object):
     def __init__(self):
@@ -102,8 +106,7 @@ class OptimizationGurobi(object):
             self.opt.addConstr(expressions[node] == self.v(name))
         self.opt.update()
 
-
-    # TODO: consume & capNodes/Links are kindof redundant at this point, clean it up
+    # TODO: consume & capNodes/Links are kind of redundant at this point, clean it up
 
     def consume(self, pptc, resource, cost, nodeCaps, linkCaps):
         """
@@ -142,8 +145,8 @@ class OptimizationGurobi(object):
         self.opt.update()
 
     def _reqAll(self, pptc, trafficClasses=None, reqType=None):
-        if types is None:
-            raise
+        if reqType is None:
+            raise SOLException('A type of constraint is needed for reqAll()')
         cdef int pi
         if trafficClasses is None:
             trafficClasses = pptc.keys()
@@ -152,20 +155,50 @@ class OptimizationGurobi(object):
                 for pi, path in enumerate(pptc[tc]):
                     for n in path:
                         self.opt.addConstr(self.v(bp(tc, pi)) <= self.v(bn(n)))
-        elif reqType.lower() == 'edge' or reqType.lower=='link':
+        elif reqType.lower() == 'edge' or reqType.lower == 'link':
             for tc in trafficClasses:
                 for pi, path in enumerate(pptc[tc]):
                     # TODO: see if this can be optimized
                     for link in path.getLinks():
                         self.opt.addConstr(self.v(bp(tc, pi)) <= self.v(be(*link)))
         else:
-            raise SOLException('A type of constraint is needed for reqAll()')
+            raise SOLException('Unknown type of constraint for reqAll()')
+
+    def _reqSome(self, pptc, trafficClasses=None, reqType=None):
+        if reqType is None:
+            raise SOLException('A type of constraint is needed for reqSome()')
+        cdef int pi
+        if trafficClasses is None:
+            trafficClasses = pptc.keys()
+        if reqType.lower() == 'node':
+            for tc in trafficClasses:
+                for pi, path in enumerate(pptc[tc]):
+                    expr = LinExpr()
+                    for n in path:
+                        expr.add(self.v(bn(n)))
+                    self.opt.addConstr(self.v(bp(tc, pi)) <= expr)
+        elif reqType.lower() == 'edge' or reqType.lower == 'link':
+            for tc in trafficClasses:
+                for pi, path in enumerate(pptc[tc]):
+                    expr = LinExpr()
+                    # TODO: see if this can be optimized
+                    for link in path.getLinks():
+                        expr.add(self.v(be(*link)))
+                    self.opt.addConstr(self.v(bp(tc, pi)) <= expr)
+        else:
+            raise SOLException('Unknown type of constraint for reqSome()')
 
     def reqAllNodes(self, pptc, trafficClasses=None):
-        return self.reqAll(pptc, trafficClasses, ['node'])
+        return self.reqAll(pptc, trafficClasses, 'node')
 
     def reqAllLinks(self, pptc, trafficClasses=None):
         return self._reqAll(pptc, trafficClasses, 'link')
+
+    def reqSomeNodes(self, pptc, trafficClasses=None):
+        return self._reqSome(pptc, trafficClasses, 'node')
+
+    def reqSomeLinks(self, pptc, trafficClasses=None):
+        return self._reqSome(pptc, trafficClasses, 'link')
 
     def disablePaths(self, pptc, trafficClasses=None):
         if trafficClasses is None:
@@ -175,12 +208,13 @@ class OptimizationGurobi(object):
             for pi, path in enumerate(bp(tc, pi)):
                 self.opt.addConstr(self.v(xp(tc, pi)) <= self.v(bp(tc, pi)))
 
-    def relaxToLP(self):
-        self.intvars = []
-        for v in self.opt.getVars():
-            if v.vType == GRB.BINARY:
-                self.intvars.append(v)
-                v.vType = GRB.CONTINUOUS
+    def enforceSinglePath(self, pptc, trafficClasses):
+        if trafficClasses is None:
+            trafficClasses = iterkeys(pptc)
+        cdef int pi
+        for tc in trafficClasses:
+            for pi, path in enumerate(pptc[tc]):
+                self.opt.addConstr(self.v(bp(tc, pi)))
 
     def minLatency(self, topo, pptc, weight=1.0, norm=True):
         latency = self.opt.addVar(name="Latency", obj=weight)
@@ -195,6 +229,16 @@ class OptimizationGurobi(object):
         self.opt.addConstr(latency == latencyExpr)
         self.opt.update()
 
+    def nodeBudget(self, topology, budgetFunc, bound):
+        g = topology.getGraph()
+        expr = LinExpr()
+        for n in topology.nodes(data=False):
+            expr.add(self.v(bn(n)), budgetFunc(n))
+        self.opt.addConstr(expr <= bound)
+
+    # TODO: mindiff
+    # TODO: Some nodes
+    # TODO: externalize strings
 
     def getLatency(self):
         return self.v("Latency").x
@@ -217,6 +261,13 @@ class OptimizationGurobi(object):
 
     def getMaxLinkLoad(self, resource):
         return self.v("MaxLinkLoad_{}".format(resource)).x
+
+    def relaxToLP(self):
+        self.intvars = []
+        for v in self.opt.getVars():
+            if v.vType == GRB.BINARY:
+                self.intvars.append(v)
+                v.vType = GRB.CONTINUOUS
 
     def setTimeLimit(self, long time):
         self.opt.params.TimeLimit = time
