@@ -195,18 +195,25 @@ class OptimizationGurobi(object):
         self.opt.addConstr(latency == latencyExpr)
         self.opt.update()
 
+
     def getLatency(self):
         return self.v("Latency").x
 
-    def minLinkLoad(self, resource, weight=1.0):
-        objname = 'MaxLinkLoad_{}'.format(resource)
-        obj = self.opt.addVar(name=objname, obj=weight)
+    def _minLoad(self, resource, prefix, weight):
+        objName = 'Max_{}_{}'.format(prefix, resource)
+        obj = self.opt.addVar(name=objName, obj=weight)
         self.opt.update()
-        prefix = 'LinkLoad_{}'.format(resource)
+        prefix = '{}_{}'.format(prefix, resource)
         for var in self.opt.getVars():
             if var.VarName.startswith(prefix):
                 self.opt.addConstr(obj >= var)
         self.opt.update()
+
+    def minNodeLoad(self, resource, weight=1.0):
+        self._minLoad(resource, 'NodeLoad', weight)
+
+    def minLinkLoad(self, resource, weight=1.0):
+        self._minLoad(resource, 'LinkLoad', weight)
 
     def getMaxLinkLoad(self, resource):
         return self.v("MaxLinkLoad_{}".format(resource)).x
