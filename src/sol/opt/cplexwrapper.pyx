@@ -409,7 +409,7 @@ class OptimizationCPLEX(object):
                     mults.append(1)
                 self.cplexprob.linear_constraints.add(
                     [cplex.SparsePair(var, mults)],
-                    senses=['G'], rhs=[1], names=['reqsomenodes.{}.{}'.format(tc.ID, pi)])
+                    senses=['G'], rhs=[0], names=['reqsomenodes.{}.{}'.format(tc.ID, pi)])
 
     def addBudgetConstraint(self, topology, budgetFunc, bound):
         v = self.cplexprob.variables.get_names()
