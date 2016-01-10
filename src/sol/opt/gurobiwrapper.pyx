@@ -20,6 +20,7 @@ except ImportError as e:
 class OptimizationGurobi(object):
     def __init__(self):
         self.opt = Model()
+        self.intvars = set()
 
     def addDecisionVars(self, pptc):
         cdef int pi
@@ -237,7 +238,6 @@ class OptimizationGurobi(object):
         self.opt.addConstr(expr <= bound)
 
     # TODO: mindiff
-    # TODO: Some nodes
     # TODO: externalize strings
 
     def getLatency(self):
@@ -263,10 +263,9 @@ class OptimizationGurobi(object):
         return self.v("MaxLinkLoad_{}".format(resource)).x
 
     def relaxToLP(self):
-        self.intvars = []
         for v in self.opt.getVars():
             if v.vType == GRB.BINARY:
-                self.intvars.append(v)
+                self.intvars.add(v)
                 v.vType = GRB.CONTINUOUS
 
     def setTimeLimit(self, long time):
