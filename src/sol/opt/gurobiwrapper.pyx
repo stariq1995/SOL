@@ -240,6 +240,7 @@ class OptimizationGurobi(object):
 
     # TODO: mindiff
     # TODO: externalize strings
+    # TODO: single path constraint
 
     def getLatency(self):
         return self.v("Latency").x
