@@ -74,8 +74,11 @@ public class SolRestResource extends BaseResource {
     @GET
     @Path("shortest")
     public Response installShortestPaths(){
-        SolApp.getInstance().installShortestPaths();
-        return Response.ok("ok").build();
+        if (SolApp.getInstance().installShortestPaths()) {
+            return Response.ok("ok").build();
+        } else {
+            return Response.serverError().build();
+        }
     }
 
     @GET
