@@ -211,7 +211,7 @@ public class SolApp {
         }
     }
 
-    void installShortestPaths() {
+    boolean installShortestPaths() {
         Iterable<Device> devices = deviceService.getDevices();
         for (Device d1 : devices) {
             for (Device d2 : devices) {
@@ -219,7 +219,7 @@ public class SolApp {
                 Collection<Path> paths = topologyService.getPaths(topologyService.currentTopology(), d1.id(), d2.id());
                 if (paths.isEmpty()) {
                     log.error("No path between " + d1.toString() + " and " + d2.toString());
-                    return;
+                    return false;
                 }
 //                log.info(paths.toString());
                 Path p = (Path) paths.toArray()[0];
@@ -232,6 +232,7 @@ public class SolApp {
                         .build());
             }
         }
+        return true;
     }
 
     public ApplicationId getID() {
