@@ -2,6 +2,9 @@ from sol.utils.pythonHelper import tup2str
 
 LINKLOAD_PREFIX = 'LinkLoad'
 LOAD_PREFIX = 'Load'
+MIN_LINK_LOAD = 'minlinkload'
+MIN_NODE_LOAD = 'minnodeload'
+MIN_LATENCY = 'minlatency'
 
 
 def xp(trafficClass, pathIndex):
