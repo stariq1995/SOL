@@ -1,14 +1,12 @@
 # coding=utf-8
 import networkx
-from cplexwrapper import OptimizationCPLEX
-from gurobiwrapper import OptimizationGurobi
 
 from ..path import generatePathsPerTrafficClass
 from ..path import getSelectFunction
 from ..path.predicates import nullPredicate
+from ..utils.constansts import *
 from ..utils.exceptions import InvalidConfigException
 
-from ..utils.constansts import *
 
 def getOptimization(backend=DEFAULT_OPTIMIZER):
     """
@@ -19,11 +17,14 @@ def getOptimization(backend=DEFAULT_OPTIMIZER):
     :raise InvalidConfigException: if the provided backend is not supported
     """
     if backend.lower() == CPLEX:
+        from cplexwrapper import OptimizationCPLEX
         return OptimizationCPLEX()
     elif backend.lower() == GUROBI:
+        from gurobiwrapper import OptimizationGurobi
         return OptimizationGurobi()
     else:
         raise InvalidConfigException('Unsupported optimization backend')
+
 
 def kickStartOptimization(topology, trafficClasses, predicate=nullPredicate, selectStrategy='shortest', selectNumber=10,
                           modifyFunc=None, backend=DEFAULT_OPTIMIZER):
@@ -44,7 +45,8 @@ def kickStartOptimization(topology, trafficClasses, predicate=nullPredicate, sel
         (in the form of a dictionary)
     """
     opt = getOptimization(backend)
-    pptc = generatePathsPerTrafficClass(topology, trafficClasses, predicate, networkx.diameter(topology.getGraph())*1.5,
+    pptc = generatePathsPerTrafficClass(topology, trafficClasses, predicate,
+                                        networkx.diameter(topology.getGraph()) * 1.5,
                                         modifyFunc=modifyFunc)
     selectFunc = getSelectFunction(selectStrategy)
     pptc = selectFunc(pptc, selectNumber)
