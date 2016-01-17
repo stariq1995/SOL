@@ -230,6 +230,7 @@ class OptimizationGurobi(object):
                 latencyExpr.addTerms(len(path) / norm, self.v(xp(tc, pi)))
         self.opt.addConstr(latency == latencyExpr)
         self.opt.update()
+        return latency
 
     def nodeBudget(self, topology, budgetFunc, bound):
         g = topology.getGraph()
@@ -254,12 +255,13 @@ class OptimizationGurobi(object):
             if var.VarName.startswith(prefix):
                 self.opt.addConstr(obj >= var)
         self.opt.update()
+        return obj
 
     def minNodeLoad(self, resource, weight=1.0):
-        self._minLoad(resource, 'NodeLoad', weight)
+        return self._minLoad(resource, 'NodeLoad', weight)
 
     def minLinkLoad(self, resource, weight=1.0):
-        self._minLoad(resource, 'LinkLoad', weight)
+        return self._minLoad(resource, 'LinkLoad', weight)
 
     def getMaxLinkLoad(self, resource):
         return self.v("MaxLinkLoad_{}".format(resource)).x
