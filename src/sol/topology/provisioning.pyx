@@ -23,7 +23,7 @@ def generateIEpairs(topology):
             if pair[0] != pair[1]]
 
 
-def computeUniformTrafficMatrixPerIE(iepairs, totalFlows):
+def uniformTM(iepairs, totalFlows):
     """
     Compute a uniform traffic matrix. That is each ingress-egress pair has the same number of flows
 
@@ -34,7 +34,7 @@ def computeUniformTrafficMatrixPerIE(iepairs, totalFlows):
     return TrafficMatrix({ie: totalFlows / len(iepairs) for ie in iepairs})
 
 
-def computeLogNormalTrafficMatrixPerIE(iepairs, meanFlows):
+def logNormalTM(iepairs, meanFlows):
     """
     Compute the log-normal distribution of traffic across ingress-egress pairs
 
@@ -46,7 +46,7 @@ def computeLogNormalTrafficMatrixPerIE(iepairs, meanFlows):
     return TrafficMatrix({ie: meanFlows * d for ie, d in six.zip(iepairs, dist)})
 
 
-def computeGravityTrafficMatrixPerIE(iepairs, totalFlows, populationDict):
+def gravityTM(iepairs, totalFlows, populationDict):
     """
     Computes the gravity model traffic matrix base
 

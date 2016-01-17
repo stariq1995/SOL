@@ -35,7 +35,7 @@ if __name__ == '__main__':
     print iePairs
     # generate traffic matrix
     populations = {node: randint(1 << 15, 1 << 18) for node, data in topo.nodes()}
-    trafficMatrix = provisioning.computeGravityTrafficMatrixPerIE(
+    trafficMatrix = provisioning.gravityTM(
         iePairs, 10 ** 6, populations)
     # compute traffic classes, only one class
     trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},

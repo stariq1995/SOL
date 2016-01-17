@@ -18,7 +18,7 @@ def testMaxFlow(backend):
     # ingress-egress pairs
     iePairs = [(0, 3)]
     # generate traffic matrix
-    trafficMatrix = provisioning.computeUniformTrafficMatrixPerIE(
+    trafficMatrix = provisioning.uniformTM(
         iePairs, 10 ** 6)
     # compute traffic classes, only one class
     trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},
