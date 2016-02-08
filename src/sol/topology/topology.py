@@ -126,17 +126,30 @@ class Topology(object):
 
     def nodes(self, data=False):
         """
-
         :return: Iterator over topology nodes as tuples of the form (nodeID, nodeData)
         """
         return self._graph.nodes_iter(data=data)
 
     def edges(self, data=False):
         """
-
         :return: Iterator over topology edge tuples (nodeID1, nodeID2, edgeData)
         """
         return self._graph.edges_iter(data=data)
+
+    def setResources(self, nodeOrLink, resources):
+        if isinstance(nodeOrLink, tuple):
+            assert len(nodeOrLink) == 2
+            self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]['resources'] = \
+                {res.name: res for res in resources}
+        else:
+            self._graph.node[nodeOrLink]['resources'] = {res.name: res for res in resources}
+
+    def getResources(self, nodeOrLink, resources):
+        if isinstance(nodeOrLink, tuple):
+            assert len(nodeOrLink) == 2
+            return self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]['resources']
+        else:
+            self._graph.node[nodeOrLink]['resources']
 
     links = edges  # Method alias here
 
@@ -155,7 +168,7 @@ class Topology(object):
         except KeyError:
             return False
 
-    hasMbox = hasMiddlebox
+    hasMbox = hasMiddlebox  # Method alias
 
     def setMiddlebox(self, node, val=True):
         """
@@ -166,8 +179,4 @@ class Topology(object):
         """
         self._graph.node[node]['hasMbox'] = val
 
-    setMbox = setMiddlebox
-
-
-
-
+    setMbox = setMiddlebox  # Method alias
