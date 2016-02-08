@@ -1,59 +1,83 @@
-from ..utils.exceptions import CompositionError
+from gurobipy import quicksum, GRB, LinExpr, QuadExpr
+
 from ..opt import getOptimization
 from ..utils.constansts import *
-import numpy
-from gurobipy import QuadExpr, LinExpr
+from ..utils.exceptions import CompositionError
 
-def composeSingleLP(apps, topo, resMode, objMode):
+#XXX: this is currently tied to Gurobi 
+def _addNamedConstraints(opt, app):
+    for c in app.constraints:
+        if c == ALLOCATE_FLOW:
+            opt.allocateFlow(app.pptc)
+        elif c == ROUTE_ALL:
+            opt.routeAll(app.pptc)
+
+def compose(apps, topo, resMode, globalNodeCaps, globalLinkCaps, 
+            resourcesToShare=[]):
     opt = getOptimization('Gurobi')
     for app in apps:
-        opt.addDecisionVars(app.trafficClasses)
-        opt.allocateFlow(app.trafficClasses)
-        opt.routeAll(app.trafficClasses)
+        opt.addDecisionVars(app.pptc)
+        _addNamedConstraints(opt, app)
 
-    composeResources(apps, topo, opt, resMode)
-    composeObjectives(apps, topo, opt, objMode)
+    _composeResources(apps, topo, opt, nodeCaps, linkCaps, resMode)
+    proportionalFairness(apps, topo, opt)
     return opt
 
-
-def composeResources(apps, topo, opt, mode=RES_COMPOSE_MAX):
+def _composeResources(apps, topo, opt, nodeCaps, linkCaps, mode=RES_COMPOSE_MAX):
     resourceset = set()
     for a in apps:
         for r in a.getResourceNames():
             resourceset.add(r)
+
+    # Decide how we pick resource consumptions value
     for r in resourceset:
-        resapps = []
+        cost = []
         for app in apps:
             if app.uses(r):
-                resapps.append(a.resources[r])
-
-        # print(resapps, set(resapps))
+                cost.append(app.resources[r])
         val = None
         if mode == RES_COMPOSE_MAX:
-            val = max(resapps)
+            val = max(cost)
         elif mode == RES_COMPOSE_SUM:
-            val = sum(resapps)
+            val = sum(cost)
         elif mode == RES_COMPOSE_CONFLICT:
-            if len(set(resapps)) != 1:
+            if len(set(cost)) != 1:
                 raise CompositionError("Resource composition conflict")
-            val = resapps[0]
+            val = cost[0]
 
         for app in apps:
             if app.uses(r):
-                opt.consume(app.trafficClasses, r, val, {node: [] for node in topo.nodes(False)},
-                            {link: {'bw': 1} for link in topo.links(False)})
+                opt.consume(app.trafficClasses, r, val, nodeCaps, linkCaps)
 
-
-def proportionalFairness(apps, to='volume'):
+def _proportionalFairness(apps, topo, opt, to='volume'):
     cdef double totalVol = 0
-    vols = []
-    for app in apps:
-        vol = sum([tc.volFlows for tc in app.trafficClasses])
-        vols.append(vol)
-        totalVol += vol
-    return [vol/totalVol for vol in vols]
+    if to.lower() == 'volume':
+        vols = {app: sum([tc.volFlows for tc in app.trafficClasses]) for app in apps}
+        totalVol = sum(vols.values())
+        for app in apps:
+            v = _addObjVar(app, topo, opt)
+            v.Obj = vols[app] / totalVol
+        opt.getGurobiModel().update()
+    else:
+        raise CompositionError('Unknown proportion when using proportional fairness')
 
-def addObjVar(app, opt, topo=None):
+def _proportionalFairnessResource(apps, topo, opt, resource, to='volume'):
+    cdef double totalVol = 0
+    if to.lower() == 'volume':
+        vols = {app: sum([tc.volFlows for tc in app.trafficClasses]) for app in apps}
+        totalVol = sum(vols.values())
+        # depending on what resource means write the fairness equations
+        # if the resource is portion of a global resource
+        
+        #TODO: need resource in path primitive!
+        for app in apps:
+            for tc in app.pptc:
+                for pi, p in enumerate(app.pptc[tc]):
+                    if resource in p:
+                        pass
+
+
+def _addObjVar(app, topo, opt):
     if app.obj.lower() == MIN_LINK_LOAD:
         return opt.minLinkLoad('bw', 0)
     elif app.obj.lower() == MIN_LATENCY:
@@ -61,21 +85,46 @@ def addObjVar(app, opt, topo=None):
     else:
         raise CompositionError("Unknown objective")
 
-
-cpdef axiomFairness(apps, opt, float beta):
-    ratio = QuadExpr()
-    denom = LinExpr()
-    vars = []
-    for app in apps:
-        v = addObjVar(app)
-        vars.append(v)
-        denom += v
-    for app in apps:
-        ratio += (v/denom)^(1-beta)
-    opt.getModel().setObj(numpy.sign(1-beta)*(ratio^(1/beta)))
+def getObjVar(app, opt):
+    if app.obj.lower() == MIN_LINK_LOAD:
+        return opt.getMaxLinkLoad('bw', False)
+    elif app.obj.lower() == MIN_LATENCY:
+        return opt.getLatency(False)
+    else:
+        raise CompositionError("Unknown objective")
 
 
+# cpdef maxMinRatio(apps, topo, opt):
+#     m = opt.getGurobiModel()
+#     ratio = m.addVar(name='maxRatio', lb=0)
+#     m.update()
+#     m.setObjective(LinExpr(ratio), sense=GRB.MINIMIZE)
+#     m.update()
+#     print apps
+#     for app in apps:
+#         addObjVar(app, topo, opt)
+#     m.update()
+#     for app in apps:
+#         appratio = m.addVar(name=app.name + 'ratio', lb=0)
+#         m.update()
+#         m.addConstr(ratio >= appratio) # >= means max ratio
+#         m.update()
+#         e = quicksum([getObjVar(app2, opt) for app2 in apps])
+#         m.addQConstr(e - appratio * getObjVar(app, opt) == 0)
+#     m.update()
 
-
-
-
+# cpdef minimizeMaxRatio(apps, topo, opt):
+#     m = opt.getGurobiModel()
+#     # print apps
+#     for app in apps:
+#         _addObjVar(app, topo, opt)
+#     o = LinExpr()
+#     o.add(len(apps) * quicksum([getObjVar(app2, opt) for app2 in apps]))
+#     for app in apps:
+#         appratio = m.addVar(name=app.name + 'ratio', lb=0)
+#         m.update()
+#         o.add(appratio)
+#         e = quicksum([getObjVar(app2, opt) for app2 in apps])
+#         m.addQConstr(appratio * getObjVar(app, opt) >= e)
+#     m.setObjective(o)
+#     m.update()
