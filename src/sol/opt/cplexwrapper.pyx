@@ -1,6 +1,6 @@
 # coding=utf-8
 """ The main optimization module behind SOL. Contains the high-level
-generation logic, and the low-level API. Uses CPLEX under the hood"""
+generation logic, and the low-level API. Uses CPLEX for solving the LP/ILP"""
 
 from __future__ import division, print_function
 
@@ -8,7 +8,7 @@ import copy
 
 from six.moves import zip
 
-from ..topology import PathWithMbox
+from sol.path import PathWithMbox
 from ..utils.exceptions import InvalidConfigException, \
     SOLException
 from ..utils.pythonHelper import tup2str, Tree

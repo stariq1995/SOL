@@ -8,7 +8,8 @@ import networkx
 import numpy
 import six
 
-from ..topology import TrafficClass, TrafficMatrix, Path
+from ..topology import TrafficClass, TrafficMatrix
+from sol.path import Path
 
 def generateIEpairs(topology):
     """
@@ -66,7 +67,7 @@ def gravityTM(iepairs, totalFlows, populationDict):
 
 
 def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
-                           classBytesDict, asdict=False):
+                           classBytesDict=None, asdict=False):
     """
     Generate traffic classes from given ingress-egress pairs and traffic matrix
 
@@ -99,7 +100,8 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
         i, e = ie
         for classname, fraction in classFractionDict.iteritems():
             volflows = fraction * trafficMatrix[ie]
-            volbytes = volflows * classBytesDict[classname]
+            if classBytesDict is not None:
+                volbytes = volflows * classBytesDict[classname]
             tc = TrafficClass(index, classname, i, e, volflows, volbytes)
             if asdict:
                 trafficClasses[classname].append(tc)
@@ -140,8 +142,6 @@ cpdef provisionLinks(topology, trafficClasses, float overprovision=3, setAttr=Fa
     :returns: mapping of links to their capacities
     :rtype: dict
     """
-
-
 
     bg = computeBackgroundLoad(topology, trafficClasses)
 

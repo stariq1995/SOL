@@ -6,6 +6,12 @@ MIN_LINK_LOAD = 'minlinkload'
 MIN_NODE_LOAD = 'minnodeload'
 MIN_LATENCY = 'minlatency'
 
+ALLOCATE_FLOW = 'allocateFlow'
+ROUTE_ALL = 'routeAll'
+REQ_ALL_LINKS = 'reqAllLinks'
+REQ_ALL_NODES = 'reqAllNodes'
+#TODO: expand available constraint name constants
+
 
 def xp(trafficClass, pathIndex):
     """ Convenience method for formatting a decision variable

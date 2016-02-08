@@ -3,8 +3,7 @@
 import networkx as nx
 
 from sol.utils import exceptions
-from ..topology import Path
-
+from paths import Path
 
 def generatePathsPerIE(source, sink, topology, predicate, cutoff,
                        maxPaths=float('inf'), modifyFunc=None,

@@ -2,7 +2,7 @@
 import pytest
 from sol.topology.generators import generateChainTopology, \
     generateCompleteTopology
-from sol.topology import PathWithMbox
+from sol.path.path import PathWithMbox
 
 from sol.path import generatePathsPerIE
 from sol.path.predicates import nullPredicate, useMboxModifier

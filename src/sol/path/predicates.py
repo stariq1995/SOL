@@ -4,8 +4,7 @@ Both generic (example predicates) and some app-specific predicates
 """
 import itertools
 
-from ..topology import PathWithMbox
-
+from paths import PathWithMbox
 
 
 # noinspection PyUnusedLocal
