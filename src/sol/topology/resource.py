@@ -14,11 +14,10 @@ class Resource:
 
 
 class CompoundResource:
-    def __init__(self, resname, links, nodes, totalCap=None):
+    def __init__(self, resname, links, nodes):
         self.name = resname
         self.links = links
         self.nodes = nodes
-        self.totalCap = totalCap
 
     def __add__(self, o):
         if not isinstance(CompoundResource, o):
