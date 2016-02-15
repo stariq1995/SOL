@@ -144,14 +144,19 @@ class Topology(object):
         else:
             self._graph.node[nodeOrLink]['resources'] = {res.name: res for res in resources}
 
-    def getResources(self, nodeOrLink, resources):
+    def getResources(self, nodeOrLink):
         if isinstance(nodeOrLink, tuple):
             assert len(nodeOrLink) == 2
-            return self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]['resources']
+            if 'resources' in self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]:
+                return self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]['resources']
+            else:
+                return []
         else:
-            self._graph.node[nodeOrLink]['resources']
+            if 'resources' in self._graph.node[nodeOrLink]:
+                return self._graph.node[nodeOrLink]['resources']
+            else:
+                return []
 
-    links = edges  # Method alias here
 
     def __repr__(self):
         return "{}(name={})".format(self.__class__, self.name)
