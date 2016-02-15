@@ -1,5 +1,5 @@
 import networkx as nx
-from sol.opt.composer import composeSingleLP
+from sol.opt.composer import compose
 from sol.topology.provisioning import generateTrafficClasses
 
 from sol import App, RES_COMPOSE_CONFLICT, MIN_LINK_LOAD, MIN_LATENCY
@@ -7,6 +7,7 @@ from sol.path import generatePathsPerTrafficClass, kShortestPaths
 from sol.path.predicates import nullPredicate
 from sol.topology import provisioning
 from sol.topology.generators import generateCompleteTopology
+from sol.topology.resource import CompoundResource, Resource
 
 
 def flatten(d):
@@ -23,6 +24,8 @@ def test_composition_1():
                                             classBytesDict={'app1': 10, 'app2': 10},
                                             asdict=True)
     linkCaps = provisioning.provisionLinks(topo, flatten(trafficClasses), 1)
+    for link in linkCaps:
+        topo.setResources(link, [Resource('bw', linkCaps[link])])
 
     pptc1 = generatePathsPerTrafficClass(topo, trafficClasses['app1'], nullPredicate,
                                          nx.diameter(topo.getGraph()) * 1.5)
@@ -32,16 +35,14 @@ def test_composition_1():
     pptc2 = kShortestPaths(pptc2, 10)
 
     apps = [
-        App(pptc1, {'bw': 10}, MIN_LINK_LOAD, 'app1'),
-        App(pptc2, {'bw': 10}, MIN_LATENCY, 'app2')
+        App(pptc1, {'bw': 10}, MIN_LINK_LOAD, name='app1'),
+        App(pptc2, {'bw': 10}, MIN_LATENCY, name='app2')
     ]
 
-    nodeCaps = {n: {} for n in topo.nodes(False)}
-    linkCaps = {l: {'bw': linkCaps[l]} for l in linkCaps}
-
-    opt = composeSingleLP(apps, topo, RES_COMPOSE_CONFLICT, nodeCaps, linkCaps)
+    opt = compose(apps, topo, RES_COMPOSE_CONFLICT, [CompoundResource('bw', links=topo.links(), nodes=[])])
     opt.write('testc1')
     opt.solve()
+    print opt.getVarValues()
     assert opt.isSolved()
 
     # opt.getGurobiModel().computeIIS()
