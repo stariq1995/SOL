@@ -136,6 +136,8 @@ class Topology(object):
         """
         return self._graph.edges_iter(data=data)
 
+    links = edges  # Method alias here
+
     def setResources(self, nodeOrLink, resources):
         if isinstance(nodeOrLink, tuple):
             assert len(nodeOrLink) == 2
