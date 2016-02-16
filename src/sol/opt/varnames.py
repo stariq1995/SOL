@@ -10,10 +10,16 @@ ALLOCATE_FLOW = 'allocateFlow'
 ROUTE_ALL = 'routeAll'
 REQ_ALL_LINKS = 'reqAllLinks'
 REQ_ALL_NODES = 'reqAllNodes'
+CAP_LINKS = 'capLinks'
+CAP_NODES = 'capNodes'
 #TODO: expand available constraint name constants
 
+SHARE_PROPORTIONAL_VOLUME = 1
+SHARE_EQUAL = 2
+SHARE_NUM_APPS = 4
 
-def xp(trafficClass, pathIndex):
+
+def xp(trafficClass, path):
     """ Convenience method for formatting a decision variable
 
     :param trafficClass: the traffic class object, needed for the ID
@@ -21,7 +27,7 @@ def xp(trafficClass, pathIndex):
     :returns: variable name of the form *x_classid_pathindex*
     :rtype: str
     """
-    return 'x_{}_{}'.format(trafficClass.ID, pathIndex)
+    return 'x_{}_{}'.format(trafficClass.ID, path.getID())
 
 
 def al(trafficClass):
@@ -55,7 +61,7 @@ def be(head, tail):
     return 'binedge_{}_{}'.format(head, tail)
 
 
-def bp(trafficClass, pathIndex):
+def bp(trafficClass, path):
     """
     Format a binary path variable
 
@@ -63,7 +69,7 @@ def bp(trafficClass, pathIndex):
     :param pathIndex: path index in the list of paths per traffic class
     :return: variable name of the form *binpath_classid_pathindex*
     """
-    return 'binpath_{}_{}'.format(trafficClass.ID, pathIndex)
+    return 'binpath_{}_{}'.format(trafficClass.ID, path.getID())
 
 
 def nl(node, resource):
