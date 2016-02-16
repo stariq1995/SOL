@@ -5,6 +5,7 @@
     Some code copied from other projects, might not be related
 """
 import functools
+import itertools
 import warnings
 from collections import defaultdict
 
@@ -60,3 +61,7 @@ class alwaysOneDict(object):
 
     def __getitem__(self, key):
         return 1.
+
+
+def listEq(a, b):
+    return len(a) == len(b) and all([x == y for x, y in itertools.izip(a, b)])
