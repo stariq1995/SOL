@@ -1,10 +1,20 @@
 from sol.topology.resource import Resource, CompoundResource
+from sol.utils.pythonHelper import listEq
 
-
-class Path(object):
+cdef class Path:
     """ Represents a path in the network"""
 
-    def __init__(self, nodes, numFlows=0):
+    cdef public int _ID
+    cdef public double _numFlows
+    cdef public _nodes
+    cdef _links
+
+    # def __cinit__(self, nodes, ID, numFlows=0):
+    #     self._numFlows = numFlows
+    #     self._ID = ID
+    #     self._nodes = nodes
+
+    def __init__(self, nodes, ID, numFlows=0):
         """Create a new path
 
         :param nodes: a list of node ids that belong to a path
@@ -12,7 +22,8 @@ class Path(object):
         """
         self._nodes = list(nodes)
         self._numFlows = numFlows
-        self._computeLinks()
+        self._ID = ID
+        self._links = self._computeLinks()
 
     @staticmethod
     def decode(dictionary):
@@ -24,47 +35,47 @@ class Path(object):
         """
         return Path(dictionary['nodes'], dictionary.get('numFlows', 0))
 
-    def _computeLinks(self):
-        self._links = tuple(zip(self._nodes, self._nodes[1:]))
-
-    def getIngress(self):
+    cpdef getIngress(self):
         """
         :return: the ingress node of this path
         """
         return self._nodes[0]
 
-    def getEgress(self):
+    cdef _computeLinks(self):
+        return zip(self._nodes, self._nodes[1:])
+
+    cpdef getEgress(self):
         """
         :return: the egress node of this path
         """
         return self._nodes[-1]
 
-    def getNodes(self):
+    cpdef getNodes(self):
         """
         :return: all nodes as a list
         """
         return self._nodes
 
-    def getNodesAsTuple(self):
+    cpdef getNodesAsTuple(self):
         """
         :return: all nodes in this path as a tuple
         """
         return tuple(self._nodes)
 
-    def getIEPair(self):
+    cpdef getIEPair(self):
         """
         :return: ingress-egress pair for this path
         :rtype: tuple
         """
         return self.getIngress(), self.getEgress()
 
-    def getNumFlows(self):
+    cpdef double getNumFlows(self):
         """
         :return: the number of flows on this path.
         """
         return self._numFlows
 
-    def setNumFlows(self, nflows):
+    cpdef setNumFlows(self, double nflows):
         """
         Set number of flows on this path
 
@@ -72,13 +83,15 @@ class Path(object):
         """
         self._numFlows = nflows
 
-    def getLinks(self):
+    cpdef getLinks(self):
         """
         :return: Return an iterator over the links in this path
         """
-        return zip(self._nodes, self._nodes[1:])
-        # return self._links
+        # return zip(self._nodes, self._nodes[1:])
+        return self._links
 
+    cpdef int getID(self):
+        return self._ID
 
     def encode(self):
         """
@@ -86,30 +99,17 @@ class Path(object):
 
         :return: dictionary representation of this path
         """
-        return {'nodes': self._nodes, 'numFlows': self._numFlows, 'Path':True}
+        return {'nodes': self._nodes, 'numFlows': self._numFlows}
 
-    def __contains__(self, obj):
-        if isinstance(obj, Resource):
-            _hasResource(self, obj)
-        elif isinstance(obj, CompoundResource):
-            _hasCompoundResource(self, obj)
-        else:
-            return obj in self._nodes
-
-    def _hasResource(self, res):
-        #TODO:
-        for node in nodes:
-        raise NotImplemented
-
-    def _hasCompoundResource(self, res):
-        # TODO:
-        raise NotImplemented
-
-    def __delitem__(self, index):
-        del self._nodes[index]
-
-    def __setitem__(self, index, val):
-        self._nodes[index] = val
+    def hasResource(self, res, topo):
+        if isinstance(res, Resource):
+            nodeset = self._nodes
+            linkset = self.getLinks()
+        elif isinstance(res, CompoundResource):
+            nodeset = frozenset(self._nodes).intersection(res.nodes)
+            linkset = frozenset(self.getLinks()).intersection(res.links)
+        return any([res.name in topo.getResources(n) for n in nodeset]) or \
+               any([res.name in topo.getResources(l) for l in linkset])
 
     def __iter__(self):
         return self._nodes.__iter__()
@@ -121,23 +121,22 @@ class Path(object):
         return "Path(nodes={}, numFlows={})".format(str(self._nodes),
                                                     self._numFlows)
 
-    # def __key(self):
-    #     return tuple(self._nodes)
+    # def __eq__(self, other):
+    #     if isinstance(other, Path):
+    #         return self._nodes == other._nodes
+    #     else:
+    #         return False
 
-    def __eq__(self, other):
-        if isinstance(other, Path):
-            return self._nodes == other._nodes
+    def __richcmp__(Path self, Path other not None, int op):
+        if op == 2:
+            return listEq(self._nodes, other._nodes)
+        elif op == 3:
+            return listEq(self._nodes, other._nodes)
         else:
-            return False
-
-    # This breaks hashing things. why?
-    # def __hash__(self):
-    #     return hash(self.__key())
-
-    def __getitem__(self, i):
-        return self._nodes[i]
+            raise TypeError
 
 
+# TODO: move this to cdef
 class PathWithMbox(Path):
     """
     Create a new path with middlebox
@@ -147,8 +146,8 @@ class PathWithMbox(Path):
     :param numFlows: number of flows (if any) along this path. Default is 0.
     """
 
-    def __init__(self, nodes, useMBoxes, numFlows=0):
-        super(PathWithMbox, self).__init__(nodes, numFlows)
+    def __init__(self, nodes, int ind, useMBoxes, numFlows=0):
+        super(PathWithMbox, self).__init__(nodes, ind, numFlows)
         self.useMBoxes = list(useMBoxes)
 
     @staticmethod
@@ -193,7 +192,7 @@ class PathWithMbox(Path):
     def __eq__(self, other):
         if not isinstance(other, PathWithMbox):
             return False
-        return self._nodes == other._nodes and self.useMBoxes == other.useMBoxes
+        return listEq(self._nodes, other._nodes) and listEq(self.useMBoxes, other.useMBoxes)
 
     def __repr__(self):
         return "PathWithMbox(nodes={}, useMBoxes={} numFlows={})". \

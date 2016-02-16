@@ -37,10 +37,10 @@ def generatePathsPerIE(source, sink, topology, predicate, cutoff,
     for p in nx.all_simple_paths(G, source, sink, cutoff):
         if modifyFunc is None:
             if predicate(p, topology):
-                paths.append(Path(p))
+                paths.append(Path(p, num))
                 num += 1
         else:
-            np = modifyFunc(p, topology)
+            np = modifyFunc(p, num, topology)
             if isinstance(np, list):
                 for innerp in np:
                     if predicate(innerp, topology):

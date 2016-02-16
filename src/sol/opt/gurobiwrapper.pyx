@@ -24,10 +24,9 @@ class OptimizationGurobi(object):
         self.intvars = set()
 
     def addDecisionVars(self, pptc):
-        cdef int pi
         for tc in pptc:
-            for pi in range(len(pptc[tc])):
-                name = xp(tc, pi)
+            for path in pptc[tc]:
+                name = xp(tc, path)
                 self.opt.addVar(lb=0, ub=1, name=name)
         self.opt.update()
 
@@ -35,10 +34,10 @@ class OptimizationGurobi(object):
         cdef int pi
         for t in types:
             if t.lower() == 'node':
-                for n in g.nodes(False):
+                for n in topology.nodes(False):
                     self.opt.addVar(vtype=GRB.BINARY, name=bn(n))
             elif t.lower() == 'edge':
-                for u, v in g.links(False):
+                for u, v in topology.links(False):
                     self.opt.addVar(vtype=GRB.BINARY, name=be(u, v))
             elif t.lower() == 'path':
                 for tc in pptc:
@@ -57,9 +56,9 @@ class OptimizationGurobi(object):
             for tc in pptc:
                 name = al(tc)
                 lhs = LinExpr()
-                for pi in range(len(pptc[tc])):
-                    lhs.addTerms(1, self.v(xp(tc, pi)))
-                self.opt.addConstr(lhs == self.v(name))
+                for path in pptc[tc]:
+                    lhs.addTerms(1, self.v(xp(tc, path)))
+                self.opt.addConstr(lhs == self.v(name), name='Allocation.tc.{}'.format(tc.ID))
         else:
             for tc in pptc:
                 name = self.al(tc)
@@ -75,19 +74,19 @@ class OptimizationGurobi(object):
         self.opt.update()
 
     def capLinks(self, pptc, resource, linkCaps, linkCapFunc):
-        cdef int pi
         expressions = defaultdict(lambda: LinExpr())
         for tc in pptc:
-            for pi, path in enumerate(pptc[tc]):
+            for path in pptc[tc]:
                 for link in path.getLinks():
                     expressions[link].addTerms(linkCapFunc(link, tc, path, resource),
-                                               self.v(xp(tc, pi)))
+                                               self.v(xp(tc, path)))
         for link, cap in linkCaps.iteritems():
             name = 'LinkLoad_{}_{}'.format(resource, tup2str(link))
             if self.v(name) is None:
                 self.opt.addVar(name=name, ub=cap)
                 self.opt.update()
-            self.opt.addConstr(expressions[link] == self.v(name))
+            self.opt.addConstr(expressions[link] == self.v(name),
+                               name='LinkCap.{}.{}'.format(resource, tup2str(link)))
         self.opt.update()
 
     def capNodes(self, pptc, resource, nodeCaps, nodeCapFunc):
@@ -97,7 +96,7 @@ class OptimizationGurobi(object):
             for pi, path in enumerate(pptc[tc]):
                 for node in path.getNodes():
                     expressions[node].addTerms(nodeCapFunc(node, tc, path, resource),
-                                               self.v(xp(tc, pi)))
+                                               self.v(xp(tc, path)))
         for node, cap in nodeCaps.iteritems():
             name = 'NodeLoad_{}_{}'.format(resource, node)
             if self.v(name) is None:
@@ -108,43 +107,37 @@ class OptimizationGurobi(object):
 
     # TODO: consume & capNodes/Links are kind of redundant at this point, clean it up
 
-    def consume(self, pptc, resource, cost, nodeCaps, linkCaps):
+    def consume(self, pptc, resourceName, cost, nodeCaps, linkCaps):
         """
         :param pptc: paths per traffic class
         :param resource: resource to be consumed
         :param cost: cost per flow for this resource
         """
-        cdef int pi
         expressions = defaultdict(lambda: LinExpr())
         for tc in pptc:
             #TODO: optimize loop
-            for pi, path in enumerate(pptc[tc]):
+            for path in pptc[tc]:
+                v = self.v(xp(tc, path))
                 for node in path.getNodes():
-                    if resource in nodeCaps[node]:
-                        expressions[node].addTerms(tc.volFlows * cost / nodeCaps[node][resource],
-                                                   self.v(xp(tc, pi)))
+                    if node in nodeCaps:
+                        expressions[node].addTerms(tc.volFlows * cost / nodeCaps[node], v)
                 for link in path.getLinks():
-                    if resource in linkCaps[link]:
-                        expressions[link].addTerms(tc.volFlows * cost / linkCaps[link][resource],
-                                                   self.v(xp(tc, pi)))
-        for node in iterkeys(nodeCaps):
-            if resource not in nodeCaps[node]:
-                continue
-            name = 'NodeLoad_{}_{}'.format(resource, node)
-            # cap = nodeCaps[node][resource]
+                    if link in linkCaps:
+                        expressions[link].addTerms(tc.volFlows * cost / linkCaps[link], v)
+        for node in nodeCaps:
+            name = 'NodeLoad_{}_{}'.format(resourceName, node)
             if self.v(name) is None:
                 self.opt.addVar(name=name, ub=1)
                 self.opt.update()
-            self.opt.addConstr(expressions[node] == self.v(name))
-        for link in iterkeys(linkCaps):
-            if resource not in linkCaps[link]:
-                continue
-            name = 'LinkLoad_{}_{}'.format(resource, tup2str(link))
-            # cap = linkCaps[link][resource]
+            self.opt.addConstr(expressions[node] == self.v(name), name='NodeLoad.{}.{}'.format(
+                resourceName, node))
+        for link in linkCaps:
+            name = 'LinkLoad_{}_{}'.format(resourceName, tup2str(link))
             if self.v(name) is None:
                 self.opt.addVar(name=name, ub=1)
                 self.opt.update()
-            self.opt.addConstr(expressions[link] == self.v(name))
+            self.opt.addConstr(expressions[link] == self.v(name), name='LinkLoad.{}.{}'.format(
+                resourceName, tup2str(link)))
         self.opt.update()
 
     def _reqAll(self, pptc, trafficClasses=None, reqType=None):
@@ -211,7 +204,7 @@ class OptimizationGurobi(object):
         cdef int pi
         for tc in trafficClasses:
             for pi, path in enumerate(bp(tc, pi)):
-                self.opt.addConstr(self.v(xp(tc, pi)) <= self.v(bp(tc, pi)))
+                self.opt.addConstr(self.v(xp(tc, path)) <= self.v(bp(tc, pi)))
         self.opt.update()
 
     def enforceSinglePath(self, pptc, trafficClasses):
@@ -232,7 +225,7 @@ class OptimizationGurobi(object):
             normFactor = sum(map(len, [paths for paths in itervalues(pptc)]))
         for tc in pptc:
             for pi, path in enumerate(pptc[tc]):
-                latencyExpr.addTerms(len(path) / normFactor, self.v(xp(tc, pi)))
+                latencyExpr.addTerms(len(path) / normFactor, self.v(xp(tc, path)))
         self.opt.addConstr(latency == latencyExpr)
         self.opt.update()
         return latency
@@ -249,7 +242,7 @@ class OptimizationGurobi(object):
     # TODO: externalize strings
     # TODO: single path constraint
 
-    def _minLoad(self, resource, prefix, weight):
+    def _minLoad(self, resource, prefix, float weight):
         objName = 'Max{}_{}'.format(prefix, resource)
         obj = self.opt.addVar(name=objName, obj=weight)
         self.opt.update()
@@ -260,10 +253,10 @@ class OptimizationGurobi(object):
         self.opt.update()
         return obj
 
-    def minNodeLoad(self, resource, weight=1.0):
+    def minNodeLoad(self, resource, float weight=1.0):
         return self._minLoad(resource, 'NodeLoad', weight)
 
-    def minLinkLoad(self, resource, weight=1.0):
+    def minLinkLoad(self, resource, float weight=1.0):
         return self._minLoad(resource, 'LinkLoad', weight)
 
     def getMaxLinkLoad(self, resource, value=True):
@@ -286,8 +279,6 @@ class OptimizationGurobi(object):
         self.opt.update()
 
     def solve(self):
-        # TODO: Move disabling of logging to a different place
-        # self.opt.setParam(GRB.param.LogToConsole, 0)
         self.opt.optimize()
 
     def write(self, fname):

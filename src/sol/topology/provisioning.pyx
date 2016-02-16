@@ -20,11 +20,11 @@ def generateIEpairs(topology):
     :return: list of ingress-egress pairs (as tuples)
     """
     return [pair for pair in
-            itertools.product([n for n, d in topology.nodes()], repeat=2)
+            itertools.product([n for n in topology.nodes()], repeat=2)
             if pair[0] != pair[1]]
 
 
-def uniformTM(iepairs, totalFlows):
+cpdef uniformTM(iepairs, double totalFlows):
     """
     Compute a uniform traffic matrix. That is each ingress-egress pair has the same number of flows
 
@@ -47,7 +47,7 @@ def logNormalTM(iepairs, meanFlows):
     return TrafficMatrix({ie: meanFlows * d for ie, d in six.zip(iepairs, dist)})
 
 
-def gravityTM(iepairs, totalFlows, populationDict):
+def gravityTM(iepairs, double totalFlows, populationDict):
     """
     Computes the gravity model traffic matrix base
 
@@ -91,6 +91,7 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
         means that each web flow is 100 bytes, each ssh flow is 200 bytes and so on.
     :return: a list of traffic classes
     """
+    assert sum(classFractionDict.values()) == 1
     trafficClasses = []
     if asdict:
         trafficClasses = defaultdict(lambda: [])
@@ -112,13 +113,15 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
 
 
 cdef computeBackgroundLoad(topology, trafficClasses):
+        cdef int ind = 0
         paths = {}
         allsp = networkx.all_pairs_shortest_path(topology.getGraph())
         for tc in trafficClasses:
             i, e = tc.getIEPair()
-            paths[(i, e)] = Path(allsp[i][e])
+            paths[(i, e)] = Path(allsp[i][e], ind)
+            ind += 1
         loads = {}
-        for u, v, data in topology.links():
+        for u, v in topology.links():
             link = (u, v)
             loads[link] = 0
         for tc in trafficClasses:
