@@ -119,14 +119,14 @@ class Topology(object):
             types = [serviceType]
         self._graph.node[node]['services'] = ';'.join(types)
 
-    def nodes(self, data=True):
+    def nodes(self, data=False):
         """
 
         :return: Iterator over topology nodes as tuples of the form (nodeID, nodeData)
         """
         return self._graph.nodes_iter(data=data)
 
-    def edges(self, data=True):
+    def edges(self, data=False):
         """
 
         :return: Iterator over topology edge tuples (nodeID1, nodeID2, edgeData)
