@@ -7,6 +7,7 @@ from collections import defaultdict
 from six import iterkeys, itervalues
 from six.moves import range
 
+from sol import Path
 from varnames import *
 from ..utils.exceptions import SOLException
 
