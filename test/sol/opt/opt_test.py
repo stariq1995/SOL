@@ -1,6 +1,6 @@
 import pytest
 
-from sol.opt import kickStartOptimization
+from sol.opt import initOptimization
 from sol.topology import provisioning
 from sol.path.predicates import nullPredicate
 from sol.topology.generators import generateCompleteTopology
@@ -10,7 +10,7 @@ _backends = ['cplex']
 
 
 @pytest.mark.parametrize("backend", _backends)
-def testMaxFlow(backend):
+def test_MaxFlow(backend):
     # ==============
     # Fake some data
     # ==============
@@ -25,23 +25,27 @@ def testMaxFlow(backend):
                                             {'allTraffic': 2000})
     linkcaps = provisioning.provisionLinks(topo, trafficClasses, 1)
     # do not load links more than 50%
-    linkConstrCaps = {(u, v): 1 for u, v, data in topo.links()}
+    linkConstrCaps = {(u, v): 1 for u, v in topo.links()}
 
     # ==============
     # Optimize
     # ==============
     linkcapfunc = lambda link, tc, path, resource: tc.volBytes / linkcaps[link]
     # Start our optimization! SOL automatically takes care of the paths behind the scenes
-    opt, pptc = kickStartOptimization(topo, trafficClasses, nullPredicate, 'shortest', 5, backend=backend)
+    opt, pptc = initOptimization(topo, trafficClasses, nullPredicate, 'shortest', 5, backend=backend)
     # Traffic must flow!
-    opt.addAllocateFlowConstraint(pptc)
+    opt.allocateFlow(pptc)
     # Traffic must not overload links!
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkConstrCaps, linkcapfunc)
+    opt.capLinks(pptc, 'bandwidth', linkConstrCaps, linkcapfunc)
     # Push as much traffic as we can!
     opt.setPredefinedObjective('maxallflow')
-
     opt.solve()
 
     for tc, paths in opt.getPathFractions(pptc).iteritems():
         for p in paths:
             assert len(p) == 2
+
+
+@pytest.mark.parametrize("backend", _backends)
+def test_TE(backend):
+    pass
