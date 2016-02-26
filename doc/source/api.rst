@@ -6,7 +6,7 @@ High-level API
 
 .. py:currentmodule:: sol.optimization.formulation
 .. autofunction:: getOptimization
-.. autofunction:: kickStartOptimization
+.. autofunction:: initOptimization
 
 .. py:currentmodule:: sol.optimization.formulation.optbase
 .. py:class:: Optimization
@@ -25,18 +25,18 @@ You can programmatically "build" your optimization using the defined functions a
 
 .. autoclass:: Optimization
 
-    .. automethod:: addAllocateFlowConstraint
-    .. automethod:: addRouteAllConstraint
-    .. automethod:: addLinkCapacityConstraint
-    .. automethod:: addNodeCapacityConstraint
-    .. automethod:: addNodeCapacityPerPathConstraint
-    .. automethod:: addRequireAllNodesConstraint
-    .. automethod:: addRequireSomeNodesConstraint
-    .. automethod:: addRequireAllEdgesConstraint
-    .. automethod:: addEnforceSinglePath
-    .. automethod:: addBudgetConstraint
-    .. automethod:: addMinDiffConstraint    
-    .. automethod:: setPredefinedObjective
+    .. automethod:: allocateFlow
+    .. automethod:: routeAll
+    .. automethod:: capLinks
+    .. automethod:: capNodes
+    .. automethod:: capNodesPathResource
+    .. automethod:: reqAllNodes
+    .. automethod:: reqSomeNodes
+    .. automethod:: reqAllEdges
+    .. automethod:: forceSinglePath
+    .. automethod:: addNodeBudget
+    .. automethod:: minDiffConstraint
+    .. automethod:: setPredefObjective
     .. autoattribute:: definedObjectives
 
 

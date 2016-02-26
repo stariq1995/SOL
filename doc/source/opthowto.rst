@@ -59,7 +59,7 @@ Say you would like to maximize the thoughput of traffic in your network.
 Gather your topology, and traffic data.
 Now proceed to kikstart your optmization: ::
 
-    opt, pptc = kickStartOptimization(topology, trafficClasses, nullPredicate, 'shortest', 5)
+    opt, pptc = initOptimization(topology, trafficClasses, nullPredicate, 'shortest', 5)
 
 * *nullPredicate* because any path will work for you. 
 * 'shortest' and 5 are a way to reduce the number of paths in your optimization and speed it up
@@ -69,11 +69,11 @@ You get back two objects: *opt*, which is your optimization object and *pptc* wh
 Add your constraints: ::
 
     # Traffic must flow!
-    opt.addAllocateFlowConstraint(pptc)
+    opt.allocateFlow(pptc)
     # Traffic must not overload links!
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
+    opt.capLinks(pptc, 'bandwidth', linkCaps, defaultLinkCapFuncNoNorm)
     # Push as much traffic as we can!
-    opt.setPredefinedObjective('maxminflow')
+    opt.setPredefObjective('maxminflow')
 
 Solve the optimization ::
 

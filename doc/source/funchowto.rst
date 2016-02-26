@@ -109,11 +109,11 @@ What if you wanted to normalize your load to be in the [0..1] range? ::
 .. note::
     If you are normalizing your loads, then the capacities passed to the constraint function must be 1! Like so::
 
-        opt.addNodeCapacityConstraint(pptc, 'cpu', {1: 1, 2: 1, 3: 1}, proxyCapacityFunc)
+        opt.capNodes(pptc, 'cpu', {1: 1, 2: 1, 3: 1}, proxyCapacityFunc)
 
 Lets explore some link capacity functions. Here is a really simple one: ::
 
-    def defaultLinkFunc(link, tc, path, resource, linkCaps):
+    def defaultLinkCapFunc(link, tc, path, resource, linkCaps):
         # For simplicity assume only one type of traffic and one resource: bandwidth
         return tc.volBytes / linkCaps[link]  # Normalize bandwidth load to [0..1] range
 

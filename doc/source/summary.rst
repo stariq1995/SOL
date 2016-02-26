@@ -5,18 +5,18 @@ Optimization API Summary
 .. autosummary:: 
     :nosignatures:
 
-    Optimization.addAllocateFlowConstraint
-    Optimization.addRouteAllConstraint
-    Optimization.addLinkCapacityConstraint
-    Optimization.addNodeCapacityConstraint
-    Optimization.addNodeCapacityPerPathConstraint
-    Optimization.addRequireAllNodesConstraint
-    Optimization.addRequireSomeNodesConstraint
-    Optimization.addRequireAllEdgesConstraint
-    Optimization.addEnforceSinglePath
-    Optimization.addBudgetConstraint
-    Optimization.addMinDiffConstraint    
-    Optimization.setPredefinedObjective
+    Optimization.allocateFlow
+    Optimization.routeAll
+    Optimization.capLinks
+    Optimization.capNodes
+    Optimization.capNodesPathResource
+    Optimization.reqAllNodes
+    Optimization.reqSomeNodes
+    Optimization.reqAllEdges
+    Optimization.forceSinglePath
+    Optimization.addNodeBudget
+    Optimization.minDiffConstraint
+    Optimization.setPredefObjective
 
 
     Optimization.solve
