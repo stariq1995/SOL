@@ -5,7 +5,7 @@ import networkx
 from sol.opt.topology.topology import Topology
 
 from sol.opt import getOptimization
-from sol.opt.funcs import defaultLinkFuncNoNormalize
+from sol.opt.funcs import defaultLinkCapFuncNoNorm
 from sol.path import generatePathsPerTrafficClass
 from sol.path import hasMboxPredicate, useMboxModifier
 from sol.path import chooserand
@@ -61,23 +61,23 @@ if __name__ == '__main__':
 
     # add all the constraints
     # variables go first
-    opt.addDecisionVariables(pptc)
-    opt.addBinaryVariables(pptc, topo, ['path', 'node'])
+    opt.addDecisionVars(pptc)
+    opt.addBinaryVars(pptc, topo, ['path', 'node'])
     # then routing of traffic
-    opt.addAllocateFlowConstraint(pptc)
-    opt.addRouteAllConstraint(pptc)
+    opt.allocateFlow(pptc)
+    opt.routeAll(pptc)
 
     # then link capacities
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
+    opt.capLinks(pptc, 'bandwidth', linkCaps, defaultLinkCapFuncNoNorm)
     # then node capacities
-    opt.addNodeCapacityConstraint(pptc, 'cpu', nodeCaps,
-                                  lambda node, tc, path, resource: tc.volFlows * tc.cpuCost)
-    opt.addRequireSomeNodesConstraint(pptc, some=1)
+    opt.capNodes(pptc, 'cpu', nodeCaps,
+                 lambda node, tc, path, resource: tc.volFlows * tc.cpuCost)
+    opt.reqSomeNodes(pptc, some=1)
     opt.addPathDisableConstraint(pptc)
-    opt.addBudgetConstraint(topo, lambda node: 1, 5)
-    # opt.addCapacityBudgetConstraint('cpu', nodeCaps.keys(), 10 ** 9) # optional
+    opt.addNodeBudget(topo, lambda node: 1, 5)
+    # opt.nodeBudget('cpu', nodeCaps.keys(), 10 ** 9) # optional
 
-    opt.setPredefinedObjective('minmaxnodeload', resource='cpu')
+    opt.setPredefObjective('minmaxnodeload', resource='cpu')
 
     # opt.write('/tmp/escale.lp')
     # Solve the formulation:

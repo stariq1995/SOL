@@ -58,18 +58,18 @@ if __name__ == '__main__':
 
     # add all the constraints
     # variables go first
-    opt.addDecisionVariables(pptc)
-    opt.addBinaryVariables(pptc, topo, ['path', 'node', 'edge'])
+    opt.addDecisionVars(pptc)
+    opt.addBinaryVars(pptc, topo, ['path', 'node', 'edge'])
     # then routing of traffic
-    opt.addAllocateFlowConstraint(pptc)
-    opt.addRouteAllConstraint(pptc)
+    opt.allocateFlow(pptc)
+    opt.routeAll(pptc)
 
     # then link capacities
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
+    opt.capLinks(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
 
     # Now enforce disabled paths when we toggle links/nodes
-    opt.addRequireAllNodesConstraint(pptc)
-    opt.addRequireAllEdgesConstraint(pptc)
+    opt.reqAllNodes(pptc)
+    opt.reqAllEdges(pptc)
     opt.addPathDisableConstraint(pptc)
 
     # finally, the objective

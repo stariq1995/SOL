@@ -33,11 +33,11 @@ if __name__ == '__main__':
     # Start our optimization! SOL automatically takes care of the paths behind the scenes
     opt, pptc = kickStartOptimization(topo, trafficClasses, nullPredicate, 'shortest', 5)
     # Traffic must flow!
-    opt.addAllocateFlowConstraint(pptc)
+    opt.allocateFlow(pptc)
     # Traffic must not overload links!
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkConstrCaps, linkcapfunc)
+    opt.capLinks(pptc, 'bandwidth', linkConstrCaps, linkcapfunc)
     # Push as much traffic as we can!
-    opt.setPredefinedObjective('maxminflow')
+    opt.setPredefObjective('maxminflow')
 
     opt.solve()
     print opt.getSolvedObjective()  # let's see how much traffic we managed to push

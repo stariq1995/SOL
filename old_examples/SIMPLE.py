@@ -94,24 +94,24 @@ if __name__ == '__main__':
 
     # add all the constraints
     # variables go first
-    opt.addDecisionVariables(pptc)
+    opt.addDecisionVars(pptc)
     # we know that we will need binary variables per path and node. (because we read the paper)
-    opt.addBinaryVariables(pptc, topo, ['path', 'node'])
+    opt.addBinaryVars(pptc, topo, ['path', 'node'])
     # then routing of traffic
-    opt.addAllocateFlowConstraint(pptc)
-    opt.addRouteAllConstraint(pptc)
+    opt.allocateFlow(pptc)
+    opt.routeAll(pptc)
 
     # then link capacities (use default Link Function, nothing fancy here)
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
+    opt.capLinks(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
 
     # then node capacities
     # recall we are normalizing the CPU node load, so capacities are now all 1.
-    opt.addNodeCapacityConstraint(pptc, 'cpu', {node: 1 for node, data in topo.nodes()
-                                                if 'fw' or 'ids' in topo.getServiceTypes(node)}, capFunc)
-    opt.addNodeCapacityPerPathConstraint(pptc, 'tcam', nodeCaps['tcam'], SIMPLE_TCAMFunc)
+    opt.capNodes(pptc, 'cpu', {node: 1 for node, data in topo.nodes()
+                               if 'fw' or 'ids' in topo.getServiceTypes(node)}, capFunc)
+    opt.capNodesPathResource(pptc, 'tcam', nodeCaps['tcam'], SIMPLE_TCAMFunc)
 
     # finally, the objective
-    opt.setPredefinedObjective('minmaxnodeload', resource='cpu')
+    opt.setPredefObjective('minmaxnodeload', resource='cpu')
 
     # Solve the formulation:
     # ======================

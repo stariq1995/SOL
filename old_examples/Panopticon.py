@@ -58,21 +58,21 @@ if __name__ == '__main__':
 
     # add all the constraints
     # variables go first
-    opt.addDecisionVariables(pptc)
-    opt.addBinaryVariables(pptc, topo, ['path', 'node'])
+    opt.addDecisionVars(pptc)
+    opt.addBinaryVars(pptc, topo, ['path', 'node'])
     # then routing of traffic
-    opt.addAllocateFlowConstraint(pptc)
-    opt.addRouteAllConstraint(pptc)
+    opt.allocateFlow(pptc)
+    opt.routeAll(pptc)
 
     # then link capacities
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
+    opt.capLinks(pptc, 'bandwidth', linkCaps, defaultLinkFuncNoNormalize)
 
     # Now enforce disabled paths when we toggle links/nodes
-    opt.addRequireSomeNodesConstraint(pptc, some=1)
-    opt.addBudgetConstraint(topo, lambda n: 1, 5)
+    opt.reqSomeNodes(pptc, some=1)
+    opt.addNodeBudget(topo, lambda n: 1, 5)
 
     # Now, set the objective, and value the switch power more.
-    opt.setPredefinedObjective('minroutingcost', pptc=pptc)
+    opt.setPredefObjective('minroutingcost', pptc=pptc)
 
     # Solve the formulation:
     # ======================

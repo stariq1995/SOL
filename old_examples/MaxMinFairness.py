@@ -9,16 +9,16 @@ def _MaxMinFairness_MCF(topology, pptc, unstaturated, saturated, allocation, lin
     and un-saturated commodities
     """
     opt = getOptimization()
-    opt.addDecisionVariables(pptc)
-    opt.addAllocateFlowConstraint({tc: pptc[tc] for tc in unstaturated})
+    opt.addDecisionVars(pptc)
+    opt.allocateFlow({tc: pptc[tc] for tc in unstaturated})
     for i in saturated:
-        opt.addAllocateFlowConstraint({tc: pptc[tc] for tc in pptc[i]}, allocation[i])
+        opt.allocateFlow({tc: pptc[tc] for tc in pptc[i]}, allocation[i])
 
     def linkcapfunc(link, tc, path, resource):
         return tc.volBytes
 
-    opt.addLinkCapacityConstraint(pptc, 'bandwidth', linkCaps, linkcapfunc)
-    opt.setPredefinedObjective("maxallflow")
+    opt.capLinks(pptc, 'bandwidth', linkCaps, linkcapfunc)
+    opt.setPredefObjective("maxallflow")
     opt.solve()
 
     return opt
