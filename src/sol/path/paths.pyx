@@ -1,4 +1,6 @@
-from sol.topology.resource import Resource, CompoundResource
+import random
+import warnings
+
 from sol.utils.pythonHelper import listEq
 
 cdef class Path:
@@ -14,7 +16,7 @@ cdef class Path:
     #     self._ID = ID
     #     self._nodes = nodes
 
-    def __init__(self, nodes, ID, numFlows=0):
+    def __init__(self, nodes, ID=-1, numFlows=0):
         """Create a new path
 
         :param nodes: a list of node ids that belong to a path
@@ -23,6 +25,9 @@ cdef class Path:
         self._nodes = list(nodes)
         self._numFlows = numFlows
         self._ID = ID
+        if self._ID == -1:
+            self._ID = random.randint(0, 1e6)
+            warnings.warn('No ID given to Path constructor, generating a random path ID')
         self._links = self._computeLinks()
 
     @staticmethod
@@ -101,15 +106,31 @@ cdef class Path:
         """
         return {'nodes': self._nodes, 'numFlows': self._numFlows}
 
-    def hasResource(self, res, topo):
-        if isinstance(res, Resource):
-            nodeset = self._nodes
-            linkset = self.getLinks()
-        elif isinstance(res, CompoundResource):
-            nodeset = frozenset(self._nodes).intersection(res.nodes)
-            linkset = frozenset(self.getLinks()).intersection(res.links)
-        return any([res.name in topo.getResources(n) for n in nodeset]) or \
-               any([res.name in topo.getResources(l) for l in linkset])
+    # def hasResource(self, res, topo):
+    #     if isinstance(res, Resource):
+    #         nodeset = self._nodes
+    #         linkset = self.getLinks()
+    #     elif isinstance(res, CompoundResource):
+    #         nodeset = frozenset(self._nodes).intersection(res.nodes)
+    #         linkset = frozenset(self.getLinks()).intersection(res.links)
+    #     return any([res.name in topo.getResources(n) for n in nodeset]) or \
+    #            any([res.name in topo.getResources(l) for l in linkset])
+
+    def __contains__(self, item):
+        return item in self._nodes
+
+    def __getitem__(self, item):
+        return self._nodes[item]
+
+    def __hash__(self):
+        # TODO: implement a better universal hash function that computes based on _nodes
+        return self.getID()
+
+    def __setitem__(self, key, value):
+        self._nodes[key] = value
+
+    def __getslice__(self, i, j):
+        return self._nodes[i:j]
 
     def __iter__(self):
         return self._nodes.__iter__()
@@ -127,26 +148,33 @@ cdef class Path:
     #     else:
     #         return False
 
-    def __richcmp__(Path self, Path other not None, int op):
+    def __richcmp__(Path self, other not None, int op):
+        sameType = isinstance(other, Path)
         if op == 2:
-            return listEq(self._nodes, other._nodes)
+            return sameType and listEq(self._nodes, other._nodes)
         elif op == 3:
-            return listEq(self._nodes, other._nodes)
+            return not sameType or not listEq(self._nodes, other._nodes)
         else:
             raise TypeError
 
+    def __len__(self):
+        return len(self._nodes)
 
-# TODO: move this to cdef
-class PathWithMbox(Path):
+    def __copy__(self):
+        return Path(self._nodes, self._ID, self._numFlows)
+
+cdef class PathWithMbox(Path):
     """
-    Create a new path with middlebox
+    Create a new path with middleboxes
 
     :param nodes: path nodes (an ordered list)
     :param useMBoxes: at which nodes the middleboxes will be used
     :param numFlows: number of flows (if any) along this path. Default is 0.
     """
 
-    def __init__(self, nodes, int ind, useMBoxes, numFlows=0):
+    cdef public useMBoxes
+
+    def __init__(self, nodes, useMBoxes, int ind=0, numFlows=0):
         super(PathWithMbox, self).__init__(nodes, ind, numFlows)
         self.useMBoxes = list(useMBoxes)
 
@@ -186,14 +214,30 @@ class PathWithMbox(Path):
         return {'nodes': self._nodes, 'numFlows': self._numFlows, 'useMBoxes': self.useMBoxes,
                 'PathWithMbox': True}
 
-    def __key(self):
-        return tuple(self._nodes), tuple(self.useMBoxes), self._numFlows
+    # def __key(self):
+    #     return tuple(self._nodes), tuple(self.useMBoxes), self._numFlows
 
-    def __eq__(self, other):
-        if not isinstance(other, PathWithMbox):
-            return False
-        return listEq(self._nodes, other._nodes) and listEq(self.useMBoxes, other.useMBoxes)
+    def __richcmp__(PathWithMbox self, other not None, int op):
+        sameType = isinstance(other, PathWithMbox)
+        if op == 2:
+            return sameType and listEq(self._nodes, other._nodes) and listEq(self.useMBoxes, other.useMBoxes)
+        elif op == 3:
+            return not sameType or not listEq(self._nodes, other._nodes) or not listEq(self.useMBoxes, other.useMBoxes)
+        else:
+            raise TypeError
+
+    def __hash__(self):
+        # TODO: implement a better universal hash function that computes based on _nodes + useMBoxes
+        return self.getID()
+
+    # def __eq__(self, other):
+    #     if not isinstance(other, PathWithMbox):
+    #         return False
+    #     return listEq(self._nodes, other._nodes) and listEq(self.useMBoxes, other.useMBoxes)
 
     def __repr__(self):
         return "PathWithMbox(nodes={}, useMBoxes={} numFlows={})". \
             format(str(self._nodes), self.useMBoxes, self._numFlows)
+
+    def __copy__(self):
+        return PathWithMbox(self._nodes, self._ID, self.useMBoxes, self._numFlows)
