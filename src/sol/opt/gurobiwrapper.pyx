@@ -326,8 +326,8 @@ class OptimizationGurobi(object):
             result[tc] = []
             for path in paths:
                 newpath = copy.copy(path)
-                newpath.setNumFlows(self.opt.getVarByName(xp(tc, path)).x)
-                if newpath.getNumFlows() > 0 and flowCarryingOnly:
+                newpath.setFlowFraction(self.opt.getVarByName(xp(tc, path)).x)
+                if newpath.getFlowFraction() > 0 and flowCarryingOnly:
                     result[tc].append(newpath)
                 elif not flowCarryingOnly:
                     result[tc].append(newpath)

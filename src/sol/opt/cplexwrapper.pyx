@@ -4,6 +4,8 @@ generation logic, and the low-level API. Uses CPLEX for solving the LP/ILP"""
 
 from __future__ import division, print_function
 
+import copy
+
 from six.moves import zip
 
 from sol.path import PathWithMbox, Path
@@ -483,11 +485,11 @@ class OptimizationCPLEX(object):
         result = {}
         for tc, paths in pptc.iteritems():
             result[tc] = []
-            for index, path in enumerate(paths):
-                newpath = Path(path)
-                newpath.setNumFlows(self.cplexprob.solution.get_values(
+            for path in paths:
+                newpath = copy.copy(path)
+                newpath.setFlowFraction(self.cplexprob.solution.get_values(
                     xp(tc, path)))
-                if newpath.getNumFlows() > 0 and flowCarryingOnly:
+                if newpath.getFlowFraction() > 0 and flowCarryingOnly:
                     result[tc].append(newpath)
                 elif not flowCarryingOnly:
                     result[tc].append(newpath)
