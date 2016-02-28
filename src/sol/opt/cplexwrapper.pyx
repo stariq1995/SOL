@@ -4,14 +4,12 @@ generation logic, and the low-level API. Uses CPLEX for solving the LP/ILP"""
 
 from __future__ import division, print_function
 
-import copy
-
 from six.moves import zip
 
 from sol.path import PathWithMbox, Path
 from ..utils.exceptions import InvalidConfigException, \
     SOLException
-from ..utils.pythonHelper import tup2str, Tree
+from ..utils.pythonHelper import Tree
 
 try:
     # noinspection PyUnresolvedReferences
@@ -84,20 +82,13 @@ class OptimizationCPLEX(object):
         self.cplexprob.objective.set_sense(s)
         self.cplexprob.objective.set_linear(coeffs.items())
 
-    def maxFlow(self):
-        self.defineVar('TotalFlow', {name: 1 for name in
-                                         self.allocationVars},
-                           lowerBound=0)
-        self.setObjectiveCoeff({'TotalFlow': 1}, 'max')
-
+    def maxFlow(self, pptc, weight=1.0):
+        self.defineVar('TotalFlow', {al(tc): 1 for tc in pptc},
+                       lowerBound=0)
+        self.setObjectiveCoeff({'TotalFlow': weight}, 'max')
 
     def setPredefObjective(self, objective, resource=None, routingCostFunc=len, pptc=None):
-        if objective.lower() == MAX_ALL_FLOW:
-            self.defineVar('TotalFlow', {name: 1 for name in
-                                         self.allocationVars},
-                           lowerBound=0)
-            self.setObjectiveCoeff({'TotalFlow': 1}, 'max')
-        elif objective.lower() == MAX_MIN_FLOW:
+        if objective.lower() == MAX_MIN_FLOW:
             self.defineVar('MinFlow')
             varindex = self.getVarIndex()
             self.setObjectiveCoeff({varindex['MinFlow']: 1}, 'max')
@@ -400,7 +391,7 @@ class OptimizationCPLEX(object):
                                            varindex[be(u, v)]],
                                           [1, -1])],
                         rhs=[0], senses='L')
-    reqAllLinks = reqAllEdges # method alias
+    reqAllLinks = reqAllEdges  # method alias
 
     def reqSomeNodes(self, pptc, trafficClasses=None):
         v = self.cplexprob.variables.get_names()

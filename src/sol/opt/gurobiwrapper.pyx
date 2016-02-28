@@ -263,6 +263,7 @@ class OptimizationGurobi(object):
         obj = self.opt.addVar(name=objName, obj=weight)
         self.opt.update()
         self.opt.addConstr(obj == 1-quicksum([self.v(al(tc)) for tc in pptc]))
+        self.opt.ModelSense = GRB.MAXIMIZE
         self.opt.update()
 
     def getMaxLinkLoad(self, resource, value=True):
@@ -323,9 +324,9 @@ class OptimizationGurobi(object):
         result = {}
         for tc, paths in pptc.iteritems():
             result[tc] = []
-            for index, path in enumerate(paths):
+            for path in paths:
                 newpath = copy.copy(path)
-                newpath.setNumFlows(self.opt.getVarByName(xp(tc, index)).x)
+                newpath.setNumFlows(self.opt.getVarByName(xp(tc, path)).x)
                 if newpath.getNumFlows() > 0 and flowCarryingOnly:
                     result[tc].append(newpath)
                 elif not flowCarryingOnly:
