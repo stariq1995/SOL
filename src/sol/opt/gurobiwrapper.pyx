@@ -4,7 +4,6 @@ from __future__ import division, print_function
 import copy
 from collections import defaultdict
 
-# import networkx as nx
 from six import iterkeys, itervalues
 from six.moves import range
 
@@ -259,6 +258,13 @@ class OptimizationGurobi(object):
     def minLinkLoad(self, resource, float weight=1.0):
         return self._minLoad(resource, 'LinkLoad', weight)
 
+    def maxFlow(self, pptc, weight=1.0):
+        objName = MAX_ALL_FLOW
+        obj = self.opt.addVar(name=objName, obj=weight)
+        self.opt.update()
+        self.opt.addConstr(obj == 1-quicksum([self.v(al(tc)) for tc in pptc]))
+        self.opt.update()
+
     def getMaxLinkLoad(self, resource, value=True):
         v = self.v("MaxLinkLoad_{}".format(resource))
         return v.x if value else v
@@ -325,3 +331,4 @@ class OptimizationGurobi(object):
                 elif not flowCarryingOnly:
                     result[tc].append(newpath)
         return result
+
