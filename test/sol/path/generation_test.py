@@ -1,11 +1,11 @@
 # coding=utf-8
 import pytest
-from sol.topology.generators import generateChainTopology, \
-    generateCompleteTopology
-from sol.path.path import PathWithMbox
 
+from sol.path import PathWithMbox
 from sol.path import generatePathsPerIE
 from sol.path.predicates import nullPredicate, useMboxModifier
+from sol.topology.generators import generateChainTopology, \
+    generateCompleteTopology
 from sol.utils.exceptions import NoPathsException
 
 
@@ -45,8 +45,8 @@ def test_pathgen_mbox():
     t = generateCompleteTopology(8)
 
     # noinspection PyUnusedLocal
-    def mbox(path, topology):
-        return [PathWithMbox(path, [n]) for n in path]
+    def mbox(path, ind, topology):
+        return [PathWithMbox(path, [n], ind) for n in path]
 
     pptc = generatePathsPerIE(1, 3, t, nullPredicate, 2,
                               modifyFunc=mbox)

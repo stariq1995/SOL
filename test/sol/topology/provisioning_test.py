@@ -1,5 +1,6 @@
 # coding=utf-8
 import sol.topology.provisioning as prov
+
 from sol.topology.generators import generateCompleteTopology
 
 

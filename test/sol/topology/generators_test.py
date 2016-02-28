@@ -49,6 +49,3 @@ def testForceSwitchLabels():
     G = topo.getGraph()
     for node in G.nodes_iter():
         assert 'switch' in G.node[node]['services']
-
-
-

@@ -1,13 +1,26 @@
 import pytest
+from sol.opt.cplexwrapper import OptimizationCPLEX, InvalidConfigException
+from sol.opt.gurobiwrapper import OptimizationGurobi
 
-from sol.opt import initOptimization
+from sol.opt import initOptimization, getOptimization
 from sol.topology import provisioning
 from sol.path.predicates import nullPredicate
 from sol.topology.generators import generateCompleteTopology
 from sol.topology.provisioning import generateTrafficClasses
 
-_backends = ['cplex']
+_backends = ['cplex', 'gurobi']
 
+
+def test_getFunc():
+    opt = getOptimization('cplex')
+    assert isinstance(opt, OptimizationCPLEX)
+    opt = getOptimization('CPlex')
+    assert isinstance(opt, OptimizationCPLEX)
+    opt = getOptimization('GuRobi')
+    assert isinstance(opt, OptimizationGurobi)
+
+    with pytest.raises(InvalidConfigException):
+        opt = getOptimization('fakebackend')
 
 @pytest.mark.parametrize("backend", _backends)
 def test_MaxFlow(backend):
@@ -38,12 +51,15 @@ def test_MaxFlow(backend):
     # Traffic must not overload links!
     opt.capLinks(pptc, 'bandwidth', linkConstrCaps, linkcapfunc)
     # Push as much traffic as we can!
-    opt.setPredefinedObjective('maxallflow')
+    opt.maxFlow(pptc)
     opt.solve()
 
     for tc, paths in opt.getPathFractions(pptc).iteritems():
         for p in paths:
+            print p
             assert len(p) == 2
+
+    print opt.getSolvedObjective()
 
 
 @pytest.mark.parametrize("backend", _backends)
