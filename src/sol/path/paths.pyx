@@ -7,7 +7,7 @@ cdef class Path:
     """ Represents a path in the network"""
 
     cdef public int _ID
-    cdef public double _numFlows
+    cdef public double _flowFraction
     cdef public _nodes
     cdef _links
 
@@ -23,7 +23,7 @@ cdef class Path:
         :param numFlows: the number of flows on this path
         """
         self._nodes = list(nodes)
-        self._numFlows = numFlows
+        self._flowFraction = numFlows
         self._ID = ID
         if self._ID == -1:
             self._ID = random.randint(0, 1e6)
@@ -74,19 +74,19 @@ cdef class Path:
         """
         return self.getIngress(), self.getEgress()
 
-    cpdef double getNumFlows(self):
+    cpdef double getFlowFraction(self):
         """
         :return: the number of flows on this path.
         """
-        return self._numFlows
+        return self._flowFraction
 
-    cpdef setNumFlows(self, double nflows):
+    cpdef setFlowFraction(self, double nflows):
         """
         Set number of flows on this path
 
         :param nflows: the new number of flows
         """
-        self._numFlows = nflows
+        self._flowFraction = nflows
 
     cpdef getLinks(self):
         """
@@ -104,7 +104,7 @@ cdef class Path:
 
         :return: dictionary representation of this path
         """
-        return {'nodes': self._nodes, 'numFlows': self._numFlows}
+        return {'nodes': self._nodes, 'numFlows': self._flowFraction}
 
     # def hasResource(self, res, topo):
     #     if isinstance(res, Resource):
@@ -140,7 +140,7 @@ cdef class Path:
 
     def __repr__(self):
         return "Path(nodes={}, numFlows={})".format(str(self._nodes),
-                                                    self._numFlows)
+                                                    self._flowFraction)
 
     # def __eq__(self, other):
     #     if isinstance(other, Path):
@@ -161,7 +161,7 @@ cdef class Path:
         return len(self._nodes)
 
     def __copy__(self):
-        return Path(self._nodes, self._ID, self._numFlows)
+        return Path(self._nodes, self._ID, self._flowFraction)
 
 cdef class PathWithMbox(Path):
     """
@@ -211,7 +211,7 @@ cdef class PathWithMbox(Path):
 
         :return: dictionary representation of this path
         """
-        return {'nodes': self._nodes, 'numFlows': self._numFlows, 'useMBoxes': self.useMBoxes,
+        return {'nodes': self._nodes, 'numFlows': self._flowFraction, 'useMBoxes': self.useMBoxes,
                 'PathWithMbox': True}
 
     # def __key(self):

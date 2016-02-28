@@ -4,7 +4,7 @@ from sol import Path, PathWithMbox
 def testPathGetters():
     p = Path([1, 4, 6, -1])
     p2 = PathWithMbox([1, 4, 6, -1], [4, 6])
-    assert p.getNumFlows() == 0
+    assert p.getFlowFraction() == 0
     assert p.getIngress() == 1
     assert p.getEgress() == -1
     assert p.getIEPair() == (1, -1)
@@ -53,8 +53,8 @@ def testPathEquality():
 
 def testPathSetters():
     p = Path([1, 2, 3, 4])
-    p.setNumFlows(100)
-    assert p.getNumFlows() == 100
+    p.setFlowFraction(100)
+    assert p.getFlowFraction() == 100
     # assert p._numFlows == 100
 
     p[1] = 100
