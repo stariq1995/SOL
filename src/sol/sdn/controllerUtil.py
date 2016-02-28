@@ -45,8 +45,8 @@ def computeSplit(k, paths, blockbits, oldPaths=None):
 
         assigned[path].append(block)
         assweight += blockweight
-        if assweight >= path.getNumFlows():
-            # print path.getNumFlows(), assweight
+        if assweight >= path.getFlowFraction():
+            # print path.getFlowFraction(), assweight
             assweight = 0
             index += 1
             if index < len(paths):
@@ -80,25 +80,25 @@ def computeSplit(k, paths, blockbits, oldPaths=None):
     #     for p in paths:
     #         oldsrc, olddst = self._pathmap[p]
     #         oldweight = len(oldsrc) * len(olddst) / (2 ** blockbits)
-    #         if p.getNumFlows() < oldweight:
+    #         if p.getFlowFraction() < oldweight:
     #             assweight = 0
     #             for block in itertools.product(oldsrc.subnet(newmask1),
     #                                            olddst.subnet(newmask2)):
     #                 assigned[p].append(block)
     #                 assweight += blockweight
-    #                 if assweight >= p.getNumFlows():
+    #                 if assweight >= p.getFlowFraction():
     #                     leftovers.append(block)
     #     # iteration two, use the leftovers to pad paths where fractions
     #     # are too low
     #     for p in paths:
     #         oldsrc, olddst = self._pathmap[p]
     #         oldweight = len(oldsrc) * len(olddst) / (2 ** blockbits)
-    #         if p.getNumFlows() > oldweight:
+    #         if p.getFlowFraction() > oldweight:
     #             assweight = oldweight
     #             while leftovers:
     #                 block = leftovers.pop(0)
     #                 assigned[p].append(block)
     #                 assweight += blockweight
-    #                 if assweight >= p.getNumFlows():
+    #                 if assweight >= p.getFlowFraction():
     #                     break
     #     assert len(leftovers) == 0
