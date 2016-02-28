@@ -2,9 +2,13 @@ from sol.utils.pythonHelper import tup2str
 
 LINKLOAD_PREFIX = 'LinkLoad'
 LOAD_PREFIX = 'Load'
+
 MIN_LINK_LOAD = 'minlinkload'
 MIN_NODE_LOAD = 'minnodeload'
 MIN_LATENCY = 'minlatency'
+MAX_ALL_FLOW = 'maxallflow'
+MAX_MIN_FLOW = 'maxminflow'
+MIN_ROUTING_COST = 'minroutingcost'
 
 ALLOCATE_FLOW = 'allocateFlow'
 ROUTE_ALL = 'routeAll'
@@ -13,6 +17,19 @@ REQ_ALL_NODES = 'reqAllNodes'
 CAP_LINKS = 'capLinks'
 CAP_NODES = 'capNodes'
 #TODO: expand available constraint name constants
+
+
+CPLEX = 'cplex'
+GUROBI = 'gurobi'
+DEFAULT_OPTIMIZER = CPLEX
+
+SELECT_RANDOM = 'random'
+SELECT_SHORTEST = 'shortest'
+
+RES_COMPOSE_MAX = 1
+RES_COMPOSE_SUM = 2
+RES_COMPOSE_CONFLICT = 3
+
 
 SHARE_PROPORTIONAL_VOLUME = 1
 SHARE_EQUAL = 2
