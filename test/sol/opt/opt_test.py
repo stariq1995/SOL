@@ -1,12 +1,12 @@
 import pytest
 from sol.opt.cplexwrapper import OptimizationCPLEX, InvalidConfigException
 from sol.opt.gurobiwrapper import OptimizationGurobi
+from sol.topology.provisioning import generateTrafficClasses
 
 from sol.opt import initOptimization, getOptimization
-from sol.topology import provisioning
 from sol.path.predicates import nullPredicate
+from sol.topology import provisioning
 from sol.topology.generators import generateCompleteTopology
-from sol.topology.provisioning import generateTrafficClasses
 
 _backends = ['cplex', 'gurobi']
 
@@ -21,6 +21,7 @@ def test_getFunc():
 
     with pytest.raises(InvalidConfigException):
         opt = getOptimization('fakebackend')
+
 
 @pytest.mark.parametrize("backend", _backends)
 def test_MaxFlow(backend):
@@ -59,7 +60,7 @@ def test_MaxFlow(backend):
             print p
             assert len(p) == 2
 
-    print opt.getSolvedObjective()
+    assert opt.getSolvedObjective() == 1
 
 
 @pytest.mark.parametrize("backend", _backends)
