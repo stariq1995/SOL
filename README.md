@@ -1,4 +1,4 @@
-## What is SOL?
+## What is SOL? [![Build Status](https://travis-ci.org/progwriter/SOL.svg?branch=master)](https://travis-ci.org/progwriter/SOL)
 SOL stands for SDN Optimization Layer and is a framework for developing
 networking applications. Many modern SDN applications rely on creating
 optimizations in order to compute the optimal way to route traffic. SOL makes

@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from sol import Path, PathWithMbox
@@ -83,6 +85,7 @@ def testUsesBox():
     assert p2.usesBox(6)
     assert not p2.usesBox(1)
 
+
 def testPathEncoding():
     p = Path([1, 2, 3])
     assert p.encode() == {'nodes': [1, 2, 3], 'numFlows': 0}
@@ -95,6 +98,9 @@ def testPathEncoding():
     except ImportError:
         pass
 
+
+@pytest.mark.skipif('TRAVIS' in os.environ,
+                    reason='Travis CI has old version of py.test with to warning tests')
 def testPathWarn():
     with pytest.warns(UserWarning):
         p = Path([1])
