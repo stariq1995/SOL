@@ -12,7 +12,6 @@ def TE():
     # ==============
     # Let's generate some example data;
     # ==============
-    # A complete topology
     topo = Topology('Abilene', 'data/topologies/Abilene.graphml')
     # Let's load an existing gravity traffic matrix. It's just a dict mapping ingress-egress tuples to flow volume (a float).
     trafficMatrix = TrafficMatrix.load('data/tm/Abilene.tm')
