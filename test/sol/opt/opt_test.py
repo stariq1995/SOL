@@ -61,8 +61,3 @@ def test_MaxFlow(backend):
             assert len(p) == 2
 
     assert opt.getSolvedObjective() == 1
-
-
-@pytest.mark.parametrize("backend", _backends)
-def test_TE(backend):
-    pass
