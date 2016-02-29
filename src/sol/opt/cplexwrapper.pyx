@@ -8,9 +8,8 @@ import copy
 
 from six.moves import zip
 
-from sol.path import PathWithMbox, Path
-from ..utils.exceptions import InvalidConfigException, \
-    SOLException
+from sol.path import PathWithMbox
+from ..utils.exceptions import InvalidConfigException
 from ..utils.pythonHelper import Tree
 
 try:
@@ -91,7 +90,7 @@ class OptimizationCPLEX(object):
 
     def minLinkLoad(self, resource, weight=1.0):
         self.cplexprob.objective.set_sense(
-                self.cplexprob.objective.sense.minimize)
+            self.cplexprob.objective.sense.minimize)
         maxLoadVarName = 'LinkLoadFunction_{}'.format(resource)
         if maxLoadVarName not in \
                 self.cplexprob.variables.get_names():
@@ -109,43 +108,43 @@ class OptimizationCPLEX(object):
                                 [1.0, -1.0])],
                             senses=['G'], rhs=[0],
                             names=['MaxLinkLoad.{}.{}'.format(resource, tup2str(link))])
-        self.cplexprob.objective.set_linear(varindex[maxLoadVarName], 1)
+        self.cplexprob.objective.set_linear(varindex[maxLoadVarName], weight)
 
-    def setPredefObjective(self, objective, resource=None, routingCostFunc=len, pptc=None):
-        if objective.lower() == MAX_MIN_FLOW:
-            self.defineVar('MinFlow')
-            varindex = self.getVarIndex()
-            self.setObjectiveCoeff({varindex['MinFlow']: 1}, 'max')
-            for allocation in self.allocationVars:
-                self.cplexprob.linear_constraints.add(
-                    [cplex.SparsePair([varindex['MinFlow'], allocation],
-                                      [1, -1])],
-                    senses=['L'], rhs=[0])
-        elif objective.lower() == MIN_ROUTING_COST:
-            self.addRoutingCost(pptc, routingCostFunc)
-            self.setObjectiveCoeff({'RoutingCost': 1}, 'min')
-        elif objective.lower() == MIN_NODE_LOAD:
-            self.cplexprob.objective.set_sense(
-                self.cplexprob.objective.sense.minimize)
-            maxLoadVarName = 'LoadFunction_{}'.format(resource)
-            if maxLoadVarName not in \
-                    self.cplexprob.variables.get_names():
-                self.cplexprob.variables.add(
-                    names=[maxLoadVarName])
-            varindex = self.getVarIndex()
-            for node in self.nodeLoads:
-                for storedRes in self.nodeLoads[node]:
-                    if storedRes == resource:
-                        for loadvar in self.nodeLoads[node][storedRes]:
-                            self.cplexprob.linear_constraints.add(
-                                [cplex.SparsePair(
-                                    ind=[varindex[maxLoadVarName],
-                                         varindex[loadvar]], val=[1.0, -1.0])],
-                                senses=['G'], rhs=[0],
-                                names=['MaxLoad.{}.{}'.format(resource, node)])
-            self.cplexprob.objective.set_linear(varindex[maxLoadVarName], 1)
-        else:
-            raise SOLException("Invalid objective function")
+    def minLatency(self, pptc, routingCostFunc=len, weight=1.0):
+        self.addRoutingCost(pptc, routingCostFunc)
+        self.setObjectiveCoeff({'RoutingCost': weight}, 'min')
+
+    # def setPredefObjective(self, objective, resource=None, routingCostFunc=len, pptc=None):
+    #     if objective.lower() == MAX_MIN_FLOW:
+    #         self.defineVar('MinFlow')
+    #         varindex = self.getVarIndex()
+    #         self.setObjectiveCoeff({varindex['MinFlow']: 1}, 'max')
+    #         for allocation in self.allocationVars:
+    #             self.cplexprob.linear_constraints.add(
+    #                 [cplex.SparsePair([varindex['MinFlow'], allocation],
+    #                                   [1, -1])],
+    #                 senses=['L'], rhs=[0])
+
+    def minNodeLoad(self, pptc, resource, weight=1.0):
+        self.cplexprob.objective.set_sense(
+            self.cplexprob.objective.sense.minimize)
+        maxLoadVarName = 'LoadFunction_{}'.format(resource)
+        if maxLoadVarName not in \
+                self.cplexprob.variables.get_names():
+            self.cplexprob.variables.add(
+                names=[maxLoadVarName])
+        varindex = self.getVarIndex()
+        for node in self.nodeLoads:
+            for storedRes in self.nodeLoads[node]:
+                if storedRes == resource:
+                    for loadvar in self.nodeLoads[node][storedRes]:
+                        self.cplexprob.linear_constraints.add(
+                            [cplex.SparsePair(
+                                ind=[varindex[maxLoadVarName],
+                                     varindex[loadvar]], val=[1.0, -1.0])],
+                            senses=['G'], rhs=[0],
+                            names=['MaxLoad.{}.{}'.format(resource, node)])
+        self.cplexprob.objective.set_linear(varindex[maxLoadVarName], weight)
 
     def addDecisionVars(self, pptc):
         var = []
