@@ -1,7 +1,8 @@
 # coding=utf-8
 """ Implements utility classes that have to do with traffic patterns, such as
-network path, traffic matrix, and network commodities
+    traffic matrix, and network traffic classes (commodities)
 """
+import json
 import random
 
 
@@ -22,7 +23,27 @@ class TrafficMatrix(dict):
         for i, k in enumerate(self.iterkeys()):
             self[k] = v[i]
 
-class TrafficClass:
+
+    def dump(self, fname):
+        """
+        Save the traffic matrix to a file
+        :param fname: filename to save to
+        """
+        with open(fname, 'w') as f:
+            json.dump({"{}->{}".format(k[0], k[1]): v for k, v in self.iteritems()}, f)
+
+    @staticmethod
+    def load(fname):
+        """
+        Load a traffic matrix from a file
+        :param fname: filename to load from
+        :return: a new TrafficMatrix
+        """
+        with open(fname, 'r') as f:
+            return TrafficMatrix({tuple(map(int, k.split('->'))): v for k, v in json.load(f).iteritems()})
+
+
+class TrafficClass(object):
     """ Represents a traffic class. All members are public
     """
 
@@ -101,4 +122,3 @@ class TrafficClass:
             return False
         else:
             return self.ID == other.ID
-
