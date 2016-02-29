@@ -1,5 +1,4 @@
 # coding=utf-8
-import itertools
 import pprint
 
 from sol.topology.provisioning import generateTrafficClasses, provisionLinks

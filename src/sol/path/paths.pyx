@@ -11,11 +11,6 @@ cdef class Path:
     cdef public _nodes
     cdef _links
 
-    # def __cinit__(self, nodes, ID, numFlows=0):
-    #     self._numFlows = numFlows
-    #     self._ID = ID
-    #     self._nodes = nodes
-
     def __init__(self, nodes, ID=-1, numFlows=0):
         """Create a new path
 
