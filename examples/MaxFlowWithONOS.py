@@ -1,27 +1,32 @@
 # coding=utf-8
-import pprint
 
-from sol.topology.provisioning import generateTrafficClasses, provisionLinks
+from sol.topology.provisioning import generateTrafficClasses
 
 from sol.opt import initOptimization
 from sol.path.predicates import nullPredicate
-from sol.topology import Topology, TrafficMatrix
+from sol.sdn.controllerUtil import computeSplit
+from sol.sdn.onosWrapper import ONOSInterface
+from sol.topology import provisioning
+from sol.topology.generators import generateCompleteTopology
 
 
-def TE():
+def MaxFlow():
     # ==============
-    # Let's generate some example data;
+    # Let's generate some example data; SOL has some functions to help with that.
     # ==============
-    topo = Topology('Abilene', 'data/topologies/Abilene.graphml')
-    # Let's load an existing gravity traffic matrix. It's just a dict mapping ingress-egress tuples to flow volume (a float).
-    trafficMatrix = TrafficMatrix.load('data/tm/Abilene.tm')
-
+    # A complete topology
+    topo = generateCompleteTopology(5)
+    # ingress-egress pairs, between which the traffic will flow
+    iePairs = [(0, 3)]
+    # generate a traffic matrix, in this case, a uniform traffic matrix with a million flows
+    trafficMatrix = provisioning.uniformTM(
+        iePairs, 10 ** 6)
     # compute traffic classes. We will only have one class that encompasses all the traffic;
     # assume that each flow consumes 2000 units of bandwidth
-    trafficClasses = generateTrafficClasses(trafficMatrix.keys(), trafficMatrix, {'allTraffic': 1},
+    trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},
                                             {'allTraffic': 2000})
     # since our topology is "fake", provision our links and generate link capacities in our network
-    linkcaps = provisionLinks(topo, trafficClasses, 2)
+    linkcaps = provisioning.provisionLinks(topo, trafficClasses, 1)
     # these will be our link constraints: do not load links more than 50%
     linkConstrCaps = {(u, v): .5 for u, v in topo.links()}
 
@@ -45,23 +50,22 @@ def TE():
     linkcapfunc = lambda link, tc, path, resource: tc.volBytes / linkcaps[link]
     opt.capLinks(pptc, 'bandwidth', linkConstrCaps, linkcapfunc)
 
-    # Route all the traffic
-    opt.routeAll(pptc)
-
-    # Minimize the link load in the network (a pretty standard TE goal)
-    opt.minLinkLoad('bandwidth')
+    # Push as much traffic as we can
+    opt.maxFlow(pptc)
 
     # Solve the optimization
     opt.solve()
 
-    ### Results
-    # Print the objective function --- this is the fractional load on the maximally loaded link
-    print opt.getSolvedObjective()
-
-    # pretty-print the paths on which the traffic is routed, along with the fraction for each traffic class
+    # For simple applications we can interface with ONOS and setup forwarding routes automatically:
+    # Insert correct address to the web interface here;
+    # You must ensure that ONOS is running the SOL app to be able to install rules in a batch
+    onos = ONOSInterface("localhost:8181")
+    routes = {}
     for tc, paths in opt.getPathFractions(pptc).iteritems():
-        print 'src:', tc.src, 'dst:', tc.dst, 'paths:', pprint.pformat(paths)
+        routes.update(computeSplit(tc, paths, 0))
+    onos.pushRoutes(routes)
+    print("Done")
 
 
 if __name__ == "__main__":
-    TE()
+    MaxFlow()

@@ -18,7 +18,7 @@ def nullPredicate(path, topology=None):
     return True
 
 
-def useMboxModifier(path, ind, topology, chainLength=1):
+def useMboxModifier(path, offset, topology, chainLength=1):
     """
     Path modifier function. Expands one path into multiple paths, based on how many intermediate
     middleboxes are used.
@@ -33,7 +33,7 @@ def useMboxModifier(path, ind, topology, chainLength=1):
         This with expand a single path into :math:`{n \\choose chainLength}` paths where :math:`n` is
         the number of switches with middleboxes attached to them in the current path.
     """
-    return [PathWithMbox(path, chain, ind) for chain in itertools.combinations(path, chainLength)
+    return [PathWithMbox(path, chain, ind+offset) for ind, chain in enumerate(itertools.combinations(path, chainLength))
             if all([topology.hasMbox(n) for n in chain])]
 
 
