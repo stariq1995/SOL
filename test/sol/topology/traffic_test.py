@@ -3,9 +3,8 @@ import copy
 
 import pytest
 
-from sol import Path, PathWithMbox
 from sol.topology import *
-
+from sol.utils.pythonHelper import listEq
 
 
 def testTrafficClass():
@@ -27,12 +26,10 @@ def testTrafficClass():
 
 
 def testTrafficMatrix():
-    tm = TrafficMatrix({(1, 2): 100, (3, 4): 500, (2, 4): 200})
+    tm = TrafficMatrix({i: random.randint(0, 1e5) for i in xrange(1000)})
     tm2 = copy.deepcopy(tm)
     tm2.permute()
     assert len(tm) == len(tm2)
     assert tm.keys() == tm2.keys()
-    assert tm.values() != tm2.values()
-    assert sorted(tm.values()) == sorted(tm2.values())
-
-
+    assert not listEq(tm.values(), tm2.values())
+    assert listEq(sorted(tm.values()), sorted(tm2.values()))
