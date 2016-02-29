@@ -89,6 +89,28 @@ class OptimizationCPLEX(object):
                        lowerBound=0)
         self.setObjectiveCoeff({'TotalFlow': weight}, 'max')
 
+    def minLinkLoad(self, resource, weight=1.0):
+        self.cplexprob.objective.set_sense(
+                self.cplexprob.objective.sense.minimize)
+        maxLoadVarName = 'LinkLoadFunction_{}'.format(resource)
+        if maxLoadVarName not in \
+                self.cplexprob.variables.get_names():
+            self.cplexprob.variables.add(
+                names=[maxLoadVarName])
+        varindex = self.getVarIndex()
+        for link in self.linkLoads:
+            for storedRes in self.linkLoads[link]:
+                if resource == storedRes:
+                    for loadvar in self.linkLoads[link][storedRes]:
+                        self.cplexprob.linear_constraints.add(
+                            [cplex.SparsePair(
+                                [varindex[maxLoadVarName],
+                                 varindex[loadvar]],
+                                [1.0, -1.0])],
+                            senses=['G'], rhs=[0],
+                            names=['MaxLinkLoad.{}.{}'.format(resource, tup2str(link))])
+        self.cplexprob.objective.set_linear(varindex[maxLoadVarName], 1)
+
     def setPredefObjective(self, objective, resource=None, routingCostFunc=len, pptc=None):
         if objective.lower() == MAX_MIN_FLOW:
             self.defineVar('MinFlow')
@@ -121,27 +143,6 @@ class OptimizationCPLEX(object):
                                          varindex[loadvar]], val=[1.0, -1.0])],
                                 senses=['G'], rhs=[0],
                                 names=['MaxLoad.{}.{}'.format(resource, node)])
-            self.cplexprob.objective.set_linear(varindex[maxLoadVarName], 1)
-        elif objective.lower() == 'minmaxlinkload':
-            self.cplexprob.objective.set_sense(
-                self.cplexprob.objective.sense.minimize)
-            maxLoadVarName = 'LinkLoadFunction_{}'.format(resource)
-            if maxLoadVarName not in \
-                    self.cplexprob.variables.get_names():
-                self.cplexprob.variables.add(
-                    names=[maxLoadVarName])
-            varindex = self.getVarIndex()
-            for link in self.linkLoads:
-                for storedRes in self.linkLoads[link]:
-                    if resource == storedRes:
-                        for loadvar in self.linkLoads[link][storedRes]:
-                            self.cplexprob.linear_constraints.add(
-                                [cplex.SparsePair(
-                                    [varindex[maxLoadVarName],
-                                     varindex[loadvar]],
-                                    [1.0, -1.0])],
-                                senses=['G'], rhs=[0],
-                                names=['MaxLinkLoad.{}.{}'.format(resource, tup2str(link))])
             self.cplexprob.objective.set_linear(varindex[maxLoadVarName], 1)
         else:
             raise SOLException("Invalid objective function")
