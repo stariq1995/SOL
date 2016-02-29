@@ -1,3 +1,5 @@
+import pytest
+
 from sol import Path, PathWithMbox
 
 
@@ -92,6 +94,11 @@ def testPathEncoding():
         assert p == l
     except ImportError:
         pass
+
+def testPathWarn():
+    with pytest.warns(UserWarning):
+        p = Path([1])
+
 
 def testPathWithMboxEncoding():
     p = PathWithMbox([1, 2, 3], useMBoxes=[2])
