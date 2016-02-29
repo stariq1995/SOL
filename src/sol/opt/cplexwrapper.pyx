@@ -170,7 +170,7 @@ class OptimizationCPLEX(object):
                 types=[self.cplexprob.variables.type.binary] * len(var),
                 lb=[0] * len(var), ub=[1] * len(var))
         if 'path' in types:
-            var = [bp(k, path) for tc in pptc for path in pptc[tc]]
+            var = [bp(tc, path) for tc in pptc for path in pptc[tc]]
             self.cplexprob.variables.add(
                 names=var,
                 types=[self.cplexprob.variables.type.binary] * len(var),
