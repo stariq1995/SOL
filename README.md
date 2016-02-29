@@ -24,7 +24,6 @@ there is no option to use PyPi yet:
 - Tinker!
     * Look at & run some examples from the *examples* folder
     * Write your own applications with the supplied API
-    <!-- [API](http://sol.readthedocs.org/en/latest/api.html) -->
 
 ## How do I contribute?
 
@@ -32,9 +31,3 @@ Fork, code, submit pull request.
 File issues.
 You know the drill.
 
-<!--
-## Where do I get the full docs?
-
-Right here:
-[http://sol.readthedocs.org/en/latest/](http://sol.readthedocs.org/en/latest/)
--->
