@@ -234,4 +234,4 @@ cdef class PathWithMbox(Path):
             format(str(self._nodes), self.useMBoxes, self._flowFraction)
 
     def __copy__(self):
-        return PathWithMbox(self._nodes, self._ID, self.useMBoxes, self._flowFraction)
+        return PathWithMbox(self._nodes, self.useMBoxes, self._ID, self._flowFraction)
