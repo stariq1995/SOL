@@ -29,8 +29,7 @@ def testTrafficClass():
 def testTrafficMatrix():
     tm = TrafficMatrix({(1, 2): 100, (3, 4): 500, (2, 4): 200})
     tm2 = copy.deepcopy(tm)
-    r = random.Random(1)
-    tm2.permute(rand=r.random)
+    tm2.permute()
     assert len(tm) == len(tm2)
     assert tm.keys() == tm2.keys()
     assert tm.values() != tm2.values()
