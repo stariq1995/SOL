@@ -4,3 +4,4 @@ netaddr
 numpy
 six
 cython
+pytest
