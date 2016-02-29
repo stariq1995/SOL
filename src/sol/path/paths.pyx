@@ -31,7 +31,7 @@ cdef class Path:
         self._links = self._computeLinks()
 
     @staticmethod
-    def decode(dictionary):
+    def decode(dict dictionary):
         """
         Create a new path from a dict
         :param dictionary: dict type, must contain following keys:
@@ -142,6 +142,7 @@ cdef class Path:
         return "Path(nodes={}, numFlows={})".format(str(self._nodes),
                                                     self._flowFraction)
 
+    # Not used because of richcmp method
     # def __eq__(self, other):
     #     if isinstance(other, Path):
     #         return self._nodes == other._nodes
@@ -179,7 +180,7 @@ cdef class PathWithMbox(Path):
         self.useMBoxes = list(useMBoxes)
 
     @staticmethod
-    def decode(dictionary):
+    def decode(dict dictionary):
         """
         Create a new path from a dict
         :param dictionary: dict type, must contain following keys:
@@ -214,9 +215,6 @@ cdef class PathWithMbox(Path):
         return {'nodes': self._nodes, 'numFlows': self._flowFraction, 'useMBoxes': self.useMBoxes,
                 'PathWithMbox': True}
 
-    # def __key(self):
-    #     return tuple(self._nodes), tuple(self.useMBoxes), self._numFlows
-
     def __richcmp__(PathWithMbox self, other not None, int op):
         sameType = isinstance(other, PathWithMbox)
         if op == 2:
@@ -230,6 +228,7 @@ cdef class PathWithMbox(Path):
         # TODO: implement a better universal hash function that computes based on _nodes + useMBoxes
         return self.getID()
 
+    # Not used because of richcmp method
     # def __eq__(self, other):
     #     if not isinstance(other, PathWithMbox):
     #         return False
@@ -237,7 +236,7 @@ cdef class PathWithMbox(Path):
 
     def __repr__(self):
         return "PathWithMbox(nodes={}, useMBoxes={} numFlows={})". \
-            format(str(self._nodes), self.useMBoxes, self._numFlows)
+            format(str(self._nodes), self.useMBoxes, self._flowFraction)
 
     def __copy__(self):
-        return PathWithMbox(self._nodes, self._ID, self.useMBoxes, self._numFlows)
+        return PathWithMbox(self._nodes, self._ID, self.useMBoxes, self._flowFraction)
