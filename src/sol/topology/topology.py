@@ -77,7 +77,12 @@ class Topology(object):
 
         :param fName: the name of the file to read from
         """
-        self._graph = graphml.read_graphml(fName, int)
+        self._graph = graphml.read_graphml(fName, int).to_directed()
+
+    # @staticmethod
+    # def load(fname):
+    #     G = graphml.read_graphml(fname, int)
+    #     return Topology(G.graph.get('name', 'NoName'), G)
 
     def getServiceTypes(self, node):
         """
