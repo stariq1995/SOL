@@ -319,6 +319,7 @@ class OptimizationCPLEX(object):
 
     def capNodesPathResource(self, pptc, resource, nodecaps,
                              nodeCapFunction):
+        self.noPathNoFlow(pptc)
         for node in nodecaps:
             loadstr = 'DLoad_{}_{}'.format(resource, node)
             self.nodeLoads[node][resource][loadstr] = 1
@@ -352,7 +353,7 @@ class OptimizationCPLEX(object):
                 rhs=[cap], senses=['L'],
                 names=['DCap.{}.{}'.format(resource, node)])
 
-    def addPathDisableConstraint(self, pptc, trafficClasses=None):
+    def noPathNoFlow(self, pptc, trafficClasses=None):
         v = self.cplexprob.variables.get_names()
         varindex = dict(zip(v, range(len(v))))
         if trafficClasses is None:
