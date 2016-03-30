@@ -23,7 +23,6 @@ class TrafficMatrix(dict):
         for i, k in enumerate(self.iterkeys()):
             self[k] = v[i]
 
-
     def dump(self, fname):
         """
         Save the traffic matrix to a file
@@ -43,19 +42,18 @@ class TrafficMatrix(dict):
             return TrafficMatrix({tuple(map(int, k.split('->'))): v for k, v in json.load(f).iteritems()})
 
 
-class TrafficClass(object):
+cdef class TrafficClass(object):
     """ Represents a traffic class. All members are public
     """
 
-    # cdef public int ID, priority
-    # cdef public char* name
-    # cdef public double volFlows, volBytes
-    # cdef public src, dst, srcIPPrefix, dstIPPrefix, srcAppPorts, dstAppPorts
+    cdef public int ID, priority, src, dst
+    cdef public str name
+    cdef public double volFlows, volBytes
+    cdef public srcIPPrefix, dstIPPrefix, srcAppPorts, dstAppPorts
 
-    def __init__(self, ID, name, src, dst, volFlows=0, volBytes=0, priority=1,
-                 srcIPPrefix=None, dstIPPrefix=None, srcAppPorts=None,
-                 dstAppPorts=None, **kwargs):
-        """ Creates a new traffic class. Any keyword arguments will be made into attributes.
+    def __init__(self, int ID, str name, int src, int dst, double volFlows=0, double volBytes=0, int priority=1,
+                 srcIPPrefix=None, dstIPPrefix=None, srcAppPorts=None, dstAppPorts=None):
+        """ Creates a new traffic class.
 
         :param ID: unique traffic class identifier
         :param name: traffic class name, for human readability (e.g., 'web',
@@ -83,23 +81,9 @@ class TrafficClass(object):
         self.srcAppPorts = srcAppPorts
         self.dstAppPorts = dstAppPorts
 
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
     def __repr__(self):
-        return "TrafficClass({})".format(
-            ",".join(["{}={}".format(k, v) for k, v in self.__dict__.iteritems()]))
-
-    def __str__(self):
-        return "Traffic class {} -> {}, {}, ID={}".format(self.src, self.dst,
-                                                          self.name, self.ID)
-
-    def encode(self):
-        return {'TrafficClass': True}.update(self.__dict__)
-
-    @staticmethod
-    def decode(dict):
-        return TrafficClass(**dict)
+        return "TrafficClass {} -> {}, {}, ID={}".format(self.src, self.dst,
+                                                         self.name, self.ID)
 
     def getIEPair(self):
         """
@@ -110,15 +94,18 @@ class TrafficClass(object):
         """
         return self.src, self.dst
 
-    def __key(self):
-        """ Return the "identity of this object, so to speak"""
-        return self.ID,
-
     def __hash__(self):
-        return hash(self.__key())
+        return hash((self.ID, self.src, self.dst, self.name))
 
-    def __eq__(self, other):
-        if not isinstance(other, TrafficClass):
-            return False
+    def __richcmp__(TrafficClass self, other not None, int op):
+        sameType = isinstance(other, TrafficClass)
+        if op == 2:
+            return sameType and (self.ID == other.ID and self.src == other.src and self.dst == other.dst)
+        elif op == 3:
+            return not sameType or not (self.ID == other.ID and self.src == other.src and self.dst == other.dst)
         else:
-            return self.ID == other.ID
+            raise TypeError
+
+    def __copy__(self):
+        return TrafficClass(self.ID, self.name, self.src, self.dst, self.volFlows, self.volBytes, self.priority,
+                            self.srcIPPrefix, self.dstIPPrefix, self.srcAppPorts, self.dstAppPorts)
