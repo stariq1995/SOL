@@ -14,7 +14,7 @@ class Topology(object):
 
     """
 
-    def __init__(self, name, graph=None):
+    def __init__(self, str name, graph=None):
         """ Create a new empty topology
 
         :param name: The topology name
@@ -33,7 +33,7 @@ class Topology(object):
         else:
             self._graph = nx.DiGraph()
 
-    def getNumNodes(self, service=None):
+    def getNumNodes(self, str service=None):
         """ Returns the number of nodes in this topology
 
         :param service: only count nodes that provide a particular service (
@@ -60,7 +60,7 @@ class Topology(object):
         """
         self._graph = graph
 
-    def writeGraph(self, dirName, fName=None):
+    def writeGraph(self, str dirName, fName=None):
         """
         Writes out the graph in GraphML format
 
@@ -72,17 +72,12 @@ class Topology(object):
         graphml.write_graphml(
             self._graph, dirName + sep + n)
 
-    def loadGraph(self, fName):
+    def loadGraph(self, str fName):
         """ Loads the topology graph from a file in GraphML format
 
         :param fName: the name of the file to read from
         """
         self._graph = graphml.read_graphml(fName, int).to_directed()
-
-    # @staticmethod
-    # def load(fname):
-    #     G = graphml.read_graphml(fname, int)
-    #     return Topology(G.graph.get('name', 'NoName'), G)
 
     def getServiceTypes(self, node):
         """

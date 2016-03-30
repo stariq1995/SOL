@@ -36,7 +36,7 @@ SHARE_EQUAL = 2
 SHARE_NUM_APPS = 4
 
 
-def xp(trafficClass, path):
+cpdef xp(trafficClass, path):
     """ Convenience method for formatting a decision variable
 
     :param trafficClass: the traffic class object, needed for the ID
@@ -47,7 +47,7 @@ def xp(trafficClass, path):
     return 'x_{}_{}'.format(trafficClass.ID, path.getID())
 
 
-def al(trafficClass):
+cpdef al(trafficClass):
     """
     Format an allocation variable
 
@@ -57,7 +57,7 @@ def al(trafficClass):
     return 'a_{}'.format(trafficClass.ID)
 
 
-def bn(node):
+cpdef bn(node):
     """
     Format a binary node variable
 
@@ -67,7 +67,7 @@ def bn(node):
     return 'binnode_{}'.format(node)
 
 
-def be(head, tail):
+cpdef be(head, tail):
     """
     Format a binary edge variable
 
@@ -78,7 +78,7 @@ def be(head, tail):
     return 'binedge_{}_{}'.format(head, tail)
 
 
-def bp(trafficClass, path):
+cpdef bp(trafficClass, path):
     """
     Format a binary path variable
 
@@ -89,7 +89,7 @@ def bp(trafficClass, path):
     return 'binpath_{}_{}'.format(trafficClass.ID, path.getID())
 
 
-def nl(node, resource):
+cpdef nl(node, resource):
     """
     Format a node load variable
 
@@ -99,7 +99,7 @@ def nl(node, resource):
     return 'Load_{}_{}'.format(resource, node)
 
 
-def el(link, resource):
+cpdef el(link, resource):
     """
     Format a link load variable
 
@@ -109,7 +109,7 @@ def el(link, resource):
     return 'Load_{}_{}'.format(resource, tup2str(link))
 
 
-def nc(node, resource):
+cpdef nc(node, resource):
     """
     Format a capacity variable
 

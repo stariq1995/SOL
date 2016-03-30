@@ -1,17 +1,17 @@
 # coding=utf-8
 """ Module implements different path pruning strategies
 """
-from collections import defaultdict
-import random
 import functools
+import random
+from collections import defaultdict
+from gurobipy import Model, LinExpr, GRB
 
+from sol.utils.pythonHelper import Tree
 from ..utils.exceptions import InvalidConfigException
-
 
 _RANDOM = ['random', 'rand']
 _SHORTEST = ['shortest', 'short', 'kshortest', 'k-shortest', 'kshort',
              'k-short']
-
 
 def chooserand(pptc, numPaths):
     """ Chooses a number of paths uniformly at random
@@ -28,7 +28,6 @@ def chooserand(pptc, numPaths):
         else:
             newppk[comm] = pptc[comm]
     return newppk
-
 
 def sortPathsPerCommodity(pptc, key=None, inplace=True):
     """
@@ -50,7 +49,6 @@ def sortPathsPerCommodity(pptc, key=None, inplace=True):
             newppk[tc] = sorted(pptc[tc], key=key)
         return newppk
 
-
 def kShortestPaths(pptc, numPaths, needsSorting=True, inplace=True):
     """ Chooses K shortest paths
     :param pptc: paths per commodity
@@ -71,7 +69,6 @@ def kShortestPaths(pptc, numPaths, needsSorting=True, inplace=True):
         result[comm] = newppk[comm][:numPaths]
     return result
 
-
 def filterPaths(pptc, func):
     """
     Filter paths using a function.
@@ -88,7 +85,6 @@ def filterPaths(pptc, func):
             if func(path):
                 result[tc].append(path)
     return result
-
 
 def getSelectFunction(strName, kwargs=None):
     """
@@ -118,3 +114,47 @@ def getSelectFunction(strName, kwargs=None):
         return functools.partial(kShortestPaths, **kwargs)
     else:
         raise InvalidConfigException("Unknown select method")
+
+# def fairSelectionOptimal(fairnessFractions, topo, numPaths=5):
+#     model = Model()
+#     model.setParam(GRB.param.LogToConsole, 0)
+#     cdef int ind
+#     revindex = Tree()
+#     appindex = {}
+#     for app in fairnessFractions:
+#         appindex[app.name] = app
+#         for tc in app.pptc:
+#             minlimit = LinExpr()
+#             for ind, path in enumerate(app.pptc[tc]):
+#                 revindex[app.name][tc.ID][ind] = path
+#                 pathcost = 0
+#                 for r in fairnessFractions[app]:
+#                     if path.hasResource(r, topo):
+#                         pathcost += 1 / fairnessFractions[app][r]
+#                 if pathcost == 0:
+#                     pathcost = len(fairnessFractions)
+#                 b = model.addVar(name='b_{}_{}_{}'.format(app.name, tc.ID, ind), vtype=GRB.BINARY, obj=pathcost)
+#                 minlimit.add(b)
+#                 model.update()
+#             model.addConstr(minlimit >= min(numPaths, len(app.pptc[tc])))
+#             model.update()
+#     model.optimize()
+#     newPaths = defaultdict(lambda : [])
+#     revind = {}
+#     # FIXME: does not preserve traffic classes
+#     for v in model.getVars():
+#         if v.VarName.startswith('b') and v.x == 1:
+#             b, appid, tcid, indid = v.VarName.split('_')
+#             newPaths[appindex[appid]].append(revindex[appid][int(tcid)][int(indid)])
+#     return newPaths
+
+def selectJoint(apps, topo, pathCoverage=5):
+    m = Model()
+    for app in apps:
+        for tc in app.pptc:
+            for path in app.pptc[tc]:
+                m.addVar(name='b_{}_{}_{}'.format(app.name, tc.ID, path.ID), vtype=GRB.BINARY)
+
+
+def selectSeperate(app, topo, pathCoverage=5):
+    pass

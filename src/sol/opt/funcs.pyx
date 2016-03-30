@@ -6,7 +6,7 @@
 
 
 # noinspection PyUnusedLocal
-def defaultLinkFunc(link, tc, path, resource, linkCaps):
+cpdef defaultLinkFunc(link, tc, path, resource, linkCaps):
     """
     Default link function that we use in all the optimizations
 
@@ -22,7 +22,7 @@ def defaultLinkFunc(link, tc, path, resource, linkCaps):
 
 
 # noinspection PyUnusedLocal
-def defaultNodeCapFunc(node, tc, path, resource, nodeCaps):
+cpdef defaultNodeCapFunc(node, tc, path, resource, nodeCaps):
     """
     Default node load function
 
@@ -35,7 +35,7 @@ def defaultNodeCapFunc(node, tc, path, resource, nodeCaps):
     """
     return tc.volFlows * getattr(tc, '{}Cost'.format(resource)) / nodeCaps[node]
 
-def defaultLinkFuncNoNormalize(link, tc, path, resource):
+cpdef defaultLinkFuncNoNormalize(link, tc, path, resource):
     """
     Default link function. Computes volume of bytes, does not normalize
 
@@ -48,7 +48,7 @@ def defaultLinkFuncNoNormalize(link, tc, path, resource):
     return tc.volBytes
 
 # noinspection PyUnusedLocal
-def dropUpstreamLinkFunc(link, tc, path, resource, linkCaps, dropRates, cumulative=False):
+cpdef dropUpstreamLinkFunc(link, tc, path, resource, linkCaps, dropRates, cumulative=False):
     """
     Example function for modeling link load while taking into account upstream
     drops
@@ -79,7 +79,7 @@ def dropUpstreamLinkFunc(link, tc, path, resource, linkCaps, dropRates, cumulati
     return tc.trafficClass.avgSize * tc.volume * retention / linkCaps[link]
 
 
-def defaultCostFunction(path):
+cpdef defaultCostFunction(path):
     """
     Default path cost function, which is just the length of the path
 
