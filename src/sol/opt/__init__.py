@@ -2,10 +2,10 @@
 import networkx
 
 from sol.opt.varnames import DEFAULT_OPTIMIZER, CPLEX, GUROBI
-from ..path import generatePathsPerTrafficClass
-from ..path import getSelectFunction
-from ..path.predicates import nullPredicate
-from ..utils.exceptions import InvalidConfigException
+from sol.path.generate import generatePathsPerTrafficClass
+from sol.path.select import getSelectFunction
+from sol.path.predicates import nullPredicate
+from sol.utils.exceptions import InvalidConfigException
 
 
 def getOptimization(backend=DEFAULT_OPTIMIZER):
