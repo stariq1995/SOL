@@ -7,9 +7,15 @@ from collections import defaultdict
 from six import iterkeys, itervalues
 from six.moves import range
 
-from sol import Path
-from varnames import *
+from sol.opt.varnames cimport xp, al, bn, be, bp, nl, el, nc
+
+from sol.opt.varnames import MAX_ALL_FLOW
+from sol.utils.pythonHelper import tup2str
 from ..utils.exceptions import SOLException
+from sol.path.paths cimport Path
+from sol.topology.traffic cimport TrafficClass
+from sol.topology.topology cimport Topology
+from gurobiwrapper cimport OptimizationGurobi
 
 try:
     from gurobipy import *
@@ -18,21 +24,25 @@ except ImportError as e:
     raise e
 
 
-class OptimizationGurobi(object):
+cdef class OptimizationGurobi:
+
+
     def __init__(self):
         self.opt = Model()
-        self.intvars = set()
+        self.expressions = {}
 
-    def addDecisionVars(self, pptc):
+    cpdef addDecisionVars(self, dict pptc):
+        cdef TrafficClass tc
+        cdef Path path
         for tc in pptc:
             for path in pptc[tc]:
                 name = xp(tc, path)
                 self.opt.addVar(lb=0, ub=1, name=name)
         self.opt.update()
 
-    def addBinaryVars(self, pptc, topology, types):
+    cpdef addBinaryVars(self, dict pptc, Topology topology, vtypes):
         cdef int pi
-        for t in types:
+        for t in vtypes:
             if t.lower() == 'node':
                 for n in topology.nodes(False):
                     self.opt.addVar(vtype=GRB.BINARY, name=bn(n))
@@ -46,7 +56,7 @@ class OptimizationGurobi(object):
             else:
                 raise SOLException("Unknown binary variable type")
 
-    def allocateFlow(self, pptc, allocation=None):
+    cpdef allocateFlow(self, pptc, allocation=None):
         cdef int pi
         for tc in pptc:
             name = al(tc)
@@ -107,38 +117,30 @@ class OptimizationGurobi(object):
 
     # TODO: consume & capNodes/Links are kind of redundant at this point, clean it up
 
-    def consume(self, pptc, resourceName, cost, nodeCaps, linkCaps):
+    def consume(self, pptc, str resourceName, cost, nodeCaps, linkCaps):
         """
         :param pptc: paths per traffic class
-        :param resource: resource to be consumed
+        :param resourceName: resource to be consumed
         :param cost: cost per flow for this resource
         """
-        expressions = defaultdict(lambda: LinExpr())
+
+        if resourceName not in self.expressions:
+            self.expressions[resourceName] = {}
         for tc in pptc:
             #TODO: optimize loop
             for path in pptc[tc]:
                 v = self.v(xp(tc, path))
                 for node in path.getNodes():
+                    if node not in self.expressions[resourceName]:
+                        self.expressions[resourceName][node] = LinExpr()
                     if node in nodeCaps:
-                        expressions[node].addTerms(tc.volFlows * cost / nodeCaps[node], v)
+                        self.expressions[resourceName][node].addTerms(tc.volFlows * cost / nodeCaps[node], v)
                 for link in path.getLinks():
+                    if link not in self.expressions[resourceName]:
+                        self.expressions[resourceName][link] = LinExpr()
                     if link in linkCaps:
-                        expressions[link].addTerms(tc.volFlows * cost / linkCaps[link], v)
-        for node in nodeCaps:
-            name = 'NodeLoad_{}_{}'.format(resourceName, node)
-            if self.v(name) is None:
-                self.opt.addVar(name=name, ub=1)
-                self.opt.update()
-            self.opt.addConstr(expressions[node] == self.v(name), name='NodeLoad.{}.{}'.format(
-                resourceName, node))
-        for link in linkCaps:
-            name = 'LinkLoad_{}_{}'.format(resourceName, tup2str(link))
-            if self.v(name) is None:
-                self.opt.addVar(name=name, ub=1)
-                self.opt.update()
-            self.opt.addConstr(expressions[link] == self.v(name), name='LinkLoad.{}.{}'.format(
-                resourceName, tup2str(link)))
-        self.opt.update()
+                        self.expressions[resourceName][link].addTerms(tc.volFlows * cost / linkCaps[link], v)
+
 
     def _reqAll(self, pptc, trafficClasses=None, reqType=None):
         if reqType is None:
@@ -263,7 +265,7 @@ class OptimizationGurobi(object):
         objName = MAX_ALL_FLOW
         obj = self.opt.addVar(name=objName, obj=weight)
         self.opt.update()
-        self.opt.addConstr(obj == 1-quicksum([self.v(al(tc)) for tc in pptc]))
+        self.opt.addConstr(obj == 1 - quicksum([self.v(al(tc)) for tc in pptc]))
         self.opt.ModelSense = GRB.MAXIMIZE
         self.opt.update()
 
@@ -286,7 +288,29 @@ class OptimizationGurobi(object):
         self.opt.params.TimeLimit = time
         self.opt.update()
 
-    def solve(self):
+    cdef _dumpExpressions(self):
+        for resourceName in self.expressions:
+            for nodeOrLink in self.expressions[resourceName]:
+                if isinstance(nodeOrLink, tuple):
+                    name = 'LinkLoad_{}_{}'.format(resourceName, tup2str(nodeOrLink))
+                    if self.v(name) is None:
+                        self.opt.addVar(name=name, ub=1)
+                        self.opt.update()
+                    self.opt.addConstr(self.expressions[resourceName][nodeOrLink] == self.v(name), name='LinkLoad.{}.{}'.format(
+                        resourceName, tup2str(nodeOrLink)))
+                    self.opt.addConstr(self.v(name) <= 1)
+                else:
+                    name = 'NodeLoad_{}_{}'.format(resourceName, nodeOrLink)
+                    if self.v(name) is None:
+                        self.opt.addVar(name=name, ub=1)
+                        self.opt.update()
+                    self.opt.addConstr(self.expressions[resourceName][nodeOrLink] == self.v(name), name='NodeLoad.{}.{}'.format(
+                        resourceName, nodeOrLink))
+                    self.opt.addConstr(self.v(name) <= 1)
+        self.opt.update()
+
+    cpdef solve(self):
+        self._dumpExpressions()
         self.opt.optimize()
 
     def write(self, fname):
@@ -321,7 +345,7 @@ class OptimizationGurobi(object):
     def v(self, n):
         return self.opt.getVarByName(n)
 
-    def getPathFractions(self, pptc, flowCarryingOnly=True):
+    cpdef getPathFractions(self, pptc, flowCarryingOnly=True):
         result = {}
         for tc, paths in pptc.iteritems():
             result[tc] = []
@@ -333,4 +357,3 @@ class OptimizationGurobi(object):
                 elif not flowCarryingOnly:
                     result[tc].append(newpath)
         return result
-
