@@ -16,3 +16,11 @@ src/sol.egg-info
 build
 .cache/v/cache
 .eggs
+my_old_examples/BasicLoadBalancer.py
+my_old_examples/ElasticScaling.py
+my_old_examples/ElasticTree.py
+my_old_examples/MaxFlow.py
+my_old_examples/MaxFlowWithOnos.py
+my_old_examples/MaxMinFairness.py
+my_old_examples/Panopticon.py
+my_old_examples/SIMPLE.py
