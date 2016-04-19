@@ -1,13 +1,14 @@
+# coding=utf-8
 import uuid
 
 from varnames import ALLOCATE_FLOW, ROUTE_ALL
 
-class App:
-    def __init__(self, dict pptc=None, dict resourceNames=None, str obj=None, objTC=None,
-                 list constraints=[ALLOCATE_FLOW, ROUTE_ALL], str name=''):
-        self.obj = obj
+class App(object):
+    def __init__(self, dict pptc, list constraints, dict resourceCost=None, str obj=None, objTC=None,
+                 str name=''):
         self.pptc = pptc
-        self.resourceNames = resourceNames
+        self.obj = obj
+        self.resourceCost = resourceCost
         self.name = name
         if not self.name:
             self.name = str(uuid.uuid4()).replace('-', '')
@@ -17,10 +18,7 @@ class App:
             self.objTC = pptc.keys()
 
     def uses(self, str resourceName):
-        return resourceName in self.resourceNames
-
-    def getResourceNames(self):
-        return self.resourceNames.keys()
+        return resourceName in self.resourceCost.keys()
 
     def __repr__(self):
         return '<sol.App {}>'.format(self.name)
@@ -29,4 +27,4 @@ class App:
         return hash(self.name)
 
     def __eq__(self, other):
-        return isinstance(other, App) and self.uuid == other.uuid
+        return isinstance(other, App) and self.name == other.name
