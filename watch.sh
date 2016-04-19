@@ -7,7 +7,7 @@ if [ $platform == "Darwin" ]; then
         exit 1
     fi
     pip install -e .
-    fswatch -or -l 1 $(find src -name '*.pyx') | while read num; do echo $num; pip install -e . ; done
+    fswatch -or -l 1 $(find src \( -name '*.pyx' -or -name '*.pxd' \) ) | while read num; do echo $num; pip install -e . ; done
 else
     echo "Sorry, have not implemented this for your OS"
     exit 1
