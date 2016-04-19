@@ -4,6 +4,7 @@
 """
 import json
 import random
+from traffic cimport TrafficClass
 
 
 class TrafficMatrix(dict):
@@ -45,11 +46,6 @@ class TrafficMatrix(dict):
 cdef class TrafficClass(object):
     """ Represents a traffic class. All members are public
     """
-
-    cdef public int ID, priority, src, dst
-    cdef public str name
-    cdef public double volFlows, volBytes
-    cdef public srcIPPrefix, dstIPPrefix, srcAppPorts, dstAppPorts
 
     def __init__(self, int ID, str name, int src, int dst, double volFlows=0, double volBytes=0, int priority=1,
                  srcIPPrefix=None, dstIPPrefix=None, srcAppPorts=None, dstAppPorts=None):
