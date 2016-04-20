@@ -2,10 +2,10 @@
 
 import networkx as nx
 
+from paths cimport Path
 from sol.utils import exceptions
-from paths import Path
 
-def generatePathsPerIE(source, sink, topology, predicate, cutoff,
+def generatePathsPerIE(int source, int sink, topology, predicate, cutoff,
                        maxPaths=float('inf'), modifyFunc=None,
                        raiseOnEmpty=True):
     """
@@ -56,7 +56,6 @@ def generatePathsPerIE(source, sink, topology, predicate, cutoff,
         if raiseOnEmpty:
             raise exceptions.NoPathsException("No paths between {} and {}".format(source, sink))
     return paths
-
 
 def generatePathsPerTrafficClass(topology, trafficClasses, predicate, cutoff,
                                  maxPaths=float('inf'), modifyFunc=None,

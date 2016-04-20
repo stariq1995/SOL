@@ -4,11 +4,10 @@ Both generic (example predicates) and some app-specific predicates
 """
 import itertools
 
-from paths import PathWithMbox
+from sol.path.paths cimport PathWithMbox
+from sol.topology.topology cimport Topology
 
-
-# noinspection PyUnusedLocal
-def nullPredicate(path, topology=None):
+cpdef nullPredicate(path, topology=None):
     """
     Predicate that allows every path
 
@@ -18,7 +17,7 @@ def nullPredicate(path, topology=None):
     return True
 
 
-def useMboxModifier(path, offset, topology, chainLength=1):
+cpdef useMboxModifier(path, int offset, Topology topology, chainLength=1):
     """
     Path modifier function. Expands one path into multiple paths, based on how many intermediate
     middleboxes are used.
@@ -37,7 +36,7 @@ def useMboxModifier(path, offset, topology, chainLength=1):
             if all([topology.hasMbox(n) for n in chain])]
 
 
-def hasMboxPredicate(path, topology):
+cpdef hasMboxPredicate(path, Topology topology):
     """
     This predicate checks if any switch in the path has a middlebox attached to it.
 
@@ -48,7 +47,7 @@ def hasMboxPredicate(path, topology):
     return any([topology.hasMbox(node) for node in path])
 
 
-def waypointMboxPredicate(path, topology, order):
+cpdef waypointMboxPredicate(path, Topology topology, order):
     """
     Check the path for correct waypoint enforcement through the middleboxes
 

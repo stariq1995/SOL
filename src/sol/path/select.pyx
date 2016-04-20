@@ -6,14 +6,19 @@ import random
 from collections import defaultdict
 from gurobipy import Model, LinExpr, GRB
 
+# from sol.opt.composer cimport compose
+from sol.topology.topology cimport Topology
+from cpython cimport bool
 from sol.utils.pythonHelper import Tree
-from ..utils.exceptions import InvalidConfigException
+from sol.utils.exceptions import InvalidConfigException
+from sol.path.paths cimport computePathCapacity, Path
+from sol.topology.traffic cimport TrafficClass
 
 _RANDOM = ['random', 'rand']
 _SHORTEST = ['shortest', 'short', 'kshortest', 'k-shortest', 'kshort',
              'k-short']
 
-def chooserand(pptc, numPaths):
+cpdef chooserand(dict pptc, int numPaths):
     """ Chooses a number of paths uniformly at random
 
     :param pptc: paths per commodity
@@ -29,7 +34,7 @@ def chooserand(pptc, numPaths):
             newppk[comm] = pptc[comm]
     return newppk
 
-def sortPathsPerCommodity(pptc, key=None, inplace=True):
+cpdef sortPathsPerCommodity(dict pptc, key=None, bool inplace=True):
     """
     Sort paths per commodity
 
@@ -49,7 +54,7 @@ def sortPathsPerCommodity(pptc, key=None, inplace=True):
             newppk[tc] = sorted(pptc[tc], key=key)
         return newppk
 
-def kShortestPaths(pptc, numPaths, needsSorting=True, inplace=True):
+cpdef kShortestPaths(pptc, int numPaths, bool needsSorting=True, bool inplace=True):
     """ Chooses K shortest paths
     :param pptc: paths per commodity
     :param numPaths: number of paths to choose (k) per commodity
@@ -69,7 +74,7 @@ def kShortestPaths(pptc, numPaths, needsSorting=True, inplace=True):
         result[comm] = newppk[comm][:numPaths]
     return result
 
-def filterPaths(pptc, func):
+cdef filterPaths(dict pptc, func):
     """
     Filter paths using a function.
 
@@ -78,7 +83,7 @@ def filterPaths(pptc, func):
     :return: new paths per commodity with paths for which *func* returned a
         true value
     """
-    assert (hasattr(func, '__call__'))
+    assert (hasattr(func, '__call__')) # ensure this is a function
     result = defaultdict(lambda: [])
     for tc in pptc:
         for path in pptc[tc]:
@@ -115,46 +120,27 @@ def getSelectFunction(strName, kwargs=None):
     else:
         raise InvalidConfigException("Unknown select method")
 
-# def fairSelectionOptimal(fairnessFractions, topo, numPaths=5):
-#     model = Model()
-#     model.setParam(GRB.param.LogToConsole, 0)
-#     cdef int ind
-#     revindex = Tree()
-#     appindex = {}
-#     for app in fairnessFractions:
-#         appindex[app.name] = app
-#         for tc in app.pptc:
-#             minlimit = LinExpr()
-#             for ind, path in enumerate(app.pptc[tc]):
-#                 revindex[app.name][tc.ID][ind] = path
-#                 pathcost = 0
-#                 for r in fairnessFractions[app]:
-#                     if path.hasResource(r, topo):
-#                         pathcost += 1 / fairnessFractions[app][r]
-#                 if pathcost == 0:
-#                     pathcost = len(fairnessFractions)
-#                 b = model.addVar(name='b_{}_{}_{}'.format(app.name, tc.ID, ind), vtype=GRB.BINARY, obj=pathcost)
-#                 minlimit.add(b)
-#                 model.update()
-#             model.addConstr(minlimit >= min(numPaths, len(app.pptc[tc])))
-#             model.update()
-#     model.optimize()
-#     newPaths = defaultdict(lambda : [])
-#     revind = {}
-#     # FIXME: does not preserve traffic classes
-#     for v in model.getVars():
-#         if v.VarName.startswith('b') and v.x == 1:
-#             b, appid, tcid, indid = v.VarName.split('_')
-#             newPaths[appindex[appid]].append(revindex[appid][int(tcid)][int(indid)])
-#     return newPaths
 
-def selectJoint(apps, topo, pathCoverage=5):
-    m = Model()
-    for app in apps:
-        for tc in app.pptc:
-            for path in app.pptc[tc]:
-                m.addVar(name='b_{}_{}_{}'.format(app.name, tc.ID, path.ID), vtype=GRB.BINARY)
+cdef dict getPathsBin(app, model):
+    cdef int i
+    pptc = {}
+    tree = Tree()
+    for var in model.getVars():
+        b, tc, ind = var.varName.split('_')
+        tree[tc][int(ind)] = var.x
+    for tc in app.pptc:
+        pptc[tc] = [p for i, p in enumerate(app.pptc[tc]) if tree[tc.ID][i] == 1]
+    return pptc
 
 
-def selectSeperate(app, topo, pathCoverage=5):
+cpdef selectOptimal(apps, Topology topo):
+    # opt = compose(apps, topo)
+    # opt.solve()
+    # Return paths
+    # TODO: return them per app
+    # return opt.getPathsFractions()
+    pass
+
+
+cpdef selectRobust(apps, Topology topo, tm):
     pass

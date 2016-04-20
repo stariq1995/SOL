@@ -1,24 +1,23 @@
+# coding=utf-8
 import random
 import warnings
 
 from sol.utils.pythonHelper import listEq
+from paths cimport Path
+from paths cimport PathWithMbox
+from sol.topology.topology cimport Topology
 
 cdef class Path:
     """ Represents a path in the network"""
 
-    cdef public int _ID
-    cdef public double _flowFraction
-    cdef public _nodes
-    cdef _links
-
-    def __init__(self, nodes, ID=-1, numFlows=0):
+    def __init__(self, nodes, ID=-1, flowFraction=0):
         """Create a new path
 
         :param nodes: a list of node ids that belong to a path
-        :param numFlows: the number of flows on this path
+        :param flowFraction: the number of flows on this path
         """
         self._nodes = list(nodes)
-        self._flowFraction = numFlows
+        self._flowFraction = flowFraction
         self._ID = ID
         if self._ID == -1:
             self._ID = random.randint(0, 1e6)
@@ -35,7 +34,7 @@ cdef class Path:
         """
         return Path(dictionary['nodes'], dictionary.get('numFlows', 0))
 
-    cpdef getIngress(self):
+    cpdef int getIngress(self):
         """
         :return: the ingress node of this path
         """
@@ -44,7 +43,7 @@ cdef class Path:
     cdef _computeLinks(self):
         return zip(self._nodes, self._nodes[1:])
 
-    cpdef getEgress(self):
+    cpdef int getEgress(self):
         """
         :return: the egress node of this path
         """
@@ -56,13 +55,13 @@ cdef class Path:
         """
         return self._nodes
 
-    cpdef getNodesAsTuple(self):
-        """
-        :return: all nodes in this path as a tuple
-        """
-        return tuple(self._nodes)
+    # cpdef getNodesAsTuple(self):
+    #     """
+    #     :return: all nodes in this path as a tuple
+    #     """
+    #     return tuple(self._nodes)
 
-    cpdef getIEPair(self):
+    cpdef tuple getIEPair(self):
         """
         :return: ingress-egress pair for this path
         :rtype: tuple
@@ -101,16 +100,6 @@ cdef class Path:
         """
         return {'nodes': self._nodes, 'numFlows': self._flowFraction}
 
-    # def hasResource(self, res, topo):
-    #     if isinstance(res, Resource):
-    #         nodeset = self._nodes
-    #         linkset = self.getLinks()
-    #     elif isinstance(res, CompoundResource):
-    #         nodeset = frozenset(self._nodes).intersection(res.nodes)
-    #         linkset = frozenset(self.getLinks()).intersection(res.links)
-    #     return any([res.name in topo.getResources(n) for n in nodeset]) or \
-    #            any([res.name in topo.getResources(l) for l in linkset])
-
     def __contains__(self, item):
         return item in self._nodes
 
@@ -121,10 +110,10 @@ cdef class Path:
         # TODO: implement a better universal hash function that computes based on _nodes
         return self.getID()
 
-    def __setitem__(self, key, value):
-        self._nodes[key] = value
+    # def __setitem__(self, key, value):
+    #     self._nodes[key] = value
 
-    def __getslice__(self, i, j):
+    def __getslice__(self, int i, int j):
         return self._nodes[i:j]
 
     def __iter__(self):
@@ -137,13 +126,7 @@ cdef class Path:
         return "Path(nodes={}, numFlows={})".format(str(self._nodes),
                                                     self._flowFraction)
 
-    # Not used because of richcmp method
-    # def __eq__(self, other):
-    #     if isinstance(other, Path):
-    #         return self._nodes == other._nodes
-    #     else:
-    #         return False
-
+    # noinspection PyProtectedMember
     def __richcmp__(Path self, other not None, int op):
         sameType = isinstance(other, Path)
         if op == 2:
@@ -152,9 +135,6 @@ cdef class Path:
             return not sameType or not listEq(self._nodes, other._nodes)
         else:
             raise TypeError
-
-    def __len__(self):
-        return len(self._nodes)
 
     def __copy__(self):
         return Path(self._nodes, self._ID, self._flowFraction)
@@ -168,10 +148,8 @@ cdef class PathWithMbox(Path):
     :param numFlows: number of flows (if any) along this path. Default is 0.
     """
 
-    cdef public useMBoxes
-
-    def __init__(self, nodes, useMBoxes, int ind=0, numFlows=0):
-        super(PathWithMbox, self).__init__(nodes, ind, numFlows)
+    def __init__(self, nodes, useMBoxes, int ind=0, flowFraction=0):
+        super(PathWithMbox, self).__init__(nodes, ind, flowFraction)
         self.useMBoxes = list(useMBoxes)
 
     @staticmethod
@@ -210,6 +188,7 @@ cdef class PathWithMbox(Path):
         return {'nodes': self._nodes, 'numFlows': self._flowFraction, 'useMBoxes': self.useMBoxes,
                 'PathWithMbox': True}
 
+    # noinspection PyProtectedMember
     def __richcmp__(PathWithMbox self, other not None, int op):
         sameType = isinstance(other, PathWithMbox)
         if op == 2:
@@ -223,11 +202,6 @@ cdef class PathWithMbox(Path):
         # TODO: implement a better universal hash function that computes based on _nodes + useMBoxes
         return self.getID()
 
-    # Not used because of richcmp method
-    # def __eq__(self, other):
-    #     if not isinstance(other, PathWithMbox):
-    #         return False
-    #     return listEq(self._nodes, other._nodes) and listEq(self.useMBoxes, other.useMBoxes)
 
     def __repr__(self):
         return "PathWithMbox(nodes={}, useMBoxes={} numFlows={})". \
@@ -235,3 +209,11 @@ cdef class PathWithMbox(Path):
 
     def __copy__(self):
         return PathWithMbox(self._nodes, self.useMBoxes, self._ID, self._flowFraction)
+
+cdef double computePathCapacity(Path p, str resourceName, Topology topo):
+    b = []
+    for x in p.getNodes() + p.getLinks():
+        res = topo.getResources(x)
+        if resourceName in res:
+            b.append(res[x])
+    return min(b)

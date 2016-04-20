@@ -8,10 +8,11 @@ import networkx
 import numpy
 import six
 
-from ..topology import TrafficClass, TrafficMatrix
-from sol.path import Path
+from sol.topology.traffic cimport TrafficClass
+from sol.topology.traffic import TrafficMatrix
+from sol.path.paths cimport Path
 
-def generateIEpairs(topology):
+cpdef generateIEpairs(topology):
     """
     Default way of generating ingress-egress pairs. Generates all possible n*(n-1) node combinations
 
@@ -35,7 +36,7 @@ cpdef uniformTM(iepairs, double totalFlows):
     return TrafficMatrix({ie: totalFlows / len(iepairs) for ie in iepairs})
 
 
-def logNormalTM(iepairs, meanFlows):
+cpdef logNormalTM(iepairs, meanFlows):
     """
     Compute the log-normal distribution of traffic across ingress-egress pairs
 
@@ -47,7 +48,7 @@ def logNormalTM(iepairs, meanFlows):
     return TrafficMatrix({ie: meanFlows * d for ie, d in six.zip(iepairs, dist)})
 
 
-def gravityTM(iepairs, double totalFlows, populationDict):
+cpdef gravityTM(iepairs, double totalFlows, populationDict):
     """
     Computes the gravity model traffic matrix base
 
@@ -67,7 +68,7 @@ def gravityTM(iepairs, double totalFlows, populationDict):
 
 
 def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
-                           classBytesDict=None, asdict=False):
+                           classBytesDict, asdict=False):
     """
     Generate traffic classes from given ingress-egress pairs and traffic matrix
 
@@ -101,8 +102,7 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
         i, e = ie
         for classname, fraction in classFractionDict.iteritems():
             volflows = fraction * trafficMatrix[ie]
-            if classBytesDict is not None:
-                volbytes = volflows * classBytesDict[classname]
+            volbytes = volflows * classBytesDict[classname]
             tc = TrafficClass(index, classname, i, e, volflows, volbytes)
             if asdict:
                 trafficClasses[classname].append(tc)
@@ -112,27 +112,27 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
     return trafficClasses
 
 
-cdef computeBackgroundLoad(topology, trafficClasses):
-        cdef int ind = 0
-        paths = {}
-        allsp = networkx.all_pairs_shortest_path(topology.getGraph())
-        for tc in trafficClasses:
-            i, e = tc.getIEPair()
-            paths[(i, e)] = Path(allsp[i][e], ind)
-            ind += 1
-        loads = {}
-        for u, v in topology.links():
-            link = (u, v)
-            loads[link] = 0
-        for tc in trafficClasses:
-            path = paths[tc.getIEPair()]
-            for link in path.getLinks():
-                l = tc.volBytes
-                loads[link] += l
-        return loads
+cdef computeBackgroundLoad(Topology topology, trafficClasses):
+    cdef int ind = 0
+    paths = {}
+    allsp = networkx.all_pairs_shortest_path(topology.getGraph())
+    for tc in trafficClasses:
+        i, e = tc.getIEPair()
+        paths[(i, e)] = Path(allsp[i][e], ind)
+        ind += 1
+    loads = {}
+    for u, v in topology.links():
+        link = (u, v)
+        loads[link] = 0
+    for tc in trafficClasses:
+        path = paths[tc.getIEPair()]
+        for link in path.getLinks():
+            l = tc.volBytes
+            loads[link] += l
+    return loads
 
 
-cpdef provisionLinks(topology, trafficClasses, float overprovision=3, setAttr=False):
+cpdef provisionLinks(Topology topology, list trafficClasses, float overprovision=3, setAttr=False):
     """ Provision the links in the topology based on the traffic classes.
     Computes shortest path routing for given traffic classes, uses the maximum
     load, scaled by *overprovision*, as the link capacity

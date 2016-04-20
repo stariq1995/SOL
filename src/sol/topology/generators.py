@@ -8,7 +8,7 @@ import itertools
 
 import networkx as nx
 
-from ..topology import Topology
+from sol.topology.topology import Topology
 
 def forceSwitchLabels(topology):
     """ Force all nodes to be labeled as switches
