@@ -1,4 +1,6 @@
+# coding=utf-8
 from sol.utils.pythonHelper import tup2str
+from varnames cimport *
 
 LINKLOAD_PREFIX = 'LinkLoad'
 LOAD_PREFIX = 'Load'
@@ -8,16 +10,15 @@ MIN_NODE_LOAD = 'minnodeload'
 MIN_LATENCY = 'minlatency'
 MAX_ALL_FLOW = 'maxallflow'
 MAX_MIN_FLOW = 'maxminflow'
-MIN_ROUTING_COST = 'minroutingcost'
 
 ALLOCATE_FLOW = 'allocateFlow'
 ROUTE_ALL = 'routeAll'
 REQ_ALL_LINKS = 'reqAllLinks'
 REQ_ALL_NODES = 'reqAllNodes'
+REQ_SOME_LINKS = 'reqSomeLinks'
+REQ_SOME_NODES = 'reqSomeNodes'
 CAP_LINKS = 'capLinks'
 CAP_NODES = 'capNodes'
-#TODO: expand available constraint name constants
-
 
 CPLEX = 'cplex'
 GUROBI = 'gurobi'
@@ -26,28 +27,21 @@ DEFAULT_OPTIMIZER = CPLEX
 SELECT_RANDOM = 'random'
 SELECT_SHORTEST = 'shortest'
 
-RES_COMPOSE_MAX = 1
-RES_COMPOSE_SUM = 2
-RES_COMPOSE_CONFLICT = 3
+BANDWIDTH = 'bw'
+CPU = 'cpu'
+MEM = 'mem'
+TCAM = 'tcam'
 
-
-SHARE_PROPORTIONAL_VOLUME = 1
-SHARE_EQUAL = 2
-SHARE_NUM_APPS = 4
-
-
-cpdef xp(trafficClass, path):
+cpdef xp(TrafficClass trafficClass, Path path):
     """ Convenience method for formatting a decision variable
 
     :param trafficClass: the traffic class object, needed for the ID
-    :param pathIndex: index of the path in the list of paths per traffic class
     :returns: variable name of the form *x_classid_pathindex*
     :rtype: str
     """
     return 'x_{}_{}'.format(trafficClass.ID, path.getID())
 
-
-cpdef al(trafficClass):
+cpdef al(TrafficClass trafficClass):
     """
     Format an allocation variable
 
@@ -56,8 +50,7 @@ cpdef al(trafficClass):
     """
     return 'a_{}'.format(trafficClass.ID)
 
-
-cpdef bn(node):
+cpdef bn(int node):
     """
     Format a binary node variable
 
@@ -66,8 +59,7 @@ cpdef bn(node):
     """
     return 'binnode_{}'.format(node)
 
-
-cpdef be(head, tail):
+cpdef be(int head, int tail):
     """
     Format a binary edge variable
 
@@ -77,8 +69,7 @@ cpdef be(head, tail):
     """
     return 'binedge_{}_{}'.format(head, tail)
 
-
-cpdef bp(trafficClass, path):
+cpdef bp(TrafficClass trafficClass, Path path):
     """
     Format a binary path variable
 
@@ -88,8 +79,7 @@ cpdef bp(trafficClass, path):
     """
     return 'binpath_{}_{}'.format(trafficClass.ID, path.getID())
 
-
-cpdef nl(node, resource):
+cpdef nl(int node, str resource):
     """
     Format a node load variable
 
@@ -98,8 +88,7 @@ cpdef nl(node, resource):
     """
     return 'Load_{}_{}'.format(resource, node)
 
-
-cpdef el(link, resource):
+cpdef el(tuple link, str resource):
     """
     Format a link load variable
 
@@ -108,8 +97,7 @@ cpdef el(link, resource):
     """
     return 'Load_{}_{}'.format(resource, tup2str(link))
 
-
-cpdef nc(node, resource):
+cpdef nc(int node, str resource):
     """
     Format a capacity variable
 
