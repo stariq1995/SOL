@@ -7,8 +7,12 @@ from os.path import sep
 import networkx as nx
 from networkx.readwrite import graphml
 
+_HAS_MBOX = 'hasMbox'
+_SWITCH = 'switch'
+_SERVICES = 'services'
+_RESOURCES = 'resources'
 
-class Topology(object):
+cdef class Topology:
     """
     Class that stores the topology graph and provides helper functions (e.g., middlebox manipulation)
 
@@ -32,6 +36,15 @@ class Topology(object):
                 self._graph = graph
         else:
             self._graph = nx.DiGraph()
+        self._processGraph()
+
+    def _processGraph(self):
+        for n in self.nodes():
+            self.addServiceType(n, _SWITCH)
+        for n in self.nodes():
+            self._graph.node[n][_RESOURCES] = {}
+        for u, v in self.links():
+            self._graph.edge[u][v][_RESOURCES] = {}
 
     def getNumNodes(self, str service=None):
         """ Returns the number of nodes in this topology
@@ -60,7 +73,7 @@ class Topology(object):
         """
         self._graph = graph
 
-    def writeGraph(self, str dirName, fName=None):
+    def writeGraph(self, str dirName, str fName=None):
         """
         Writes out the graph in GraphML format
 
@@ -69,8 +82,7 @@ class Topology(object):
             '.graphml' suffix is used
         """
         n = self.name + '.graphml' if fName is None else fName
-        graphml.write_graphml(
-            self._graph, dirName + sep + n)
+        graphml.write_graphml(self._graph, dirName + sep + n)
 
     def loadGraph(self, str fName):
         """ Loads the topology graph from a file in GraphML format
@@ -87,7 +99,7 @@ class Topology(object):
         :return: a list of available services at this node (e.g., 'switch',
             'ids')
         """
-        return self._graph.node[node]['services'].split(';')
+        return self._graph.node[node][_SERVICES].split(';')
 
     def setServiceTypes(self, node, serviceTypes):
         """
@@ -98,9 +110,9 @@ class Topology(object):
         :type serviceTypes: list
         """
         if isinstance(serviceTypes, str):
-            self._graph.node[node]['services'] = serviceTypes
+            self._graph.node[node][_SERVICES] = serviceTypes
         elif isinstance(serviceTypes, list):
-            self._graph.node[node]['services'] = ';'.join(serviceTypes)
+            self._graph.node[node][_SERVICES] = ';'.join(serviceTypes)
         else:
             raise AttributeError('Wrong type of serviceTypes, use a list')
 
@@ -112,48 +124,48 @@ class Topology(object):
         :param serviceType: the service to add (e.g., 'switch', 'ids')
         :type serviceType: str
         """
-        if 'services' in self._graph.node[node]:
-            types = self._graph.node[node]['services'].split(';') + [
-                serviceType]
+        if _SERVICES in self._graph.node[node]:
+            types = set(self._graph.node[node][_SERVICES].split(';'))
+            types.add(serviceType)
         else:
             types = [serviceType]
-        self._graph.node[node]['services'] = ';'.join(types)
+        self._graph.node[node][_SERVICES] = ';'.join(types)
 
-    def nodes(self, data=False):
+    cpdef nodes(self, data=False):
         """
+        :param data: whether to return the attributes associated with the node
         :return: Iterator over topology nodes as tuples of the form (nodeID, nodeData)
         """
         return self._graph.nodes_iter(data=data)
 
-    def edges(self, data=False):
+    cpdef edges(self, data=False):
         """
+        :param data: whether to return the attributes associated with the edge
         :return: Iterator over topology edge tuples (nodeID1, nodeID2, edgeData)
         """
         return self._graph.edges_iter(data=data)
 
     links = edges  # Method alias here
 
-    def setResources(self, nodeOrLink, resources):
+    def setResource(self, nodeOrLink, str resource, double capacity):
         if isinstance(nodeOrLink, tuple):
             assert len(nodeOrLink) == 2
-            self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]['resources'] = \
-                {res.name: res for res in resources}
+            self._graph.edge[nodeOrLink[0]][nodeOrLink[1]][_RESOURCES][resource] = capacity
         else:
-            self._graph.node[nodeOrLink]['resources'] = {res.name: res for res in resources}
+            self._graph.node[nodeOrLink][_RESOURCES][resource] = capacity
 
-    def getResources(self, nodeOrLink):
+    cpdef dict getResources(self, nodeOrLink):
         if isinstance(nodeOrLink, tuple):
             assert len(nodeOrLink) == 2
-            if 'resources' in self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]:
-                return self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]['resources']
+            if _RESOURCES in self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]:
+                return self._graph.edge[nodeOrLink[0]][nodeOrLink[1]][_RESOURCES]
             else:
-                return []
+                return {}
         else:
-            if 'resources' in self._graph.node[nodeOrLink]:
-                return self._graph.node[nodeOrLink]['resources']
+            if _RESOURCES in self._graph.node[nodeOrLink]:
+                return self._graph.node[nodeOrLink][_RESOURCES]
             else:
-                return []
-
+                return {}
 
     def __repr__(self):
         return "{}(name={})".format(self.__class__, self.name)
@@ -166,7 +178,7 @@ class Topology(object):
         :return: True or False
         """
         try:
-            return self._graph.node[node]['hasMbox']
+            return self._graph.node[node][_HAS_MBOX]
         except KeyError:
             return False
 
@@ -179,6 +191,6 @@ class Topology(object):
         :param node: node ID
         :param val: True or False
         """
-        self._graph.node[node]['hasMbox'] = val
+        self._graph.node[node][_HAS_MBOX] = val
 
     setMbox = setMiddlebox  # Method alias
