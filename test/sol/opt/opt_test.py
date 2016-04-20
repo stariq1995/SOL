@@ -1,3 +1,4 @@
+# coding=utf-8
 import pytest
 from sol.opt.cplexwrapper import OptimizationCPLEX, InvalidConfigException
 from sol.opt.gurobiwrapper import OptimizationGurobi

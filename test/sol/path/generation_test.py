@@ -1,8 +1,8 @@
 # coding=utf-8
 import pytest
 
-from sol.path import PathWithMbox
-from sol.path import generatePathsPerIE
+from sol.path.paths import PathWithMbox
+from sol.path.generate import generatePathsPerIE
 from sol.path.predicates import nullPredicate, useMboxModifier
 from sol.topology.generators import generateChainTopology, \
     generateCompleteTopology

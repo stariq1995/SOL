@@ -1,8 +1,9 @@
+# coding=utf-8
 import os
 
 import pytest
 
-from sol import Path, PathWithMbox
+from sol.path.paths import Path, PathWithMbox
 
 
 def testPathGetters():
@@ -13,7 +14,7 @@ def testPathGetters():
     assert p.getEgress() == -1
     assert p.getIEPair() == (1, -1)
     assert p.getNodes() == [1, 4, 6, -1]
-    assert p.getNodesAsTuple() == (1, 4, 6, -1)
+    # assert p.getNodesAsTuple() == (1, 4, 6, -1)
     assert list(p.getLinks()) == [(1, 4), (4, 6), (6, -1)]
 
     # test indexing/length
@@ -32,12 +33,12 @@ def testPathGetters():
 
 def testPathEquality():
     p = Path([1, 2, 3, 4])
-    p1 = Path([1, 2, 3, 4], numFlows=10)
+    p1 = Path([1, 2, 3, 4], flowFraction=10)
     p2 = Path([1, 2, 3, 5])
 
     p3 = PathWithMbox([1, 2, 3, 4], [2])
     p4 = PathWithMbox([1, 2, 3, 4], [2, 4])
-    p5 = PathWithMbox([1, 2, 3, 4], [2, 4], numFlows=100)
+    p5 = PathWithMbox([1, 2, 3, 4], [2, 4], flowFraction=100)
     # NumFlows does not matter
     assert p == p1
     # Different nodes are not equal
@@ -51,18 +52,17 @@ def testPathEquality():
     assert p3 != p5
     # again, numflows does not matter
     assert p4 == p5
-
     assert not p == (1, 2, 3, 4)
 
-
-def testPathSetters():
-    p = Path([1, 2, 3, 4])
-    p.setFlowFraction(100)
-    assert p.getFlowFraction() == 100
-    # assert p._numFlows == 100
-
-    p[1] = 100
-    assert p[1] == 100
+    # wrong operators must raise and exception:
+    with pytest.raises(TypeError):
+        p4 < p3
+    with pytest.raises(TypeError):
+        p > p2
+    with pytest.raises(TypeError):
+        p <= p2
+    with pytest.raises(TypeError):
+        p >= p2
 
 
 def testPathHashing():
@@ -111,3 +111,4 @@ def testPathWithMboxEncoding():
     assert p.encode() == {'nodes': [1, 2, 3], 'numFlows': 0, 'useMBoxes': [2], 'PathWithMbox': True}
     l = p.decode(p.encode())
     assert p == l
+

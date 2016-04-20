@@ -1,8 +1,9 @@
+# coding=utf-8
 import pytest
 from sol.topology.provisioning import generateTrafficClasses, uniformTM
 
-from sol.path import generatePathsPerTrafficClass
-from sol.path import kShortestPaths, chooserand
+from sol.path.generate import generatePathsPerTrafficClass
+from sol.path.select import kShortestPaths, chooserand
 from sol.path.predicates import nullPredicate
 from sol.topology.generators import generateCompleteTopology
 

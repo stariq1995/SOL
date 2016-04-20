@@ -1,7 +1,7 @@
 # coding=utf-8
 import networkx
 
-from sol.topology import Topology
+from sol.topology.topology import Topology
 from sol.topology.generators import generateCompleteTopology, generateChainTopology, generateFatTree, forceSwitchLabels
 
 

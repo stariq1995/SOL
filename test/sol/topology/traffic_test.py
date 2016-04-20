@@ -1,9 +1,10 @@
 # coding=utf-8
 import copy
+import random
 
 import pytest
 
-from sol.topology import *
+from sol.topology.traffic import TrafficClass, TrafficMatrix
 from sol.utils.pythonHelper import listEq
 
 
