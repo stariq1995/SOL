@@ -63,7 +63,7 @@ def MaxFlow():
     routes = {}
     for tc, paths in opt.getPathFractions(pptc).iteritems():
         routes.update(computeSplit(tc, paths, 0))
-    onos.pushRoutes(routes)
+    onos.push_routes(routes)
     print("Done")
 
 
