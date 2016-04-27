@@ -1,10 +1,14 @@
 # coding=utf-8
 import uuid
 
-from varnames import ALLOCATE_FLOW, ROUTE_ALL
 
 class App(object):
-    def __init__(self, dict pptc, list constraints, dict resourceCost=None, str obj=None, objTC=None,
+    """
+        Represents a single network management application. Optimizition is build
+        using these applications.
+    """
+    def __init__(self, dict pptc, list constraints, dict resourceCost=None,
+                 str obj=None, objTC=None,
                  str name=''):
         self.pptc = pptc
         self.obj = obj
