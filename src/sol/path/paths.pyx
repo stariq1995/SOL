@@ -7,6 +7,7 @@ from paths cimport Path
 from paths cimport PathWithMbox
 from sol.topology.topology cimport Topology
 
+# noinspection PyClassicStyleClass
 cdef class Path:
     """ Represents a path in the network"""
 
@@ -139,6 +140,7 @@ cdef class Path:
     def __copy__(self):
         return Path(self._nodes, self._ID, self._flowFraction)
 
+# noinspection PyClassicStyleClass
 cdef class PathWithMbox(Path):
     """
     Create a new path with middleboxes

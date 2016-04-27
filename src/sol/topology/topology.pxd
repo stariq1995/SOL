@@ -1,5 +1,6 @@
 # coding=utf-8
 
+# noinspection PyClassicStyleClass
 cdef class Topology:
     cdef public str name
     cdef public _graph

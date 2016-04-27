@@ -12,6 +12,7 @@ _SWITCH = 'switch'
 _SERVICES = 'services'
 _RESOURCES = 'resources'
 
+# noinspection PyClassicStyleClass
 cdef class Topology:
     """
     Class that stores the topology graph and provides helper functions (e.g., middlebox manipulation)

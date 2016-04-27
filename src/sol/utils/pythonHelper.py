@@ -56,11 +56,11 @@ def deprecated(func):
     return new_func
 
 
-class alwaysOneDict(object):
-    """ Dictionary that returns one for any key. Only supports *get* operation """
-
-    def __getitem__(self, key):
-        return 1.
+# class alwaysOneDict(object):
+#     """ Dictionary that returns one for any key. Only supports *get* operation """
+#
+#     def __getitem__(self, key):
+#         return 1.
 
 
 def listEq(a, b):

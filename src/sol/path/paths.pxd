@@ -2,6 +2,7 @@
 
 from sol.topology.topology cimport Topology
 
+# noinspection PyClassicStyleClass
 cdef class Path:
     cdef public int _ID
     cdef public double _flowFraction
@@ -18,6 +19,7 @@ cdef class Path:
     cpdef getNodes(self)
     cpdef int getID(self)
 
+# noinspection PyClassicStyleClass
 cdef class PathWithMbox(Path):
     cdef public list useMBoxes
 
