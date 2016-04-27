@@ -32,25 +32,25 @@ CPU = 'cpu'
 MEM = 'mem'
 TCAM = 'tcam'
 
-cpdef xp(TrafficClass trafficClass, Path path):
+cpdef str xp(TrafficClass trafficClass, Path path, int epoch=0):
     """ Convenience method for formatting a decision variable
 
     :param trafficClass: the traffic class object, needed for the ID
     :returns: variable name of the form *x_classid_pathindex*
     :rtype: str
     """
-    return 'x_{}_{}'.format(trafficClass.ID, path.getID())
+    return 'x_{}_{}_{}'.format(trafficClass.ID, path.getID(), epoch)
 
-cpdef al(TrafficClass trafficClass):
+cpdef str al(TrafficClass trafficClass, int epoch=0):
     """
     Format an allocation variable
 
     :param trafficClass: the traffic class object
     :return: variable name of the form *a_classid*
     """
-    return 'a_{}'.format(trafficClass.ID)
+    return 'a_{}_{}'.format(trafficClass.ID, epoch)
 
-cpdef bn(int node):
+cpdef str bn(int node):
     """
     Format a binary node variable
 
@@ -59,7 +59,7 @@ cpdef bn(int node):
     """
     return 'binnode_{}'.format(node)
 
-cpdef be(int head, int tail):
+cpdef str be(int head, int tail):
     """
     Format a binary edge variable
 
@@ -69,7 +69,7 @@ cpdef be(int head, int tail):
     """
     return 'binedge_{}_{}'.format(head, tail)
 
-cpdef bp(TrafficClass trafficClass, Path path):
+cpdef str bp(TrafficClass trafficClass, Path path):
     """
     Format a binary path variable
 
@@ -79,29 +79,29 @@ cpdef bp(TrafficClass trafficClass, Path path):
     """
     return 'binpath_{}_{}'.format(trafficClass.ID, path.getID())
 
-cpdef nl(int node, str resource):
+cpdef str nl(int node, str resource, int epoch=0):
     """
     Format a node load variable
 
     :param node: node ID
     :param resource: the resource
     """
-    return 'Load_{}_{}'.format(resource, node)
+    return 'Load_{}_{}_{}'.format(resource, node, epoch)
 
-cpdef el(tuple link, str resource):
+cpdef str el(tuple link, str resource, int epoch=0):
     """
     Format a link load variable
 
     :param link:
     :param resource:
     """
-    return 'Load_{}_{}'.format(resource, tup2str(link))
+    return 'Load_{}_{}_{}'.format(resource, tup2str(link), epoch)
 
-cpdef nc(int node, str resource):
+cpdef str nc(int node, str resource, int epoch=0):
     """
     Format a capacity variable
 
     :param node:
     :param resource:
     """
-    return 'Cap_{}_{}'.format(resource, node)
+    return 'Cap_{}_{}_{}'.format(resource, node, epoch)

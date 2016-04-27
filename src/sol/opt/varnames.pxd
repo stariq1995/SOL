@@ -3,11 +3,11 @@
 from sol.topology.traffic cimport TrafficClass
 from sol.path.paths cimport Path
 
-cpdef xp(TrafficClass trafficClass, Path path)
-cpdef al(TrafficClass trafficClass)
-cpdef bn(int node)
-cpdef be(int head, int tail)
-cpdef bp(TrafficClass trafficClass, Path path)
-cpdef nl(int node, str resource)
-cpdef el(tuple link, str resource)
-cpdef nc(int node, str resource)
+cpdef str xp(TrafficClass trafficClass, Path path, int epoch=*)
+cpdef str al(TrafficClass trafficClass, int epoch=*)
+cpdef str bn(int node)
+cpdef str be(int head, int tail)
+cpdef str bp(TrafficClass trafficClass, Path path)
+cpdef str nl(int node, str resource, int epoch=*)
+cpdef str el(tuple link, str resource, int epoch=*)
+cpdef str nc(int node, str resource, int epoch=*)
