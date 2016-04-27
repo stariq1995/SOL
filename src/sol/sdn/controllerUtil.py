@@ -1,13 +1,23 @@
-# coding utf-8
-from collections import defaultdict
+# coding=utf-8
 import itertools
+from collections import defaultdict
 
 import netaddr
 
 
-def computeSplit(k, paths, blockbits, oldPaths=None):
-    srcnet = netaddr.IPNetwork(k.srcIPPrefix)
-    dstnet = netaddr.IPNetwork(k.dstIPPrefix)
+def computeSplit(tc, paths, blockbits, oldPaths=None):
+    """
+    Compute the IP prefix splits for the given paths and the volume of traffic
+    they should be carrying
+    :param tc: TrafficClass
+    :param paths: paths of this traffic class
+    :param blockbits: how many bits (e.g., /8, /4, /2) define an IP "block"
+    :param oldPaths: Did we already have routing computed? If so, provide old
+        paths and their volumes here
+    :return:
+    """
+    srcnet = netaddr.IPNetwork(tc.srcIPPrefix)
+    dstnet = netaddr.IPNetwork(tc.dstIPPrefix)
     assigned = defaultdict(lambda: [])
 
     # optimize for the common case of one path:
@@ -35,6 +45,7 @@ def computeSplit(k, paths, blockbits, oldPaths=None):
     newmask1 = ipbits - blockbits
     newmask2 = ipbits - blockbits
     blockweight = 1.0 / numblocks  # This is not volume-aware
+    # TODO: also implement min-diff version
     # This is the basic version, no min-diff required.
     assweight = 0
     index = 0
@@ -57,12 +68,14 @@ def computeSplit(k, paths, blockbits, oldPaths=None):
         subsrcprefix = netaddr.cidr_merge(sources)
         subdstprefix = netaddr.cidr_merge(dests)
 
+        # noinspection PyMissingOrEmptyDocstring
         def split(bigger, smaller):
             while len(bigger) != len(smaller):
                 l = map(len, smaller)
                 maxind = l.index(max(l))
                 item = smaller.pop(maxind)
-                smaller.extend(list(item.subnet(item.prefixlen+1)))
+                smaller.extend(list(item.subnet(item.prefixlen + 1)))
+
         if len(subsrcprefix) != len(subdstprefix):
             if len(subsrcprefix) > len(subdstprefix):
                 split(subsrcprefix, subdstprefix)

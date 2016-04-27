@@ -2,15 +2,27 @@
 """ Mininet topology helper
 """
 
-from mininet.topo import Topo
+
+def offset(val, o):
+    """
+    Offset value of an integer in string form by o.
+    :param val: value
+    :param o: the offset
+    :return: string representation of value+o
+    """
+    return str(int(val) + o)
 
 
-def offset(val, offset):
-    return str(int(val) + offset)
+try:
+    from mininet.topo import Topo
+except ImportError as e:
+    print("You need mininet installed!")
+    raise e
 
 
 class mnTopo(Topo):
-    """ Implements custom topology class that allows loading of panacea
+    """
+    Implements custom topology class that allows loading
     graphml files
     """
 
@@ -31,5 +43,3 @@ class mnTopo(Topo):
         # add links here:
         for u, v in topo.getGraph().to_undirected().edges_iter():
             self.addLink(offset(u, 1), offset(v, 1))
-
-topos = {'soltopo': (lambda x: mnTopo())}
