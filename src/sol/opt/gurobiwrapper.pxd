@@ -20,4 +20,3 @@ cdef class OptimizationGurobi:
     cpdef getSolvedObjective(self)
     cpdef isSolved(self)
     cpdef v(self, n)
-    cpdef selectPaths(self, maxPaths)

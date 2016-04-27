@@ -339,10 +339,6 @@ cdef class OptimizationGurobi:
                     self.opt.addConstr(self.v(name) <= 1)
         self.opt.update()
 
-    cpdef selectPaths(self, pptc, maxPaths):
-        self.addBinaryVars(self, topology, 'path')
-        for
-
     cpdef solve(self):
         self._dumpExpressions()
         self.opt.optimize()
