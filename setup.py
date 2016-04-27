@@ -1,6 +1,5 @@
 # coding=utf-8
-
-
+import numpy
 from Cython.Build import cythonize
 from distutils.core import setup
 
@@ -18,5 +17,6 @@ setup(
     setup_requires=['pytest-runner'],
     requires=['networkx', 'requests', 'netaddr', 'pytest', 'numpy', 'cython', 'six'],
     tests_require=['pytest'],
-    ext_modules=cythonize("src/sol/**/*.pyx")
+    ext_modules=cythonize("src/sol/**/*.pyx"),
+    include_dirs=[numpy.get_include()]
 )
