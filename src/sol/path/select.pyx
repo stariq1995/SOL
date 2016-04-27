@@ -4,15 +4,14 @@
 import functools
 import random
 from collections import defaultdict
-from gurobipy import Model, LinExpr, GRB
 
-# from sol.opt.composer cimport compose
+from sol.opt.composer cimport compose
 from sol.topology.topology cimport Topology
 from cpython cimport bool
 from sol.utils.pythonHelper import Tree
 from sol.utils.exceptions import InvalidConfigException
-from sol.path.paths cimport computePathCapacity, Path
-from sol.topology.traffic cimport TrafficClass
+
+from tmgen cimport TrafficMatrix
 
 _RANDOM = ['random', 'rand']
 _SHORTEST = ['shortest', 'short', 'kshortest', 'k-shortest', 'kshort',
@@ -83,7 +82,7 @@ cdef filterPaths(dict pptc, func):
     :return: new paths per commodity with paths for which *func* returned a
         true value
     """
-    assert (hasattr(func, '__call__')) # ensure this is a function
+    assert (hasattr(func, '__call__'))  # ensure this is a function
     result = defaultdict(lambda: [])
     for tc in pptc:
         for path in pptc[tc]:
@@ -120,7 +119,6 @@ def getSelectFunction(strName, kwargs=None):
     else:
         raise InvalidConfigException("Unknown select method")
 
-
 cdef dict getPathsBin(app, model):
     cdef int i
     pptc = {}
@@ -132,15 +130,15 @@ cdef dict getPathsBin(app, model):
         pptc[tc] = [p for i, p in enumerate(app.pptc[tc]) if tree[tc.ID][i] == 1]
     return pptc
 
-
 cpdef selectOptimal(apps, Topology topo):
-    # opt = compose(apps, topo)
-    # opt.solve()
+    opt = compose(apps, topo)
+    opt.solve()
     # Return paths
     # TODO: return them per app
-    # return opt.getPathsFractions()
-    pass
+    return opt.getPathsFractions()
 
-
-cpdef selectRobust(apps, Topology topo, tm):
-    pass
+cpdef selectRobust(apps, Topology topo):
+    opt = compose(apps, topo)
+    opt.selectPaths((topo.get_num_nodes() - 1)**2  * 10)
+    opt.solve()
+    # TODO: return

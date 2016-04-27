@@ -2,5 +2,4 @@
 
 from sol.topology.topology cimport Topology
 
-# cpdef selectWithMaxFlow(app, Topology topo)
-cpdef selectRobust(apps, Topology topo, tm)
+cpdef selectRobust(apps, Topology topo)
