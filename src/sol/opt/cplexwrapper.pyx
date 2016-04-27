@@ -8,7 +8,7 @@ import copy
 
 from six.moves import zip
 
-from sol.path import PathWithMbox
+from sol.path.paths cimport PathWithMbox
 from ..utils.exceptions import InvalidConfigException
 from ..utils.pythonHelper import Tree
 
