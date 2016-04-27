@@ -10,14 +10,14 @@ def testConverters():
     assert str2tup('3_4') == ('3', '4')
 
 
-def testOneDict():
-    d = ph.alwaysOneDict()
-    assert d[1] == 1
-    assert d[2] == 1
-    assert d['hidhf'] == 1
-    with pytest.raises(TypeError):
-        d[2] = -1
-    assert d[2] == 1
+# def testOneDict():
+#     d = ph.alwaysOneDict()
+#     assert d[1] == 1
+#     assert d[2] == 1
+#     assert d['hidhf'] == 1
+#     with pytest.raises(TypeError):
+#         d[2] = -1
+#     assert d[2] == 1
 
 
 def testListEq():
