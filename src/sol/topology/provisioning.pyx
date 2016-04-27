@@ -9,7 +9,7 @@ import numpy
 import six
 
 from sol.topology.traffic cimport TrafficClass
-from sol.topology.traffic import TrafficMatrix
+from tmgen cimport TrafficMatrix
 from sol.path.paths cimport Path
 
 cpdef generateIEpairs(topology):
@@ -25,46 +25,46 @@ cpdef generateIEpairs(topology):
             if pair[0] != pair[1]]
 
 
-cpdef uniformTM(iepairs, double totalFlows):
-    """
-    Compute a uniform traffic matrix. That is each ingress-egress pair has the same number of flows
-
-    :param iepairs: list of ingress-egress tuples
-    :param totalFlows: total number of flows in the network
-    :return: the traffic matrix
-    """
-    return TrafficMatrix({ie: totalFlows / len(iepairs) for ie in iepairs})
-
-
-cpdef logNormalTM(iepairs, meanFlows):
-    """
-    Compute the log-normal distribution of traffic across ingress-egress pairs
-
-    :param iepairs: ingress-egress pairs
-    :param meanFlows: the average number of flows, around which the distribution is centered.
-    :return: the traffic matrix
-    """
-    dist = numpy.random.lognormal(0, .5)
-    return TrafficMatrix({ie: meanFlows * d for ie, d in six.zip(iepairs, dist)})
-
-
-cpdef gravityTM(iepairs, double totalFlows, populationDict):
-    """
-    Computes the gravity model traffic matrix base
-
-    :param iepairs: ingress-egress pairs
-    :param totalFlows: number of total flows in the network
-    :param populationDict: dictionary mapping nodeIDs to populations, which will be used to compute the model
-    :return: the traffic matrix as :py:class:`~sol.optimization.topology.traffic.TrafficMatrix`
-    """
-    tm = TrafficMatrix()
-    tot_population = sum(populationDict.values())
-
-    for i, e in iepairs:
-        ti_in = populationDict[i]
-        tj_out = populationDict[e]
-        tm[(i, e)] = ((float(ti_in * tj_out) / (tot_population ** 2)) * totalFlows)
-    return tm
+# cpdef uniformTM(iepairs, double totalFlows):
+#     """
+#     Compute a uniform traffic matrix. That is each ingress-egress pair has the same number of flows
+#
+#     :param iepairs: list of ingress-egress tuples
+#     :param totalFlows: total number of flows in the network
+#     :return: the traffic matrix
+#     """
+#     return TrafficMatrix({ie: totalFlows / len(iepairs) for ie in iepairs})
+#
+#
+# cpdef logNormalTM(iepairs, meanFlows):
+#     """
+#     Compute the log-normal distribution of traffic across ingress-egress pairs
+#
+#     :param iepairs: ingress-egress pairs
+#     :param meanFlows: the average number of flows, around which the distribution is centered.
+#     :return: the traffic matrix
+#     """
+#     dist = numpy.random.lognormal(0, .5)
+#     return TrafficMatrix({ie: meanFlows * d for ie, d in six.zip(iepairs, dist)})
+#
+#
+# cpdef gravityTM(iepairs, double totalFlows, populationDict):
+#     """
+#     Computes the gravity model traffic matrix base
+#
+#     :param iepairs: ingress-egress pairs
+#     :param totalFlows: number of total flows in the network
+#     :param populationDict: dictionary mapping nodeIDs to populations, which will be used to compute the model
+#     :return: the traffic matrix as :py:class:`~sol.optimization.topology.traffic.TrafficMatrix`
+#     """
+#     tm = TrafficMatrix()
+#     tot_population = sum(populationDict.values())
+#
+#     for i, e in iepairs:
+#         ti_in = populationDict[i]
+#         tj_out = populationDict[e]
+#         tm[(i, e)] = ((float(ti_in * tj_out) / (tot_population ** 2)) * totalFlows)
+#     return tm
 
 
 def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
