@@ -34,6 +34,7 @@ class ControllerException(Exception):
     """
     pass
 
+
 class CompositionError(SOLException):
     """
     Something went wrong during composition of multiple applications
