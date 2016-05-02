@@ -111,7 +111,7 @@ if __name__ == '__main__':
     opt.solve()
 
     # Print the objective function --- in this case the load on the maximally loaded middlebox [0, 1]
-    print opt.getSolvedObjective()
+    print opt.get_solved_objective()
     # pretty-print the paths on which the traffic is routed, along with the fraction for each traffic class
     # useMBoxes indicates at which middleboxes the processing should occur
     for tc, paths in opt.get_path_fractions(pptc).iteritems():

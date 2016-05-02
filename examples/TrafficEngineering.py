@@ -56,7 +56,7 @@ def TE():
 
     ### Results
     # Print the objective function --- this is the fractional load on the maximally loaded link
-    print opt.getSolvedObjective()
+    print opt.get_solved_objective()
 
     # pretty-print the paths on which the traffic is routed, along with the fraction for each traffic class
     for tc, paths in opt.get_path_fractions(pptc).iteritems():
