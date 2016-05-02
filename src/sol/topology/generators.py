@@ -7,21 +7,11 @@ Generates some basic topologies. Contains utility methods as well.
 import itertools
 
 import networkx as nx
-
 from sol.topology.topology import Topology
-
-def forceSwitchLabels(topology):
-    """ Force all nodes to be labeled as switches
-
-    :param topology: topology to operate on
-    :return:
-    """
-    G = topology.getGraph()
-    for n in G.nodes_iter():
-        topology.addServiceType(n, 'switch')
+from six.moves import xrange
 
 
-def generateFatTree(k):
+def fat_tree(k):
     """ Creates a FatTree topology as a directed graph
 
     :param k: specify the k-value that controls the size of the topology
@@ -54,7 +44,7 @@ def generateFatTree(k):
     return Topology('k{}'.format(k), G)
 
 
-def generateChainTopology(n, name='chain'):
+def chain_topology(n, name='chain'):
     """
     Generates a chain topology
 
@@ -65,11 +55,10 @@ def generateChainTopology(n, name='chain'):
     """
     G = nx.path_graph(n).to_directed()
     t = Topology(name, G)
-    forceSwitchLabels(t)
     return t
 
 
-def generateCompleteTopology(n, name='complete'):
+def complete_topology(n, name='complete'):
     """
     Generates a complete graph topology
 
@@ -80,6 +69,4 @@ def generateCompleteTopology(n, name='complete'):
     """
     G = nx.complete_graph(n).to_directed()
     t = Topology(name, G)
-    forceSwitchLabels(t)
     return t
-
