@@ -4,8 +4,8 @@ import pytest
 from sol.path.paths import PathWithMbox
 from sol.path.generate import generatePathsPerIE
 from sol.path.predicates import nullPredicate, useMboxModifier
-from sol.topology.generators import generateChainTopology, \
-    generateCompleteTopology
+from sol.topology.generators import chain_topology, \
+    complete_topology
 from sol.utils.exceptions import NoPathsException
 
 
@@ -13,7 +13,7 @@ def test_pathgen_simple():
     """
     Check that one path is found on chain topology
     """
-    chaintopo = generateChainTopology(5)
+    chaintopo = chain_topology(5)
     for sink in xrange(1, 5):
         pptc = generatePathsPerIE(0, sink, chaintopo, nullPredicate, cutoff=100)
         print pptc
@@ -30,7 +30,7 @@ def test_pathgen_simple():
 
 
 def test_pathgen_cutoffs():
-    t = generateCompleteTopology(8)
+    t = complete_topology(8)
     pptc = generatePathsPerIE(1, 3, t, nullPredicate, 100)
     assert len(pptc) > 20
     pptc = generatePathsPerIE(1, 3, t, nullPredicate, 1)
@@ -42,7 +42,7 @@ def test_pathgen_cutoffs():
 
 
 def test_pathgen_mbox():
-    t = generateCompleteTopology(8)
+    t = complete_topology(8)
 
     # noinspection PyUnusedLocal
     def mbox(path, ind, topology):

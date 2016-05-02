@@ -2,7 +2,7 @@
 import networkx
 
 from sol.topology.topology import Topology
-from sol.topology.generators import generateCompleteTopology, generateChainTopology, generateFatTree, forceSwitchLabels
+from sol.topology.generators import complete_topology, chain_topology, fat_tree, forceSwitchLabels
 
 
 def testGenerators():
@@ -10,12 +10,12 @@ def testGenerators():
     Some basic test for topology generators. Ensure we return correct types
     and correct number of nodes.
     """
-    topo = generateCompleteTopology(5)
+    topo = complete_topology(5)
     assert isinstance(topo, Topology)
     assert isinstance(topo.getGraph(), networkx.DiGraph)
     assert topo.num_nodes() == 5
 
-    topo = generateChainTopology(10)
+    topo = chain_topology(10)
     assert isinstance(topo, Topology)
     assert isinstance(topo.getGraph(), networkx.DiGraph)
 
@@ -26,7 +26,7 @@ def testFatTreeGenerator():
     and correct number of nodes. Additionally, check that core has correct
     number of switches and fatter links
     """
-    topo = generateFatTree(8)
+    topo = fat_tree(8)
     assert isinstance(topo, Topology)
     assert isinstance(topo.getGraph(), networkx.DiGraph)
     # correct size
@@ -44,7 +44,7 @@ def testForceSwitchLabels():
     Ensure that switches are labeled appropriately
 
     """
-    topo = generateCompleteTopology(5)
+    topo = complete_topology(5)
     forceSwitchLabels(topo)
     G = topo.get_graph()
     for node in G.nodes_iter():

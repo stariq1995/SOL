@@ -4,12 +4,12 @@ import os
 import networkx
 
 from sol.topology.topology import Topology
-from sol.topology.generators import generateCompleteTopology
+from sol.topology.generators import complete_topology
 
 
 def testTopologyWriteRead(tmpdir):
     dirname = os.path.abspath(tmpdir.dirname)
-    topo = generateCompleteTopology(5)
+    topo = complete_topology(5)
     topo.write_graph(dirname)
     topo2 = Topology(topo.name)
     topo2.loadGraph(dirname + os.path.sep + topo.name + '.graphml')
@@ -25,7 +25,7 @@ def testTopologyConstructor():
 
 
 def testGetNumNodes():
-    topo = generateCompleteTopology(8)
+    topo = complete_topology(8)
     assert topo.num_nodes() == 8
     assert topo.num_nodes('switch') == 8
     assert topo.num_nodes('middlebox') == 0

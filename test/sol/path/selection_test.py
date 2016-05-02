@@ -5,12 +5,12 @@ from sol.topology.provisioning import generateTrafficClasses, uniformTM
 from sol.path.generate import generatePathsPerTrafficClass
 from sol.path.select import kShortestPaths, chooserand
 from sol.path.predicates import nullPredicate
-from sol.topology.generators import generateCompleteTopology
+from sol.topology.generators import complete_topology
 
 
 @pytest.fixture
 def pptc():
-    topo = generateCompleteTopology(8)
+    topo = complete_topology(8)
     iePairs = [(0, 3)]
     tc = generateTrafficClasses(iePairs, uniformTM(iePairs, 1000), {'allTraffic': 1},
                                 {'allTraffic': 10})

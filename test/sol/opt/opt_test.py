@@ -7,7 +7,7 @@ from sol.topology.provisioning import generateTrafficClasses
 from sol.opt import initOptimization, getOptimization
 from sol.path.predicates import nullPredicate
 from sol.topology import provisioning
-from sol.topology.generators import generateCompleteTopology
+from sol.topology.generators import complete_topology
 
 _backends = ['cplex', 'gurobi']
 
@@ -29,7 +29,7 @@ def test_MaxFlow(backend):
     # ==============
     # Fake some data
     # ==============
-    topo = generateCompleteTopology(5)
+    topo = complete_topology(5)
     # ingress-egress pairs
     iePairs = [(0, 3)]
     # generate traffic matrix
@@ -49,14 +49,14 @@ def test_MaxFlow(backend):
     # Start our optimization! SOL automatically takes care of the paths behind the scenes
     opt, pptc = initOptimization(topo, trafficClasses, nullPredicate, 'shortest', 5, backend=backend)
     # Traffic must flow!
-    opt.allocateFlow(pptc)
+    opt.allocate_flow(pptc)
     # Traffic must not overload links!
     opt.capLinks(pptc, 'bandwidth', linkConstrCaps, linkcapfunc)
     # Push as much traffic as we can!
     opt.maxFlow(pptc)
     opt.solve()
 
-    for tc, paths in opt.getPathFractions(pptc).iteritems():
+    for tc, paths in opt.get_path_fractions(pptc).iteritems():
         for p in paths:
             print p
             assert len(p) == 2
