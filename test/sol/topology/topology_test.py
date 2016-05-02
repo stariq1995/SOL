@@ -10,13 +10,13 @@ from sol.topology.generators import generateCompleteTopology
 def testTopologyWriteRead(tmpdir):
     dirname = os.path.abspath(tmpdir.dirname)
     topo = generateCompleteTopology(5)
-    topo.writeGraph(dirname)
+    topo.write_graph(dirname)
     topo2 = Topology(topo.name)
     topo2.loadGraph(dirname + os.path.sep + topo.name + '.graphml')
-    assert networkx.is_isomorphic(topo.getGraph(), topo2.getGraph())
-    topo.writeGraph(dirname, 'lalala.graphml')
+    assert networkx.is_isomorphic(topo.get_graph(), topo2.getGraph())
+    topo.write_graph(dirname, 'lalala.graphml')
     topo2.loadGraph(dirname + os.path.sep + 'lalala.graphml')
-    assert networkx.is_isomorphic(topo.getGraph(), topo2.getGraph())
+    assert networkx.is_isomorphic(topo.get_graph(), topo2.getGraph())
 
 
 def testTopologyConstructor():
@@ -26,9 +26,9 @@ def testTopologyConstructor():
 
 def testGetNumNodes():
     topo = generateCompleteTopology(8)
-    assert topo.getNumNodes() == 8
-    assert topo.getNumNodes('switch') == 8
-    assert topo.getNumNodes('middlebox') == 0
+    assert topo.num_nodes() == 8
+    assert topo.num_nodes('switch') == 8
+    assert topo.num_nodes('middlebox') == 0
 
 
 def testServiceTypes():

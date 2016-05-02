@@ -15,7 +15,8 @@ _RESOURCES = 'resources'
 # noinspection PyClassicStyleClass
 cdef class Topology:
     """
-    Class that stores the topology graph and provides helper functions (e.g., middlebox manipulation)
+    Class that stores the topology graph and provides helper functions
+    (e.g., middlebox manipulation)
 
     """
 
@@ -32,22 +33,27 @@ cdef class Topology:
         self.name = name
         if graph is not None:
             if isinstance(graph, str):
-                self.loadGraph(graph)
+                self.load_graph(graph)
             else:
                 self._graph = graph
         else:
             self._graph = nx.DiGraph()
-        self._processGraph()
+        self._process_graph()
 
-    def _processGraph(self):
+    def _process_graph(self):
+        """
+        Initializes all the nodes to switches and sets resource dictionaries.
+        """
         for n in self.nodes():
-            self.addServiceType(n, _SWITCH)
+            self.add_service_type(n, _SWITCH)
         for n in self.nodes():
-            self._graph.node[n][_RESOURCES] = {}
+            if _RESOURCES not in self._graph.node[n]:
+                self._graph.node[n][_RESOURCES] = {}
         for u, v in self.links():
-            self._graph.edge[u][v][_RESOURCES] = {}
+            if _RESOURCES not in self._graph.edge[u][v]:
+                self._graph.edge[u][v][_RESOURCES] = {}
 
-    def getNumNodes(self, str service=None):
+    def num_nodes(self, str service=None):
         """ Returns the number of nodes in this topology
 
         :param service: only count nodes that provide a particular service (
@@ -60,39 +66,39 @@ cdef class Topology:
                         if 'services' in self._graph.node[n] and
                         service in self._graph.node[n]['services']])
 
-    def getGraph(self):
+    def get_graph(self):
         """ Return the topology graph
 
         :return: :py:mod:`networkx` topology directed graph
         """
         return self._graph
 
-    def setGraph(self, graph):
+    def set_graph(self, graph):
         """ Set the graph
 
         :param graph: :py:mod:`networkx` directed graph
         """
         self._graph = graph
 
-    def writeGraph(self, str dirName, str fName=None):
+    def write_graph(self, str dir_name, str fname=None):
         """
         Writes out the graph in GraphML format
 
-        :param dirName: directory to write to
-        :param fName: file name to use. If None, topology name with a
+        :param dir_name: directory to write to
+        :param fname: file name to use. If None, topology name with a
             '.graphml' suffix is used
         """
-        n = self.name + '.graphml' if fName is None else fName
-        graphml.write_graphml(self._graph, dirName + sep + n)
+        n = self.name + '.graphml' if fname is None else fname
+        graphml.write_graphml(self._graph, dir_name + sep + n)
 
-    def loadGraph(self, str fName):
+    def load_graph(self, str fname):
         """ Loads the topology graph from a file in GraphML format
 
-        :param fName: the name of the file to read from
+        :param fname: the name of the file to read from
         """
-        self._graph = graphml.read_graphml(fName, int).to_directed()
+        self._graph = graphml.read_graphml(fname, int).to_directed()
 
-    def getServiceTypes(self, node):
+    def get_service_types(self, node):
         """
         Returns the list of services a particular node provides
 
@@ -102,34 +108,32 @@ cdef class Topology:
         """
         return self._graph.node[node][_SERVICES].split(';')
 
-    def setServiceTypes(self, node, serviceTypes):
+    def set_service_types(self, node, service_types):
         """
         Set the service types for this node
 
         :param node: the node id of interest
-        :param serviceTypes: a list of strings denoting the services
-        :type serviceTypes: list
+        :param service_types: a list of strings denoting the services
+        :type service_types: list
         """
-        if isinstance(serviceTypes, str):
-            self._graph.node[node][_SERVICES] = serviceTypes
-        elif isinstance(serviceTypes, list):
-            self._graph.node[node][_SERVICES] = ';'.join(serviceTypes)
+        if isinstance(service_types, str):
+            self._graph.node[node][_SERVICES] = service_types
         else:
-            raise AttributeError('Wrong type of serviceTypes, use a list')
+            self._graph.node[node][_SERVICES] = ';'.join(service_types)
 
-    def addServiceType(self, node, serviceType):
+    def add_service_type(self, node, service_type):
         """
         Add a single service type to the given node
 
         :param node: the node id of interest
-        :param serviceType: the service to add (e.g., 'switch', 'ids')
-        :type serviceType: str
+        :param service_type: the service to add (e.g., 'switch', 'ids')
+        :type service_type: str
         """
         if _SERVICES in self._graph.node[node]:
             types = set(self._graph.node[node][_SERVICES].split(';'))
-            types.add(serviceType)
+            types.add(service_type)
         else:
-            types = [serviceType]
+            types = [service_type]
         self._graph.node[node][_SERVICES] = ';'.join(types)
 
     cpdef nodes(self, data=False):
@@ -148,30 +152,45 @@ cdef class Topology:
 
     links = edges  # Method alias here
 
-    def setResource(self, nodeOrLink, str resource, double capacity):
-        if isinstance(nodeOrLink, tuple):
-            assert len(nodeOrLink) == 2
-            self._graph.edge[nodeOrLink[0]][nodeOrLink[1]][_RESOURCES][resource] = capacity
+    def set_resource(self, node_or_link, str resource, double capacity):
+        """
+        Set the given resources capacity on a node (or link)
+        :param node_or_link: node (or link) for which resource capcity is being
+            set
+        :param resource: name of the resource
+        :param capacity: resource capacity
+        """
+        if isinstance(node_or_link, tuple):
+            assert len(node_or_link) == 2
+            self._graph.edge[node_or_link[0]][node_or_link[1]][_RESOURCES][
+                resource] = capacity
         else:
-            self._graph.node[nodeOrLink][_RESOURCES][resource] = capacity
+            self._graph.node[node_or_link][_RESOURCES][resource] = capacity
 
-    cpdef dict getResources(self, nodeOrLink):
-        if isinstance(nodeOrLink, tuple):
-            assert len(nodeOrLink) == 2
-            if _RESOURCES in self._graph.edge[nodeOrLink[0]][nodeOrLink[1]]:
-                return self._graph.edge[nodeOrLink[0]][nodeOrLink[1]][_RESOURCES]
+    cpdef dict get_resources(self, node_or_link):
+        """
+        Returns the resources (and their capacities) associated with given
+        node or link
+        :param node_or_link:
+        :return:
+        """
+        if isinstance(node_or_link, tuple):
+            assert len(node_or_link) == 2
+            if _RESOURCES in self._graph.edge[node_or_link[0]][node_or_link[1]]:
+                return self._graph.edge[node_or_link[0]][node_or_link[1]][
+                    _RESOURCES]
             else:
                 return {}
         else:
-            if _RESOURCES in self._graph.node[nodeOrLink]:
-                return self._graph.node[nodeOrLink][_RESOURCES]
+            if _RESOURCES in self._graph.node[node_or_link]:
+                return self._graph.node[node_or_link][_RESOURCES]
             else:
                 return {}
 
     def __repr__(self):
         return "{}(name={})".format(self.__class__, self.name)
 
-    def hasMiddlebox(self, node):
+    def has_middlebox(self, node):
         """
         Check if the given node has a middlebox attached to it
 
@@ -183,9 +202,9 @@ cdef class Topology:
         except KeyError:
             return False
 
-    hasMbox = hasMiddlebox  # Method alias
+    has_mbox = has_middlebox  # Method alias
 
-    def setMiddlebox(self, node, val=True):
+    def set_middlebox(self, node, val=True):
         """
         Indicate whether a middlebox is attached to a given node
 
@@ -194,4 +213,4 @@ cdef class Topology:
         """
         self._graph.node[node][_HAS_MBOX] = val
 
-    setMbox = setMiddlebox  # Method alias
+    set_mbox = set_middlebox  # Method alias
