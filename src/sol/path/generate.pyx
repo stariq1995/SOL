@@ -30,7 +30,7 @@ def generatePathsPerIE(int source, int sink, topology, predicate, cutoff,
     :returns: a list of path objects
     :rtype: list
     """
-    G = topology.getGraph()
+    G = topology.get_graph()
     paths = []
     cdef int num = 0
 

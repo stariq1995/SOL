@@ -11,6 +11,7 @@ import six
 from sol.topology.traffic cimport TrafficClass
 from tmgen cimport TrafficMatrix
 from sol.path.paths cimport Path
+from six import iteritems
 
 cpdef generateIEpairs(topology):
     """
@@ -67,7 +68,7 @@ cpdef generateIEpairs(topology):
 #     return tm
 
 
-def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
+def generateTrafficClasses(iepairs, TrafficMatrix trafficMatrix, classFractionDict,
                            classBytesDict, asdict=False):
     """
     Generate traffic classes from given ingress-egress pairs and traffic matrix
@@ -100,7 +101,7 @@ def generateTrafficClasses(iepairs, trafficMatrix, classFractionDict,
     cdef double fraction, volflows, volbytes
     for ie in iepairs:
         i, e = ie
-        for classname, fraction in classFractionDict.iteritems():
+        for classname, fraction in iteritems(classFractionDict):
             volflows = fraction * trafficMatrix[ie]
             volbytes = volflows * classBytesDict[classname]
             tc = TrafficClass(index, classname, i, e, volflows, volbytes)

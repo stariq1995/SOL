@@ -7,6 +7,7 @@ from __future__ import division, print_function
 import copy
 
 from six.moves import zip
+from six import iteritems
 
 from sol.path.paths cimport PathWithMbox
 from ..utils.exceptions import InvalidConfigException
@@ -155,7 +156,7 @@ class OptimizationCPLEX(object):
                                      ub=[1] * len(var))
 
     def addBinaryVars(self, pptc, topology, types):
-        graph = topology.getGraph()
+        graph = topology.get_graph()
         if 'node' in types:
             var = [bn(n) for n in graph.nodes_iter()]
             self.cplexprob.variables.add(
@@ -415,7 +416,7 @@ class OptimizationCPLEX(object):
     def addNodeBudget(self, topology, budgetFunc, bound):
         v = self.cplexprob.variables.get_names()
         varindex = dict(zip(v, range(len(v))))
-        G = topology.getGraph()
+        G = topology.get_graph()
         self.cplexprob.linear_constraints.add(
             [cplex.SparsePair([varindex[bn(n)] for n in G.nodes_iter()],
                               [budgetFunc(n) for n in G.nodes_iter()])],
@@ -484,7 +485,7 @@ class OptimizationCPLEX(object):
 
     def getPathFractions(self, pptc, flowCarryingOnly=True):
         result = {}
-        for tc, paths in pptc.iteritems():
+        for tc, paths in iteritems(pptc):
             result[tc] = []
             for path in paths:
                 newpath = copy.copy(path)

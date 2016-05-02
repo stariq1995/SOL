@@ -36,10 +36,10 @@ class mnTopo(Topo):
             self.addSwitch(n)
             self.addHost('h{}'.format(n))
             self.addLink(n, 'h{}'.format(n))
-            # if topo.hasMiddlebox(n):
+            # if topo.has_middlebox(n):
             #     self.addHost('m{}'.format(n))
             #     self.addLink(n, 'm{}'.format(n))
 
         # add links here:
-        for u, v in topo.getGraph().to_undirected().edges_iter():
+        for u, v in topo.get_graph().to_undirected().edges_iter():
             self.addLink(offset(u, 1), offset(v, 1))
