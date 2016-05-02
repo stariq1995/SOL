@@ -50,7 +50,7 @@ Remember, you also get full power of :py:mod:`networkx` in this. So if you have 
 Like so::
 
     def predicate(path, topology):
-        G = topology.getGraph()
+        G = topology.get_graph()
         # only allow paths that use all "good edges"
         good = True
         for u,v in path.getLinks():

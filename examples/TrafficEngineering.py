@@ -46,7 +46,7 @@ def TE():
     opt.capLinks(pptc, 'bandwidth', linkConstrCaps, linkcapfunc)
 
     # Route all the traffic
-    opt.routeAll(pptc)
+    opt.route_all(pptc)
 
     # Minimize the link load in the network (a pretty standard TE goal)
     opt.minLinkLoad('bandwidth')

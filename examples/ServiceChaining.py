@@ -28,7 +28,7 @@ if __name__ == '__main__':
     # set nodes to be firewalls and IDSes:
     for node in topo.nodes():
         topo.setMbox(node)
-        topo.setServiceTypes(node, ['fw', 'ids'])
+        topo.set_service_types(node, ['fw', 'ids'])
 
     trafficClasses = generateTrafficClasses(trafficMatrix.keys(), trafficMatrix, {'allTraffic': 1},
                                             {'allTraffic': 2000})
@@ -41,7 +41,7 @@ if __name__ == '__main__':
     maxCPUCap = provisioning.computeMaxIngressLoad(trafficClasses, {t: t.cpuCost for t in trafficClasses})
     nodeCaps = dict()
     nodeCaps['cpu'] = {node: maxCPUCap * 2 for node in topo.nodes()
-                       if 'fw' or 'ids' in topo.getServiceTypes(node)}
+                       if 'fw' or 'ids' in topo.get_service_types(node)}
     # provision the TCAM capacities on the switch nodes
     nodeCaps['tcam'] = {node: 1000 for node in topo.nodes()}
     # similartly with link capacities
@@ -54,7 +54,7 @@ if __name__ == '__main__':
 
     def path_predicate(path, topology):
         # Firewall followed by IDS is the requirement for the path to be valid
-        return any([s == ('fw', 'ids') for s in itertools.product(*[topology.getServiceTypes(node)
+        return any([s == ('fw', 'ids') for s in itertools.product(*[topology.get_service_types(node)
                                                                     for node in path.useMBoxes])])
 
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
 
     # Allocate and route all of the traffic
     opt.allocateFlow(pptc)
-    opt.routeAll(pptc)
+    opt.route_all(pptc)
 
     # We know that we will need binary variables per path and node to model TCAM constraints
     opt.addBinaryVars(pptc, topo, ['path', 'node'])
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     # And similarly node capacities
     # Recall that we are normalizing the CPU node load to [0, 1], so capacities are now all 1.
     opt.capNodes(pptc, 'cpu', {node: 1 for node in topo.nodes()
-                               if 'fw' or 'ids' in topo.getServiceTypes(node)}, nodeFunc)
+                               if 'fw' or 'ids' in topo.get_service_types(node)}, nodeFunc)
 
     # Finally, the objective, minimize the load on the middleboxes
     opt.minNodeLoad(pptc, 'cpu')
