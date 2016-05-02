@@ -38,7 +38,7 @@ def TE():
 
     # Now, our constraints.
     # First, we must allocate some amount of flow (i.e, tell SOL to route things frorm ingress to egress)
-    opt.allocateFlow(pptc)
+    opt.allocate_flow(pptc)
 
     # Traffic must not overload links -- so cap links according to our link constraints (recall the 50%)
     # linkcapfunc defines how bandwidth is consumed.
@@ -59,7 +59,7 @@ def TE():
     print opt.getSolvedObjective()
 
     # pretty-print the paths on which the traffic is routed, along with the fraction for each traffic class
-    for tc, paths in opt.getPathFractions(pptc).iteritems():
+    for tc, paths in opt.get_path_fractions(pptc).iteritems():
         print 'src:', tc.src, 'dst:', tc.dst, 'paths:', pprint.pformat(paths)
 
 

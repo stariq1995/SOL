@@ -11,12 +11,14 @@ cdef class OptimizationGurobi:
     cdef dict expressions
 
     cpdef addDecisionVars(self, dict pptc)
-    cpdef addBinaryVars(self, dict pptc, Topology topology, vtypes)
+    cpdef addBinaryVars(self, dict pptc, vtypes)
     cpdef allocateFlow(self, pptc, allocation=*)
-    cdef _dumpExpressions(self)
     cpdef solve(self)
     cpdef getPathFractions(self, pptc, flowCarryingOnly=*)
-    cpdef routeAll(self, pptc)
+    cpdef route_all(self, pptc)
     cpdef getSolvedObjective(self)
     cpdef isSolved(self)
     cpdef v(self, n)
+    cpdef get_chosen_paths(self, pptc)
+    cdef _dump_expressions(self)
+

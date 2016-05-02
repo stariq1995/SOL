@@ -3,7 +3,7 @@ import networkx
 
 from sol.opt.varnames import DEFAULT_OPTIMIZER, CPLEX, GUROBI
 from sol.path.generate import generatePathsPerTrafficClass
-from sol.path.select import getSelectFunction
+from sol.path.select import get_select_function
 from sol.path.predicates import nullPredicate
 from sol.utils.exceptions import InvalidConfigException
 
@@ -46,9 +46,9 @@ def initOptimization(topology, trafficClasses, predicate=nullPredicate, selectSt
     """
     opt = getOptimization(backend)
     pptc = generatePathsPerTrafficClass(topology, trafficClasses, predicate,
-                                        networkx.diameter(topology.getGraph()) * 1.5,
+                                        networkx.diameter(topology.get_graph()) * 1.5,
                                         modifyFunc=modifyFunc)
-    selectFunc = getSelectFunction(selectStrategy)
+    selectFunc = get_select_function(selectStrategy)
     pptc = selectFunc(pptc, selectNumber)
-    opt.addDecisionVars(pptc)
+    opt._add_decision_vars(pptc)
     return opt, pptc

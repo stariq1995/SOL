@@ -1,4 +1,5 @@
 # coding=utf-8
+from __future__ import print_function
 import pytest
 
 from sol.path.paths import PathWithMbox
@@ -7,6 +8,7 @@ from sol.path.predicates import nullPredicate, useMboxModifier
 from sol.topology.generators import chain_topology, \
     complete_topology
 from sol.utils.exceptions import NoPathsException
+from six import xrange
 
 
 def test_pathgen_simple():
@@ -16,7 +18,7 @@ def test_pathgen_simple():
     chaintopo = chain_topology(5)
     for sink in xrange(1, 5):
         pptc = generatePathsPerIE(0, sink, chaintopo, nullPredicate, cutoff=100)
-        print pptc
+        print(pptc)
         assert len(pptc) == 1
 
     with pytest.raises(NoPathsException):

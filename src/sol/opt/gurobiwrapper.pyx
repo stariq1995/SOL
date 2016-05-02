@@ -2,12 +2,11 @@
 from __future__ import division, print_function
 
 import copy
-from collections import defaultdict
 
-from six import iterkeys, itervalues, next
+from six import iterkeys, itervalues, iteritems, next
 from six.moves import range
-
 from sol.opt.varnames import MAX_ALL_FLOW
+
 from sol.utils.exceptions import SOLException
 from sol.utils.pythonHelper import tup2str
 from sol.path.paths cimport Path
@@ -24,11 +23,15 @@ except ImportError as e:
 
 # noinspection PyClassicStyleClass
 cdef class OptimizationGurobi:
-    def __init__(self):
+    """
+    Represents a SOL optimization problem. Uses Gurobi for building the model and solving it.
+    """
+    def __init__(self, Topology topo):
         self.opt = Model()
         self.expressions = {}
+        self.topo = topo
 
-    cpdef addDecisionVars(self, dict pptc):
+    cpdef _add_decision_vars(self, dict pptc):
         cdef TrafficClass tc
         cdef Path path
         cdef int num_epochs = next(itervalues(pptc)).volFlows.size
@@ -41,14 +44,14 @@ cdef class OptimizationGurobi:
                     self.opt.addVar(lb=0, ub=1, name=name)
         self.opt.update()
 
-    cpdef addBinaryVars(self, dict pptc, Topology topology, vtypes):
+    cpdef _add_binary_vars(self, dict pptc, vtypes):
         cdef int pi
         for t in vtypes:
             if t.lower() == 'node':
-                for n in topology.nodes(False):
+                for n in self.topo.nodes(False):
                     self.opt.addVar(vtype=GRB.BINARY, name=bn(n))
             elif t.lower() == 'edge':
-                for u, v in topology.links(False):
+                for u, v in self.topo.links(False):
                     self.opt.addVar(vtype=GRB.BINARY, name=be(u, v))
             elif t.lower() == 'path':
                 for tc in pptc:
@@ -57,7 +60,14 @@ cdef class OptimizationGurobi:
             else:
                 raise SOLException("Unknown binary variable type")
 
-    cpdef allocateFlow(self, pptc, allocation=None):
+    cpdef allocate_flow(self, pptc, allocation=None):
+        """
+        Allocate network flow
+        :param pptc: paths per traffic class
+        :param allocation: if given, allocation of given traffic classes will
+            be set to this value.
+        :return:
+        """
         cdef int pi
         cdef int epoch = 0, num_epochs = next(itervalues(pptc)).volFlows.size
         for tc in pptc:
@@ -84,7 +94,12 @@ cdef class OptimizationGurobi:
                                            tc.ID, epoch))
         self.opt.update()
 
-    cpdef routeAll(self, pptc):
+    cpdef route_all(self, pptc):
+        """
+        Route all traffic for all traffic classes
+        :param pptc:
+        :return:
+        """
         cdef int epoch = 0, num_epochs = next(itervalues(pptc)).volFlows.size
         for tc in pptc:
             for epoch in range(num_epochs):
@@ -128,45 +143,55 @@ cdef class OptimizationGurobi:
     # TODO: consume & capNodes/Links are kind of redundant at this point, clean it up
     # TODO: write a separate TCAM function
 
-    def consume(self, pptc, str resourceName, cost, nodeCaps, linkCaps):
+    def consume(self, pptc, str resource_name, cost, node_caps, link_caps):
         """
         :param pptc: paths per traffic class
-        :param resourceName: resource to be consumed
+        :param resource_name: resource to be consumed
         :param cost: cost per flow for this resource
         """
 
-        if resourceName not in self.expressions:
-            self.expressions[resourceName] = {}
+        if resource_name not in self.expressions:
+            self.expressions[resource_name] = {}
+        cdef int num_epochs = next(itervalues(pptc)).volFlows.size
         for tc in pptc:
-            #TODO: optimize loop
             for path in pptc[tc]:
-                v = self.v(xp(tc, path))
                 for node in path.getNodes():
-                    if node not in self.expressions[resourceName]:
-                        self.expressions[resourceName][node] = LinExpr()
-                    if node in nodeCaps:
-                        self.expressions[resourceName][node].addTerms(
-                            tc.volFlows * cost / nodeCaps[node], v)
+                    if node not in self.expressions[resource_name]:
+                        self.expressions[resource_name][node] = {}
+                    for epoch in range(num_epochs):
+                        if epoch not in self.expressions[resource_name][node]:
+                            self.expressions[resource_name][node][
+                                epoch] = LinExpr()
+                        v = self.v(xp(tc, path, epoch))
+                        if node in node_caps:
+                            self.expressions[resource_name][node][
+                                epoch].addTerms(
+                                tc.volFlows[epoch] * cost / node_caps[node], v)
                 for link in path.getLinks():
-                    if link not in self.expressions[resourceName]:
-                        self.expressions[resourceName][link] = LinExpr()
-                    if link in linkCaps:
-                        self.expressions[resourceName][link].addTerms(
-                            tc.volFlows * cost / linkCaps[link], v)
+                    if link not in self.expressions[resource_name]:
+                        self.expressions[resource_name][link] = {}
+                    for epoch in range(num_epochs):
+                        if epoch not in self.expressions[resource_name][link]:
+                            self.expressions[resource_name][link][
+                                epoch] = LinExpr()
+                        v = self.v(xp(tc, path, epoch))
+                        if link in link_caps:
+                            self.expressions[resource_name][link].addTerms(
+                                tc.volFlows[epoch] * cost / link_caps[link], v)
 
-    def _req_all(self, pptc, trafficClasses=None, reqType=None):
-        if reqType is None:
+    def _req_all(self, pptc, traffic_classes=None, req_type=None):
+        if req_type is None:
             raise SOLException('A type of constraint is needed for reqAll()')
         cdef int pi
-        if trafficClasses is None:
-            trafficClasses = pptc.keys()
-        if reqType.lower() == 'node':
-            for tc in trafficClasses:
+        if traffic_classes is None:
+            traffic_classes = pptc.keys()
+        if req_type.lower() == 'node':
+            for tc in traffic_classes:
                 for pi, path in enumerate(pptc[tc]):
                     for n in path:
                         self.opt.addConstr(self.v(bp(tc, pi)) <= self.v(bn(n)))
-        elif reqType.lower() == 'edge' or reqType.lower == 'link':
-            for tc in trafficClasses:
+        elif req_type.lower() == 'edge' or req_type.lower == 'link':
+            for tc in traffic_classes:
                 for pi, path in enumerate(pptc[tc]):
                     # TODO: see if this can be optimized
                     for link in path.getLinks():
@@ -201,19 +226,19 @@ cdef class OptimizationGurobi:
             raise SOLException('Unknown type of constraint for reqSome()')
         self.opt.update()
 
-    def reqAllNodes(self, pptc, trafficClasses=None):
+    def req_all_nodes(self, pptc, trafficClasses=None):
         return self.reqAll(pptc, trafficClasses, 'node')
 
-    def reqAllLinks(self, pptc, trafficClasses=None):
+    def req_all_links(self, pptc, trafficClasses=None):
         return self._req_all(pptc, trafficClasses, 'link')
 
-    def reqSomeNodes(self, pptc, trafficClasses=None):
+    def req_some_nodes(self, pptc, trafficClasses=None):
         return self._req_some(pptc, trafficClasses, 'node')
 
-    def reqSomeLinks(self, pptc, trafficClasses=None):
+    def req_some_links(self, pptc, trafficClasses=None):
         return self._req_some(pptc, trafficClasses, 'link')
 
-    def disablePaths(self, pptc, trafficClasses=None):
+    def _disable_paths(self, pptc, trafficClasses=None):
         if trafficClasses is None:
             trafficClasses = pptc.keys()
         cdef TrafficClass tc
@@ -222,10 +247,11 @@ cdef class OptimizationGurobi:
         for tc in trafficClasses:
             for pi, path in enumerate(bp(tc, pi)):
                 for epoch in range(num_epochs):
-                    self.opt.addConstr(self.v(xp(tc, path, epoch)) <= self.v(bp(tc, pi)))
+                    self.opt.addConstr(
+                        self.v(xp(tc, path, epoch)) <= self.v(bp(tc, pi)))
         self.opt.update()
 
-    def enforceSinglePath(self, pptc, trafficClasses):
+    def enforce_single_path(self, pptc, trafficClasses):
         if trafficClasses is None:
             trafficClasses = iterkeys(pptc)
         cdef int pi
@@ -233,6 +259,11 @@ cdef class OptimizationGurobi:
             for pi, path in enumerate(pptc[tc]):
                 self.opt.addConstr(self.v(bp(tc, pi)))
         self.opt.update()
+
+    def cap_num_paths(self, int max_paths):
+        self.opt.addConstr(quicksum([v for v in self.opt.getVars() if
+                                     v.name.starts_with(
+                                         'binpath')]) <= max_paths)
 
     def minLatency(self, topo, pptc, weight=1.0, norm=True):
         latency = self.opt.addVar(name="Latency", obj=weight)
@@ -257,7 +288,7 @@ cdef class OptimizationGurobi:
         :param bound:
         :return:
         """
-        g = topology.getGraph()
+        g = topology.get_graph()
         expr = LinExpr()
         for n in topology.nodes(data=False):
             expr.add(self.v(bn(n)), budgetFunc(n))
@@ -296,88 +327,116 @@ cdef class OptimizationGurobi:
         v = self.v("MaxLinkLoad_{}".format(resource))
         return v.x if value else v
 
-    def getLatency(self, value=True):
+    def get_latency(self, value=True):
         v = self.v("Latency")
         return v.x if value else v
 
-    def relaxToLP(self):
+    def relax_to_lp(self):
+        """
+        Change integer (or binary) variables to continuous variables.
+        ..warning:
+            Solution is no longer guaranteed to be optimal (or even make sense)
+            This assumes you know what you're doing and are attempting to
+            implement randomized rounding or something of that sort.
+        """
         for v in self.opt.getVars():
             if v.vType == GRB.BINARY:
                 self.intvars.add(v)
                 v.vType = GRB.CONTINUOUS
         self.opt.update()
 
-    def setTimeLimit(self, long time):
+    def set_time_limit(self, long time):
+        """
+        Limit how long Gurobi looks for the solution.
+        :param time: time, in milliseconds
+        :return:
+        """
         self.opt.params.TimeLimit = time
         self.opt.update()
 
-    cdef _dumpExpressions(self):
+    cdef _dump_expressions(self):
         for resourceName in self.expressions:
             for nodeOrLink in self.expressions[resourceName]:
-                if isinstance(nodeOrLink, tuple):
-                    name = 'LinkLoad_{}_{}'.format(resourceName,
-                                                   tup2str(nodeOrLink))
-                    if self.v(name) is None:
-                        self.opt.addVar(name=name, ub=1)
-                        self.opt.update()
-                    self.opt.addConstr(
-                        self.expressions[resourceName][nodeOrLink] == self.v(
-                            name),
-                        name='LinkLoad.{}.{}'.format(
-                            resourceName, tup2str(nodeOrLink)))
-                    self.opt.addConstr(self.v(name) <= 1)
-                else:
-                    name = 'NodeLoad_{}_{}'.format(resourceName, nodeOrLink)
-                    if self.v(name) is None:
-                        self.opt.addVar(name=name, ub=1)
-                        self.opt.update()
-                    self.opt.addConstr(
-                        self.expressions[resourceName][nodeOrLink] == self.v(
-                            name),
-                        name='NodeLoad.{}.{}'.format(
-                            resourceName, nodeOrLink))
-                    self.opt.addConstr(self.v(name) <= 1)
+                for epoch in self.expressions[resourceName][nodeOrLink]:
+                    if isinstance(nodeOrLink, tuple):
+                        name = 'LinkLoad_{}_{}_{}'.format(resourceName,
+                                                          tup2str(nodeOrLink),
+                                                          epoch)
+                        if self.v(name) is None:
+                            self.opt.addVar(name=name, ub=1)
+                            self.opt.update()
+                        self.opt.addConstr(self.expressions[resourceName][
+                                               nodeOrLink] == self.v(name))
+                        self.opt.addConstr(self.v(name) <= 1)
+                    else:
+                        name = 'NodeLoad_{}_{}_{}'.format(resourceName,
+                                                          nodeOrLink, epoch)
+                        if self.v(name) is None:
+                            self.opt.addVar(name=name, ub=1)
+                            self.opt.update()
+                        self.opt.addConstr(self.expressions[resourceName][
+                                               nodeOrLink] == self.v(name))
+                        self.opt.addConstr(self.v(name) <= 1)
         self.opt.update()
 
     cpdef solve(self):
-        self._dumpExpressions()
+        """
+        Solve the optimization
+        """
+        self._dump_expressions()
         self.opt.optimize()
 
     def write(self, fname):
+        """
+        Writes the LP/ILP formulation to disk.
+            ".lp" suffix is appended automatically
+        :param fname: filename of the lp file
+        """
         self.opt.write(fname + ".lp")
 
     def writeSolution(self, fname):
+        """
+        Write the solution to disk
+        :param fname: filename of the solution file.
+            ".sol" suffix is appended automatically
+        """
         self.write(fname + ".sol")
 
-    def getGurobiModel(self):
+    def get_gurobi_model(self):
+        """
+        Returns the underlying Gurobi model
+        """
         return self.opt
 
-    def getVarValues(self):
+    def get_var_values(self):
+        """
+        Returns the mapping of variable names to values assigned by optimization
+        """
         return {var.VarName: var.x for var in self.opt.getVars()}
-
-    def getVar(self, name):
-        return self.opt.getVarByName(name)
 
     def copy(self):
         c = OptimizationGurobi()
         c.opt = self.opt.copy()
+        c.expressions = copy.copy(self.expressions)
         return c
-
-    def save(self, fname):
-        pass
 
     cpdef getSolvedObjective(self):
         return self.opt.ObjVal
 
-    cpdef isSolved(self):
+    cpdef is_solved(self):
         return self.opt.Status == GRB.OPTIMAL
 
     cpdef v(self, n):
+        """
+        Return variable by name
+        :param n:
+        :return:
+        """
         return self.opt.getVarByName(n)
 
-    cpdef getPathFractions(self, pptc, flowCarryingOnly=True):
+    cpdef get_path_fractions(self, pptc, flowCarryingOnly=True):
         result = {}
-        for tc, paths in pptc.iteritems():
+        for tc, paths in iteritems(pptc):
             result[tc] = []
             for path in paths:
                 newpath = copy.copy(path)
@@ -386,4 +445,26 @@ cdef class OptimizationGurobi:
                     result[tc].append(newpath)
                 elif not flowCarryingOnly:
                     result[tc].append(newpath)
+        return result
+
+    cpdef get_chosen_paths(self, pptc):
+        """
+        Return
+        :param pptc:
+        :return:
+        """
+        result = {}
+        ii = {}  # inverse index of traffic class IDs to traffic classes
+        iip = {}  # inverse index of traffic class IDs to path IDs to paths
+        for tc in pptc:
+            result[tc] = []
+            ii[tc.ID] = tc
+            iip[tc.ID] = {}
+            for p in pptc[tc]:
+                iip[tc.ID][p.ID] = p
+        for v in self.opt.getVars():
+            if v.name.starts_with('binpath'):
+                _, tcid, pid = v.name.split('_')
+                if v.x > 0:
+                    result[ii[tcid]] = iip[tc.ID][p.ID]
         return result

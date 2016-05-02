@@ -7,7 +7,7 @@ from sol.path.predicates import nullPredicate
 from sol.sdn.controllerUtil import computeSplit
 from sol.sdn.onosWrapper import ONOSInterface
 from sol.topology import provisioning
-from sol.topology.generators import generateCompleteTopology
+from sol.topology.generators import complete_topology
 
 
 def MaxFlow():
@@ -15,7 +15,7 @@ def MaxFlow():
     # Let's generate some example data; SOL has some functions to help with that.
     # ==============
     # A complete topology
-    topo = generateCompleteTopology(5)
+    topo = complete_topology(5)
     # ingress-egress pairs, between which the traffic will flow
     iePairs = [(0, 3)]
     # generate a traffic matrix, in this case, a uniform traffic matrix with a million flows
@@ -43,7 +43,7 @@ def MaxFlow():
 
     # Now, our constraints.
     # First, we must allocate some amount of flow (i.e, tell SOL to route things frorm ingress to egress)
-    opt.allocateFlow(pptc)
+    opt.allocate_flow(pptc)
 
     # Traffic must not overload links -- so cap links according to our link constraints (recall the 50%)
     # linkcapfunc defines how bandwidth is consumed.
@@ -61,7 +61,7 @@ def MaxFlow():
     # You must ensure that ONOS is running the SOL app to be able to install rules in a batch
     onos = ONOSInterface("localhost:8181")
     routes = {}
-    for tc, paths in opt.getPathFractions(pptc).iteritems():
+    for tc, paths in opt.get_path_fractions(pptc).iteritems():
         routes.update(computeSplit(tc, paths, 0))
     onos.push_routes(routes)
     print("Done")

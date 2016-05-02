@@ -88,11 +88,11 @@ if __name__ == '__main__':
                                  'random', 5, functools.partial(useMboxModifier, chainLength=2), 'CPLEX')
 
     # Allocate and route all of the traffic
-    opt.allocateFlow(pptc)
+    opt.allocate_flow(pptc)
     opt.route_all(pptc)
 
     # We know that we will need binary variables per path and node to model TCAM constraints
-    opt.addBinaryVars(pptc, topo, ['path', 'node'])
+    opt._add_binary_vars(pptc, topo, ['path', 'node'])
     # Add TCAM capacities here
     opt.capNodesPathResource(pptc, 'tcam', nodeCaps['tcam'], TCAMCapFunc)
 
@@ -114,5 +114,5 @@ if __name__ == '__main__':
     print opt.getSolvedObjective()
     # pretty-print the paths on which the traffic is routed, along with the fraction for each traffic class
     # useMBoxes indicates at which middleboxes the processing should occur
-    for tc, paths in opt.getPathFractions(pptc).iteritems():
+    for tc, paths in opt.get_path_fractions(pptc).iteritems():
         print 'src:', tc.src, 'dst:', tc.dst, 'paths:', pprint.pformat(paths)
