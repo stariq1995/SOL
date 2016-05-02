@@ -3,7 +3,7 @@ import pytest
 from sol.topology.provisioning import generateTrafficClasses, uniformTM
 
 from sol.path.generate import generatePathsPerTrafficClass
-from sol.path.select import kShortestPaths, chooserand
+from sol.path.select import k_shortest_paths, choose_rand
 from sol.path.predicates import nullPredicate
 from sol.topology.generators import complete_topology
 
@@ -19,7 +19,7 @@ def pptc():
 
 
 def testShortest(pptc):
-    subset = kShortestPaths(pptc, 5)
+    subset = k_shortest_paths(pptc, 5)
     # ensure correct number of paths
     for k, v in subset.iteritems():
         assert len(v) == 5
@@ -35,7 +35,7 @@ def shortest_test_keyword(pptc):
 
 def random_test(pptc):
     # Check number
-    subset = chooserand(pptc, 5)
+    subset = choose_rand(pptc, 5)
     for k, v in subset.iteritems():
         assert len(v) == 5
         # check that all paths are unique
