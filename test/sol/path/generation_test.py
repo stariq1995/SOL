@@ -22,7 +22,7 @@ def test_pathgen_simple():
     with pytest.raises(NoPathsException):
         generatePathsPerIE(0, 4, chaintopo, lambda p, t: False, 100)
 
-    chaintopo.getGraph().remove_edge(1, 2)
+    chaintopo.get_graph().remove_edge(1, 2)
     with pytest.raises(NoPathsException):
         generatePathsPerIE(0, 4, chaintopo, nullPredicate, 100)
     assert len(generatePathsPerIE(0, 4, chaintopo, nullPredicate, cutoff=100,

@@ -13,7 +13,7 @@ def testGenerators():
     topo = generateCompleteTopology(5)
     assert isinstance(topo, Topology)
     assert isinstance(topo.getGraph(), networkx.DiGraph)
-    assert topo.getNumNodes() == 5
+    assert topo.num_nodes() == 5
 
     topo = generateChainTopology(10)
     assert isinstance(topo, Topology)
@@ -30,7 +30,7 @@ def testFatTreeGenerator():
     assert isinstance(topo, Topology)
     assert isinstance(topo.getGraph(), networkx.DiGraph)
     # correct size
-    assert topo.getNumNodes() == 80
+    assert topo.num_nodes() == 80
     G = topo.getGraph()
     # every node has a layer attribute
     assert all(['layer' in G.node[n] for n in G.nodes_iter()])
@@ -46,6 +46,6 @@ def testForceSwitchLabels():
     """
     topo = generateCompleteTopology(5)
     forceSwitchLabels(topo)
-    G = topo.getGraph()
+    G = topo.get_graph()
     for node in G.nodes_iter():
         assert 'switch' in G.node[node]['services']
