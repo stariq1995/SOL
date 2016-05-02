@@ -12,7 +12,7 @@ cdef add_named_constraints(opt, app):
     opt.addDecisionVars(app.pptc)
     for c in app.constraints:
         if c == ALLOCATE_FLOW:
-            opt.allocateFlow(app.pptc)
+            opt.allocate_flow(app.pptc)
         elif c == ROUTE_ALL:
             opt.route_all(app.pptc)
         elif c[0] == CAP_LINKS:
