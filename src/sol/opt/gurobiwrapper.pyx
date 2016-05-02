@@ -345,7 +345,7 @@ cdef class OptimizationGurobi:
                 v.vType = GRB.CONTINUOUS
         self.opt.update()
 
-    def set_time_limit(self, long time):
+    cpdef set_time_limit(self, long time):
         """
         Limit how long Gurobi looks for the solution.
         :param time: time, in milliseconds
@@ -420,7 +420,7 @@ cdef class OptimizationGurobi:
         c.expressions = copy.copy(self.expressions)
         return c
 
-    cpdef getSolvedObjective(self):
+    cpdef get_solved_objective(self):
         return self.opt.ObjVal
 
     cpdef is_solved(self):

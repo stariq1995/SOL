@@ -61,4 +61,4 @@ def test_MaxFlow(backend):
             print p
             assert len(p) == 2
 
-    assert opt.getSolvedObjective() == 1
+    assert opt.get_solved_objective() == 1
