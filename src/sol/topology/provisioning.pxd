@@ -1,8 +1,10 @@
 # coding=utf-8
 
 from sol.topology.topology cimport Topology
+from cpython cimport bool
 
-cpdef provisionLinks(Topology topology, list trafficClasses, float overprovision= *, setAttr= *)
+cpdef provision_links(Topology topology, list traffic_classes,
+                      float overprovision=3, bool set_attr=*)
 # cpdef uniformTM(iepairs, double totalFlows)
 cpdef generateIEpairs(topology)
 # cpdef logNormalTM(iepairs, meanFlows)

@@ -1,29 +1,27 @@
 # coding=utf-8
 from __future__ import division
 
-import itertools
 from collections import defaultdict
 
 import networkx
-import numpy
-import six
-
 from sol.topology.traffic cimport TrafficClass
 from tmgen cimport TrafficMatrix
-from sol.path.paths cimport Path
-from six import iteritems
+from six import iteritems, iterkeys
+from six.moves import range, zip
+from cpython cimport bool
+from sol.opt.varnames import BANDWIDTH
 
-cpdef generateIEpairs(topology):
-    """
-    Default way of generating ingress-egress pairs. Generates all possible n*(n-1) node combinations
-
-    :param topology: the topology to work with
-    :type topology: sol.optimization.topology.topology
-    :return: list of ingress-egress pairs (as tuples)
-    """
-    return [pair for pair in
-            itertools.product([n for n in topology.nodes()], repeat=2)
-            if pair[0] != pair[1]]
+# cpdef generateIEpairs(topology):
+#     """
+#     Default way of generating ingress-egress pairs. Generates all possible n*(n-1) node combinations
+#
+#     :param topology: the topology to work with
+#     :type topology: sol.optimization.topology.topology
+#     :return: list of ingress-egress pairs (as tuples)
+#     """
+#     return [pair for pair in
+#             itertools.product([n for n in topology.nodes()], repeat=2)
+#             if pair[0] != pair[1]]
 
 
 # cpdef uniformTM(iepairs, double totalFlows):
@@ -67,116 +65,122 @@ cpdef generateIEpairs(topology):
 #         tm[(i, e)] = ((float(ti_in * tj_out) / (tot_population ** 2)) * totalFlows)
 #     return tm
 
-
-def generateTrafficClasses(iepairs, TrafficMatrix trafficMatrix, classFractionDict,
-                           classBytesDict, asdict=False):
+cpdef traffic_classes(TrafficMatrix tm, fractions, class_bytes, as_dict=False):
     """
-    Generate traffic classes from given ingress-egress pairs and traffic matrix
+    Generate traffic classes from a given traffic matrix
 
-    :param iepairs: list of ingress-egress pairs (as tuples)
-    :param trafficMatrix: the traffic matrix object
-    :param classFractionDict: a dictionary mapping class name to a fraction of traffic (in flows).
+    :param tm: the traffic matrix object
+    :param fractions: a dictionary mapping class name to a fraction of traffic.
         Must sum up to 1.
         Example::
 
             classFractionDict = {'web': .6, 'ssh': .2, 'voip': .2}
 
-        .. note::
-
-            This does assume that the split is even across all ingress-egress pairs
-
-    :param classBytesDict: dictionary mapping class name to an average flow size in bytes.
+    :param class_bytes: dictionary mapping the class name to an average flow
+        size in bytes.
         That is::
 
             classBytesDict = {'web': 100, 'ssh': 200, 'voip': 200}
 
-        means that each web flow is 100 bytes, each ssh flow is 200 bytes and so on.
-    :return: a list of traffic classes
+        means that each web flow is 100 bytes, each ssh flow is 200 bytes and
+        so on.
+    :param as_dict: whether to return traffic classes as dictionary with keys
+        being class names. If False, a flat list is returned
     """
-    assert sum(classFractionDict.values()) == 1
-    trafficClasses = []
-    if asdict:
-        trafficClasses = defaultdict(lambda: [])
-    cdef int index = 1
+    assert tm.matrix.shape[0] == tm.matrix.shape[1]
+    assert sum(fractions.values()) == 1
+    traffic_classes = []
+    if as_dict:
+        traffic_classes = {}
+        for classname in iterkeys(fractions):
+            traffic_classes[classname] = []
+    cdef int index = 1, i = 0, j = 0
     cdef double fraction, volflows, volbytes
-    for ie in iepairs:
-        i, e = ie
-        for classname, fraction in iteritems(classFractionDict):
-            volflows = fraction * trafficMatrix[ie]
-            volbytes = volflows * classBytesDict[classname]
-            tc = TrafficClass(index, classname, i, e, volflows, volbytes)
-            if asdict:
-                trafficClasses[classname].append(tc)
-            else:
-                trafficClasses.append(tc)
-            index += 1
-    return trafficClasses
+    for i in range(tm.shape[0]):
+        for j in range(tm.shape[1]):
+            for classname, fraction in iteritems(fractions):
+                volflows = fraction * tm[i, j]
+                volbytes = volflows * class_bytes[classname]
+                # XXX: this assumes that topology nodes are 0-indexed
+                tc = TrafficClass(index, classname, i, j, volflows, volbytes)
+                if as_dict:
+                    traffic_classes[classname].append(tc)
+                else:
+                    traffic_classes.append(tc)
+                index += 1
+    return traffic_classes
 
+cdef compute_background_load(Topology topology, traffic_classes):
+    """
+    Compute the load on each link given the topology and traffic classes,
+    assuming that all routing would be done using shortest-path routing.
 
-cdef computeBackgroundLoad(Topology topology, trafficClasses):
+    :param topology: The Topology object
+    :param traffic_classes: list of traffic classes
+    :return:
+    """
     cdef int ind = 0
     paths = {}
-    allsp = networkx.all_pairs_shortest_path(topology.getGraph())
-    for tc in trafficClasses:
-        i, e = tc.getIEPair()
-        paths[(i, e)] = Path(allsp[i][e], ind)
-        ind += 1
+    allsp = networkx.all_pairs_shortest_path(topology.get_graph())
     loads = {}
+    cdef int u, v, i, e
     for u, v in topology.links():
         link = (u, v)
         loads[link] = 0
-    for tc in trafficClasses:
-        path = paths[tc.getIEPair()]
-        for link in path.getLinks():
-            l = tc.volBytes
-            loads[link] += l
+    for tc in traffic_classes:
+        i, e = tc.get_iepair()
+        path = allsp[i][e]
+        for link in zip(path, path[1:]):
+            load = tc.volBytes
+            loads[link] += load
     return loads
 
-
-cpdef provisionLinks(Topology topology, list trafficClasses, float overprovision=3, setAttr=False):
+cpdef provision_links(Topology topology, list traffic_classes,
+                      float overprovision=3, bool set_attr=False):
     """ Provision the links in the topology based on the traffic classes.
     Computes shortest path routing for given traffic classes, uses the maximum
     load, scaled by *overprovision*, as the link capacity
 
     :param topology: topology of interest
-    :param trafficClasses: list of traffic classes
+    :param traffic_classes: list of traffic classes
     :param overprovision: the multiplier by which to overprovision the links
-    :param setAttr: if True the topology graph will be modified to set
+    :param set_attr: if True the topology graph will be modified to set
         the link *capacity* attribute for each link.
     :returns: mapping of links to their capacities
     :rtype: dict
     """
 
-    bg = computeBackgroundLoad(topology, trafficClasses)
-
-    maxBackground = max(bg.values())
+    bg = compute_background_load(topology, traffic_classes)
+    cdef double max_bg = max(bg.values())
     capacities = {}
-    G = topology.getGraph()
-    for u, v in G.edges_iter():
-        # print u,v
+    cdef int u, v
+    cdef double cap
+    cdef int mult = 1
+    for u, v, data in topology.links(True):
         link = (u, v)
         mult = 1
-        if 'capacitymult' in G.edge[u][v]:
-            mult = G.edge[u][v]['capacitymult']
-        capacities[link] = float(overprovision * maxBackground * mult)
-        if setAttr:
-            G.edge[u][v]['capacity'] = capacities[link]
+        if 'capacitymult' in data:
+            mult = data['capacitymult']
+        cap = overprovision * max_bg * mult
+        if set_attr:
+            topology.set_resource(link, BANDWIDTH, cap)
+        capacities[link] = cap
     return capacities
 
 
-def computeMaxIngressLoad(trafficClasses, tcCost):
-    """
-    Compute the maximum load assuming all the processing would be done at
-    ingress nodes
-
-    :param trafficClasses: list of traffic classes
-    :param tcCost: a mapping of traffic class to the processing cost (for a
-        particular resource)
-
-    :returns: max ingress load
-    """
-
-    loads = defaultdict(lambda: 0)
-    for tc in trafficClasses:
-        loads[tc.src] += (tc.volFlows * tcCost[tc])
-    return float(max(loads.values()))
+# TODO: is this method even used?
+# def compute_max_ingress_load(traffic_classes, tc_cost):
+#     """
+#     Compute the maximum load assuming all the processing would be done at
+#     ingress nodes
+#
+#     :param traffic_classes: list of traffic classes
+#     :param tc_cost: a mapping of traffic class to the processing cost (for a
+#         particular resource)
+#
+#     :returns: max ingress load
+#     """
+#     loads = defaultdict(lambda: 0)
+#     for tc in traffic_classes:
+#         loads[tc.src] += (tc.volFlows * tc_cost[tc])
+#     return float(max(loads.values()))
