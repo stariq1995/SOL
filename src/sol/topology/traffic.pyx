@@ -4,10 +4,8 @@
 """
 # import json
 # import random
-import numpy as np
 cimport numpy as np
 from traffic cimport TrafficClass
-
 
 # class TrafficMatrix(dict):
 #     """
@@ -50,45 +48,45 @@ cdef class TrafficClass(object):
     """ Represents a traffic class. All members are public
     """
 
-    def __init__(self, int ID, str name, int src, int dst,
-                 np.ndarray volFlows=np.zeros(1),
-                 np.ndarray volBytes=np.zeros(1), int priority=1,
-                 srcIPPrefix=None, dstIPPrefix=None,
-                 srcAppPorts=None, dstAppPorts=None):
+    def __init__(self, int tcid, str name, int src, int dst,
+                 np.ndarray vol_flows=np.zeros(1),
+                 np.ndarray vol_bytes=np.zeros(1), int priority=1,
+                 src_ip_prefix=None, dst_ip_prefix=None,
+                 src_app_ports=None, dst_app_ports=None):
         """ Creates a new traffic class.
 
-        :param ID: unique traffic class identifier
+        :param tcid: unique traffic class identifier
         :param name: traffic class name, for human readability (e.g., 'web',
             'ssh', etc.)
         :param src: nodeID that is the ingress for this traffic class
         :param dst: nodeID that is the egress for this traffic class
-        :param volFlows: number of flows for this traffic class
-        :param volBytes: number of bytes for this traffic class
+        :param vol_flows: number of flows for this traffic class
+        :param vol_bytes: number of bytes for this traffic class
         :param priority: traffic class priority, as an integer (higher number means higher priority)
-        :param srcIPPrefix: ingress IP prefix (CIDR notation)
-        :param dstIPPrefix: egress IP prefix (CIDR notation)
+        :param src_ip_prefix: ingress IP prefix (CIDR notation)
+        :param dst_ip_prefix: egress IP prefix (CIDR notation)
         :param scrAppPorts: packet application ports (source)
-        :param dstAppPorts: packet application ports (destination)
+        :param dst_app_ports: packet application ports (destination)
         """
 
-        self.ID = ID
+        self.ID = tcid
         self.name = name
         self.src = src
         self.dst = dst
-        self.volFlows = volFlows
-        self.volBytes = volBytes
-        assert self.volFlows.size == self.volFlows.size
+        self.volFlows = vol_flows
+        self.volBytes = vol_bytes
+        assert self.volFlows.size == self.volBytes.size
         self.priority = priority
-        self.srcIPPrefix = srcIPPrefix
-        self.dstIPPrefix = dstIPPrefix
-        self.srcAppPorts = srcAppPorts
-        self.dstAppPorts = dstAppPorts
+        self.srcIPPrefix = src_ip_prefix
+        self.dstIPPrefix = dst_ip_prefix
+        self.srcAppPorts = src_app_ports
+        self.dstAppPorts = dst_app_ports
 
     def __repr__(self):
         return "TrafficClass {} -> {}, {}, ID={}".format(self.src, self.dst,
                                                          self.name, self.ID)
 
-    def getIEPair(self):
+    def get_iepair(self):
         """
         Return the ingress-egress pair as a tuple
 
@@ -101,14 +99,20 @@ cdef class TrafficClass(object):
         return hash((self.ID, self.src, self.dst, self.name))
 
     def __richcmp__(TrafficClass self, other not None, int op):
-        sameType = isinstance(other, TrafficClass)
+        sametype = isinstance(other, TrafficClass)
         if op == 2:
-            return sameType and (self.ID == other.ID and self.src == other.src and self.dst == other.dst)
+            return sametype and (self.ID == other.ID and
+                                 self.src == other.src and
+                                 self.dst == other.dst)
         elif op == 3:
-            return not sameType or not (self.ID == other.ID and self.src == other.src and self.dst == other.dst)
+            return not sametype or not (self.ID == other.ID and
+                                        self.src == other.src and
+                                        self.dst == other.dst)
         else:
             raise TypeError
 
     def __copy__(self):
-        return TrafficClass(self.ID, self.name, self.src, self.dst, self.volFlows, self.volBytes, self.priority,
-                            self.srcIPPrefix, self.dstIPPrefix, self.srcAppPorts, self.dstAppPorts)
+        return TrafficClass(self.ID, self.name, self.src, self.dst,
+                            self.volFlows, self.volBytes, self.priority,
+                            self.srcIPPrefix, self.dstIPPrefix,
+                            self.srcAppPorts, self.dstAppPorts)

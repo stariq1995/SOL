@@ -38,14 +38,14 @@ if __name__ == '__main__':
 
     # Do some topology provisioning, instead of the real switch/link/middlebox capacities:
     # provision the node cpu capacities (for the sake of example)
-    maxCPUCap = provisioning.computeMaxIngressLoad(trafficClasses, {t: t.cpuCost for t in trafficClasses})
+    maxCPUCap = provisioning.compute_max_ingress_load(trafficClasses, {t: t.cpuCost for t in trafficClasses})
     nodeCaps = dict()
     nodeCaps['cpu'] = {node: maxCPUCap * 2 for node in topo.nodes()
                        if 'fw' or 'ids' in topo.get_service_types(node)}
     # provision the TCAM capacities on the switch nodes
     nodeCaps['tcam'] = {node: 1000 for node in topo.nodes()}
     # similartly with link capacities
-    linkCaps = provisioning.provisionLinks(topo, trafficClasses, 3)
+    linkCaps = provisioning.provision_links(topo, trafficClasses, 3)
 
 
     # =====================================

@@ -28,7 +28,7 @@ def MaxFlow():
     trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},
                                             {'allTraffic': 2000})
     # since our topology is "fake", provision our links and generate link capacities in our network
-    linkcaps = provisioning.provisionLinks(topo, trafficClasses, 1)
+    linkcaps = provisioning.provision_links(topo, trafficClasses, 1)
     # these will be our link constraints: do not load links more than 50%
     linkConstrCaps = {(u, v): .5 for u, v in topo.links()}
 

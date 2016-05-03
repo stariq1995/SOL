@@ -38,7 +38,7 @@ def test_MaxFlow(backend):
     # compute traffic classes, only one class
     trafficClasses = generateTrafficClasses(iePairs, trafficMatrix, {'allTraffic': 1},
                                             {'allTraffic': 2000})
-    linkcaps = provisioning.provisionLinks(topo, trafficClasses, 1)
+    linkcaps = provisioning.provision_links(topo, trafficClasses, 1)
     # do not load links more than 50%
     linkConstrCaps = {(u, v): 1 for u, v in topo.links()}
 
