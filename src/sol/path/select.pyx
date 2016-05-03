@@ -118,20 +118,20 @@ def get_select_function(name, kwargs=None):
     else:
         raise InvalidConfigException("Unknown select method")
 
-cpdef select_optimal(apps, Topology topo):
-    """
-    Select paths to be used for given apps on a given topology.
-    This is equivalent to the optimal solution.
-
-    :param apps: list of applications
-    :param topo: network topology
-    :return:
-    """
-    opt = compose(apps, topo)
-    opt.solve()
-    # Return paths
-    # FIXME: return them per app
-    return opt.getPathsFractions()
+# cpdef select_optimal(apps, Topology topo):
+#     """
+#     Select paths to be used for given apps on a given topology.
+#     This is equivalent to the optimal solution.
+#
+#     :param apps: list of applications
+#     :param topo: network topology
+#     :return:
+#     """
+#     opt = compose(apps, topo)
+#     opt.solve()
+#     # Return paths
+#     # FIXME: return them per app
+#     return opt.getPathsFractions()
 
 cpdef select_robust(apps, Topology topo):
     """
@@ -144,5 +144,4 @@ cpdef select_robust(apps, Topology topo):
     opt.cap_num_paths((topo.num_nodes() - 1) ** 2 * 10)
     opt.solve()
     # return paths
-    # FIXME: return them per app
     return opt.get_chosen_paths()
