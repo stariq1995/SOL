@@ -1,12 +1,11 @@
 # coding=utf-8
 
-from sol.topology.topology cimport Topology
+from sol.topology.topologynx cimport Topology
 from cpython cimport bool
+from tmgen cimport TrafficMatrix
 
+cdef compute_background_load(Topology topology, trafficClasses)
+cpdef traffic_classes(TrafficMatrix tm, dict fractions, dict class_bytes,
+                      as_dict= *)
 cpdef provision_links(Topology topology, list traffic_classes,
-                      float overprovision=3, bool set_attr=*)
-# cpdef uniformTM(iepairs, double totalFlows)
-cpdef generateIEpairs(topology)
-# cpdef logNormalTM(iepairs, meanFlows)
-# cpdef gravityTM(iepairs, double totalFlows, populationDict)
-cdef computeBackgroundLoad(Topology topology, trafficClasses)
+                      float overprovision= *, bool set_attr= *)

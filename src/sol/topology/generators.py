@@ -7,7 +7,7 @@ Generates some basic topologies. Contains utility methods as well.
 import itertools
 
 import networkx as nx
-from sol.topology.topology import Topology
+from sol.topology.topologynx import Topology
 from six.moves import xrange
 
 

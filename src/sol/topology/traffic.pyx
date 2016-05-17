@@ -4,6 +4,7 @@
 """
 # import json
 # import random
+import numpy as np
 cimport numpy as np
 from traffic cimport TrafficClass
 
@@ -102,12 +103,14 @@ cdef class TrafficClass(object):
         sametype = isinstance(other, TrafficClass)
         if op == 2:
             return sametype and (self.ID == other.ID and
-                                 self.src == other.src and
-                                 self.dst == other.dst)
+                self.src == other.src and
+                self.dst == other.dst and
+                self.name == other.name)
         elif op == 3:
             return not sametype or not (self.ID == other.ID and
-                                        self.src == other.src and
-                                        self.dst == other.dst)
+                self.src == other.src and
+                self.dst == other.dst and
+                self.name == other.name)
         else:
             raise TypeError
 

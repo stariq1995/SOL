@@ -5,7 +5,7 @@ Both generic (example predicates) and some app-specific predicates
 import itertools
 
 from sol.path.paths cimport PathWithMbox
-from sol.topology.topology cimport Topology
+from sol.topology.topologynx cimport Topology
 
 cpdef nullPredicate(path, topology=None):
     """

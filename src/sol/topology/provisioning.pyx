@@ -1,15 +1,16 @@
 # coding=utf-8
 from __future__ import division
 
-from collections import defaultdict
-
 import networkx
 from sol.topology.traffic cimport TrafficClass
+from sol.topology.topologynx cimport Topology
 from tmgen cimport TrafficMatrix
 from six import iteritems, iterkeys
 from six.moves import range, zip
 from cpython cimport bool
 from sol.opt.varnames import BANDWIDTH
+import numpy as np
+cimport numpy as np
 
 # cpdef generateIEpairs(topology):
 #     """
@@ -65,7 +66,8 @@ from sol.opt.varnames import BANDWIDTH
 #         tm[(i, e)] = ((float(ti_in * tj_out) / (tot_population ** 2)) * totalFlows)
 #     return tm
 
-cpdef traffic_classes(TrafficMatrix tm, fractions, class_bytes, as_dict=False):
+cpdef traffic_classes(TrafficMatrix tm, dict fractions, dict class_bytes,
+                      as_dict=False):
     """
     Generate traffic classes from a given traffic matrix
 
@@ -86,6 +88,9 @@ cpdef traffic_classes(TrafficMatrix tm, fractions, class_bytes, as_dict=False):
         so on.
     :param as_dict: whether to return traffic classes as dictionary with keys
         being class names. If False, a flat list is returned
+
+    .. warning:
+        Assumes topology's nodes are contiguous and 0-indexed.
     """
     assert tm.matrix.shape[0] == tm.matrix.shape[1]
     assert sum(fractions.values()) == 1
@@ -95,19 +100,22 @@ cpdef traffic_classes(TrafficMatrix tm, fractions, class_bytes, as_dict=False):
         for classname in iterkeys(fractions):
             traffic_classes[classname] = []
     cdef int index = 1, i = 0, j = 0
-    cdef double fraction, volflows, volbytes
-    for i in range(tm.shape[0]):
-        for j in range(tm.shape[1]):
-            for classname, fraction in iteritems(fractions):
-                volflows = fraction * tm[i, j]
-                volbytes = volflows * class_bytes[classname]
-                # XXX: this assumes that topology nodes are 0-indexed
-                tc = TrafficClass(index, classname, i, j, volflows, volbytes)
-                if as_dict:
-                    traffic_classes[classname].append(tc)
-                else:
-                    traffic_classes.append(tc)
-                index += 1
+    cdef double fraction
+    cdef np.ndarray volflows, volbytes
+    for i in range(tm.matrix.shape[0]):
+        for j in range(tm.matrix.shape[1]):
+            if i != j:
+                for classname, fraction in iteritems(fractions):
+                    volflows = np.array([fraction * tm.between(i, j, 'mean')])
+                    volbytes = volflows * class_bytes[classname]
+                    # XXX: this assumes that topology nodes are 0-indexed
+                    tc = TrafficClass(index, classname, i, j, volflows,
+                                      volbytes)
+                    if as_dict:
+                        traffic_classes[classname].append(tc)
+                    else:
+                        traffic_classes.append(tc)
+                    index += 1
     return traffic_classes
 
 cdef compute_background_load(Topology topology, traffic_classes):

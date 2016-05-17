@@ -6,7 +6,7 @@ import networkx
 import requests
 import six
 
-from sol.topology.topology import Topology
+from sol.topology.topologynx import Topology
 
 
 class ONOSInterface(object):
@@ -29,7 +29,7 @@ class ONOSInterface(object):
         # s = time.time()
         for path in six.iterkeys(path_to_prefix):
             for prefix in path_to_prefix[path]:
-                paths.append({"nodes": path.getNodes(),
+                paths.append({"nodes": path.nodes(),
                               "srcprefix": str(prefix[0]),
                               "dstprefix": str(prefix[1])})
         # print time.time() - s

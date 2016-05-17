@@ -1,6 +1,6 @@
 # coding=utf-8
 
-from sol.topology.topology cimport Topology
+from sol.topology.topologynx cimport Topology
 
 cpdef inline nullPredicate(path, topology=*)
 cpdef useMboxModifier(path, int offset, Topology topology, chainLength=*)
