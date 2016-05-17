@@ -4,11 +4,11 @@
 import functools
 import random
 from collections import defaultdict
+from sol.utils.exceptions import InvalidConfigException, SOLException
 
 from sol.opt.composer cimport compose
-from sol.topology.topology cimport Topology
+from sol.topology.topologynx cimport Topology
 from cpython cimport bool
-from sol.utils.exceptions import InvalidConfigException
 
 _RANDOM = ['random', 'rand']
 _SHORTEST = ['shortest', 'short', 'kshortest', 'k-shortest', 'kshort',
@@ -71,6 +71,7 @@ cpdef k_shortest_paths(pptc, int num_paths, bool needs_sorting=True,
         result[comm] = newppk[comm][:num_paths]
     return result
 
+# TODO: check that this is even used
 def filter_paths(dict pptc, func):
     """ Filter paths using a function.
 
@@ -79,8 +80,6 @@ def filter_paths(dict pptc, func):
     :return: new paths per commodity with paths for which *func* returned a
         true value
     """
-
-    # TODO: check that this is even used
     assert (hasattr(func, '__call__'))  # ensure this is a function
     result = defaultdict(lambda: [])
     for tc in pptc:
@@ -133,15 +132,39 @@ def get_select_function(name, kwargs=None):
 #     # FIXME: return them per app
 #     return opt.getPathsFractions()
 
+cdef _merge_pptc(apps):
+    result = {}
+    for app in apps:
+        for tc in app.pptc:
+            if tc not in result:
+                result[tc] = app.pptc[tc]
+    return result
+
+cdef _filter_pptc(apps, chosen_pptc):
+    for app in apps:
+        for tc in app.pptc:
+            app.pptc[tc] = chosen_pptc[tc]
+
 cpdef select_robust(apps, Topology topo):
     """
-
+    Select paths that are capable of supporting multiple traffic matrices
     :param apps:
     :param topo:
     :return:
     """
     opt = compose(apps, topo)
-    opt.cap_num_paths((topo.num_nodes() - 1) ** 2 * 10)
+    mpptc = _merge_pptc(apps)  # merged
+    opt.cap_num_paths(mpptc, (topo.num_nodes() - 1) ** 2 * 100)
     opt.solve()
-    # return paths
-    return opt.get_chosen_paths()
+    opt.write('select_robust')
+    if not opt.is_solved():
+        raise SOLException("Could not solve path selection problem for"
+                           "topology %s" % topo.name)
+    # get the paths chosen by the optimization
+    # print (opt.get_var_values())
+    chosen_pptc = opt.get_chosen_paths(mpptc)
+    # print (chosen_pptc)
+    # return paths by modifying the pptc of the apps they are associated with
+    _filter_pptc(apps, chosen_pptc)
+    return opt.get_time()
+
