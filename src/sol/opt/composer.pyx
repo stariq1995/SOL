@@ -1,26 +1,15 @@
 # coding=utf-8
-
-from sol.opt.varnames import ALLOCATE_FLOW, ROUTE_ALL, CAP_LINKS, CAP_NODES, \
-    MIN_LINK_LOAD, MIN_LATENCY
-from sol.topology.topology cimport Topology
+# cython: cdivision=True
+from __future__ import division
+from sol.topology.topologynx cimport Topology
 from sol.opt.gurobiwrapper cimport OptimizationGurobi
+
+from sol import logger
+from sol.opt.quickstart import add_obj_var
 from sol.utils.exceptions import CompositionError
+from sol.opt.quickstart cimport add_named_constraints
 
-#FIXME: this entire module is currently tied to Gurobi
-
-cdef add_named_constraints(opt, app):
-    opt.addDecisionVars(app.pptc)
-    for c in app.constraints:
-        if c == ALLOCATE_FLOW:
-            opt.allocate_flow(app.pptc)
-        elif c == ROUTE_ALL:
-            opt.route_all(app.pptc)
-        elif c[0] == CAP_LINKS:
-            opt.capLinks(app.pptc, *c[1:])
-        elif c[0] == CAP_NODES:
-            opt.capNodes(app.pptc, *c[1:])
-        else:
-            raise CompositionError("Unsupported constraint type")
+#XXX: this entire module is currently tied to Gurobi
 
 cpdef compose(list apps, Topology topo):
     """
@@ -29,13 +18,15 @@ cpdef compose(list apps, Topology topo):
     :param topo: Topology
     :return:
     """
-    opt = OptimizationGurobi()
+    logger.debug("Starting composition")
+    opt = OptimizationGurobi(topo)
     for app in apps:
-        opt.addDecisionVars(app.pptc)
         add_named_constraints(opt, app)
+    logger.debug("Added named constraints")
 
-    _prop_fair_obj(apps, topo, opt)
     _compose_resources(apps, topo, opt)
+    _prop_fair_obj(apps, topo, opt)
+    logger.debug("Composition complete")
     return opt
 
 cpdef _detect_cost_conflict(list apps):
@@ -48,42 +39,30 @@ cpdef _detect_cost_conflict(list apps):
                 if apps[i].resourceCost[r] != apps[j].resourceCost[r]:
                     raise CompositionError(
                         "Different costs for resources in overlapping traffic classes")
+    logger.debug("No resource conflicts between apps")
 
 cdef _compose_resources(list apps, Topology topo, opt):
+    logger.debug("Composing resources")
     _detect_cost_conflict(apps)
-    nodeCaps = {node: topo.getResources(node) for node in topo.nodes()}
-    linkCaps = {link: topo.getResources(link) for link in topo.links()}
+    node_caps = {node: topo.get_resources(node) for node in topo.nodes()}
+    link_caps = {link: topo.get_resources(link) for link in topo.links()}
     for app in apps:
         for r in app.resourceCost:
             opt.consume(app.pptc, r, app.resourceCost[r],
-                        {n: nodeCaps[n][r] for n in nodeCaps if
-                         r in nodeCaps[n]},
-                        {l: linkCaps[l][r] for l in linkCaps if
-                         r in linkCaps[l]})
+                        {n: node_caps[n][r] for n in node_caps if
+                         r in node_caps[n]},
+                        {l: link_caps[l][r] for l in link_caps if
+                         r in link_caps[l]})
 
 cdef _prop_fair_obj(apps, Topology topo, opt):
-    cdef double totalVol = 0
+    logger.debug("Composing objectives")
+    cdef double total_vol = 0
     # Compute proportions according to volume
-    vols = {app: sum([tc.volFlows for tc in app.pptc]) for app in apps}
-    totalVol = sum(vols.values())
+    vols = {app: app.volume() for app in apps}
+    logger.debug('App volumes: %s', vols)
+    total_vol = sum(vols.values())
     for app in apps:
-        v = add_obj_var(app, topo, opt)
-        v.Obj = vols[app] / totalVol
+        add_obj_var(app, opt, vols[app] / total_vol)
     opt.get_gurobi_model().update()
 
-cpdef add_obj_var(app, Topology topo, opt, double weight=0):
-    if app.obj.lower() == MIN_LINK_LOAD:
-        return opt.minLinkLoad('bw', weight)
-    elif app.obj.lower() == MIN_LATENCY:
-        return opt.minLatency(topo, {tc: app.pptc[tc] for tc in app.objTC},
-                              weight)
-    else:
-        raise CompositionError("Unknown objective")
-
-# cpdef getObjVar(app, Topology opt, value=False):
-#     if app.obj.lower() == MIN_LINK_LOAD:
-#         return opt.getMaxLinkLoad('bw', value)
-#     elif app.obj.lower() == MIN_LATENCY:
-#         return opt.getLatency(value)
-#     else:
-#         raise CompositionError("Unknown objective")
+# TODO: introduce other fairness metrics

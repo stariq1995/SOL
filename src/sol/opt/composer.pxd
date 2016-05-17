@@ -1,7 +1,7 @@
 # coding=utf-8
-from sol.topology.topology cimport Topology
+from sol.topology.topologynx cimport Topology
+from cpython cimport bool
 
 cpdef compose(list apps, Topology topo)
-cdef add_named_constraints(opt, app)
+# cdef add_named_constraints(opt, app)
 cpdef _detect_cost_conflict(list apps)
-cpdef add_obj_var(app, Topology topo, opt, double weight=*)
