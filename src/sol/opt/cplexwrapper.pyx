@@ -306,7 +306,7 @@ class OptimizationCPLEX(object):
                 mults = [-1]
                 for tc in pptc:
                     for path in pptc[tc]:
-                        if link in path.getLinks():
+                        if link in path.links():
                             multiplier = linkCapFunction(link, tc, path,
                                                          resource)
                             mults.append(multiplier)
@@ -388,7 +388,7 @@ class OptimizationCPLEX(object):
             trafficClasses = pptc.keys()
         for tc in trafficClasses:
             for pi, path in enumerate(pptc[tc]):
-                for edge in path.getLinks():
+                for edge in path.links():
                     u, v = edge
                     self.cplexprob.linear_constraints.add(
                         [cplex.SparsePair([varindex[bp(tc, path)],
@@ -489,9 +489,9 @@ class OptimizationCPLEX(object):
             result[tc] = []
             for path in paths:
                 newpath = copy.copy(path)
-                newpath.setFlowFraction(self.cplexprob.solution.get_values(
+                newpath.set_flow_fraction(self.cplexprob.solution.get_values(
                     xp(tc, path)))
-                if newpath.getFlowFraction() > 0 and flowCarryingOnly:
+                if newpath.flow_fraction() > 0 and flowCarryingOnly:
                     result[tc].append(newpath)
                 elif not flowCarryingOnly:
                     result[tc].append(newpath)
