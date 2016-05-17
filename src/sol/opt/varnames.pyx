@@ -1,4 +1,6 @@
 # coding=utf-8
+# cython: profile=False
+import cython
 from sol.utils.pythonHelper import tup2str
 from varnames cimport *
 
@@ -31,24 +33,27 @@ BANDWIDTH = 'bw'
 CPU = 'cpu'
 MEM = 'mem'
 TCAM = 'tcam'
+LATENCY = 'Latency'
 
-cpdef str xp(TrafficClass trafficClass, Path path, int epoch=0):
+@cython.profile(False)
+cpdef inline str xp(TrafficClass traffic_class, Path path, int epoch=0):
     """ Convenience method for formatting a decision variable
 
-    :param trafficClass: the traffic class object, needed for the ID
+    :param traffic_class: the traffic class object, needed for the ID
     :returns: variable name of the form *x_classid_pathindex*
     :rtype: str
     """
-    return 'x_{}_{}_{}'.format(trafficClass.ID, path.getID(), epoch)
+    return 'x_{}_{}_{}'.format(traffic_class.ID, path.get_id(), epoch)
 
-cpdef str al(TrafficClass trafficClass, int epoch=0):
+@cython.profile(False)
+cpdef str al(TrafficClass traffic_class, int epoch=0):
     """
     Format an allocation variable
 
-    :param trafficClass: the traffic class object
+    :param traffic_class: the traffic class object
     :return: variable name of the form *a_classid*
     """
-    return 'a_{}_{}'.format(trafficClass.ID, epoch)
+    return 'a_{}_{}'.format(traffic_class.ID, epoch)
 
 cpdef str bn(int node):
     """
@@ -69,15 +74,16 @@ cpdef str be(int head, int tail):
     """
     return 'binedge_{}_{}'.format(head, tail)
 
-cpdef str bp(TrafficClass trafficClass, Path path):
+@cython.profile(False)
+cpdef str bp(TrafficClass traffic_class, Path path):
     """
     Format a binary path variable
 
-    :param trafficClass: traffic class (for ID)
+    :param traffic_class: traffic class (for ID)
     :param pathIndex: path index in the list of paths per traffic class
     :return: variable name of the form *binpath_classid_pathindex*
     """
-    return 'binpath_{}_{}'.format(trafficClass.ID, path.getID())
+    return 'binpath_{}_{}'.format(traffic_class.ID, path.get_id())
 
 cpdef str nl(int node, str resource, int epoch=0):
     """
