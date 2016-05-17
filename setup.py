@@ -13,10 +13,12 @@ setup(
 
     package_dir={'': 'src'},
     packages=['sol'],
-    url='https://bitbucket.org/progwriter/sol',
-    setup_requires=['pytest-runner'],
-    requires=['networkx', 'requests', 'netaddr', 'pytest', 'numpy', 'cython', 'six'],
-    tests_require=['pytest'],
-    ext_modules=cythonize("src/sol/**/*.pyx"),
+    url='https://github.com/progwriter/SOL',
+    requires=['networkx', 'requests', 'netaddr', 'numpy', 'cython', 'six'],
+    ext_modules=cythonize("src/sol/**/*.pyx", compiler_directives={
+        'cdivision':True,
+        # 'profile': True
+        'embedsignature': True
+    }),
     include_dirs=[numpy.get_include()]
 )
