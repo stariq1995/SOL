@@ -2,12 +2,11 @@
 # cython: cdivision=True
 from __future__ import division
 from sol.topology.topologynx cimport Topology
-from sol.opt.gurobiwrapper cimport OptimizationGurobi
+from sol.opt.gurobiwrapper cimport OptimizationGurobi, add_obj_var, \
+    add_named_constraints
 
 from sol import logger
-from sol.opt.quickstart import add_obj_var
 from sol.utils.exceptions import CompositionError
-from sol.opt.quickstart cimport add_named_constraints
 
 #XXX: this entire module is currently tied to Gurobi
 
