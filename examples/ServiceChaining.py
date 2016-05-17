@@ -104,7 +104,7 @@ if __name__ == '__main__':
                                if 'fw' or 'ids' in topo.get_service_types(node)}, nodeFunc)
 
     # Finally, the objective, minimize the load on the middleboxes
-    opt.minNodeLoad(pptc, 'cpu')
+    opt.min_node_load(pptc, 'cpu')
 
     # Solve the formulation:
     # ======================

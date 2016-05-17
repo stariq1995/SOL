@@ -49,7 +49,7 @@ def TE():
     opt.route_all(pptc)
 
     # Minimize the link load in the network (a pretty standard TE goal)
-    opt.minLinkLoad('bandwidth')
+    opt.min_link_load('bandwidth')
 
     # Solve the optimization
     opt.solve()
