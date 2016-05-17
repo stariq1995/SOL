@@ -1,26 +1,29 @@
 # coding=utf-8
 
-from sol.topology.topology cimport Topology
+from cpython cimport bool
 
 # noinspection PyClassicStyleClass
 cdef class Path:
-    cdef public int _ID
+    cdef int _ID
     cdef public double _flowFraction
     cdef public _nodes
     cdef _links
 
-    cpdef int getIngress(self)
-    cpdef int getEgress(self)
-    cdef _computeLinks(self)
-    cpdef tuple getIEPair(self)
-    cpdef double getFlowFraction(self)
-    cpdef setFlowFraction(self, double nflows)
-    cpdef getLinks(self)
-    cpdef getNodes(self)
-    cpdef int getID(self)
+    cpdef int ingress(self)
+    cpdef int egress(self)
+    cdef _compute_links(self)
+    cpdef tuple iepair(self)
+    cpdef double flow_fraction(self)
+    cpdef set_flow_fraction(self, double f)
+    cpdef links(self)
+    cpdef nodes(self)
+    cpdef int get_id(self)
+    cpdef dict encode(self)
 
 # noinspection PyClassicStyleClass
 cdef class PathWithMbox(Path):
     cdef public list useMBoxes
 
-cdef double computePathCapacity(Path p, str resourceName, Topology topo)
+    cpdef dict encode(self)
+    cpdef bool uses_box(self, node)
+    cpdef int full_length(self)

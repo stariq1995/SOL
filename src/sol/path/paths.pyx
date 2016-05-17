@@ -1,105 +1,105 @@
 # coding=utf-8
+"""
+    Contains implementations of SOL Path objects
+"""
 import random
-import warnings
 
 from sol.utils.pythonHelper import listEq
 from paths cimport Path
 from paths cimport PathWithMbox
-from sol.topology.topology cimport Topology
+
+from cpython cimport bool
 
 # noinspection PyClassicStyleClass
 cdef class Path:
     """ Represents a path in the network"""
 
-    def __init__(self, nodes, ID=-1, flowFraction=0):
+    def __init__(self, nodes, pid=-1, flow_fraction=0):
         """Create a new path
 
         :param nodes: a list of node ids that belong to a path
-        :param flowFraction: the number of flows on this path
+        :param flow_fraction: the number of flows on this path
         """
         self._nodes = list(nodes)
-        self._flowFraction = flowFraction
-        self._ID = ID
+        self._flowFraction = flow_fraction
+        self._ID = pid
         if self._ID == -1:
             self._ID = random.randint(0, 1e6)
-            warnings.warn('No ID given to Path constructor, generating a random path ID')
-        self._links = self._computeLinks()
+            # warnings.warn('No ID given to Path constructor, generating a random path ID')
+        self._links = self._compute_links()
 
-    @staticmethod
-    def decode(dict dictionary):
-        """
-        Create a new path from a dict
-        :param dictionary: dict type, must contain following keys:
-
-            'nodes': maps to a list of nodes
-        """
-        return Path(dictionary['nodes'], dictionary.get('numFlows', 0))
-
-    cpdef int getIngress(self):
+    cpdef int ingress(self):
         """
         :return: the ingress node of this path
         """
         return self._nodes[0]
 
-    cdef _computeLinks(self):
+    cdef _compute_links(self):
         return zip(self._nodes, self._nodes[1:])
 
-    cpdef int getEgress(self):
+    cpdef int egress(self):
         """
         :return: the egress node of this path
         """
         return self._nodes[-1]
 
-    cpdef getNodes(self):
+    cpdef nodes(self):
         """
         :return: all nodes as a list
         """
         return self._nodes
 
-    # cpdef getNodesAsTuple(self):
-    #     """
-    #     :return: all nodes in this path as a tuple
-    #     """
-    #     return tuple(self._nodes)
-
-    cpdef tuple getIEPair(self):
+    cpdef tuple iepair(self):
         """
         :return: ingress-egress pair for this path
         :rtype: tuple
         """
-        return self.getIngress(), self.getEgress()
+        return self.ingress(), self.egress()
 
-    cpdef double getFlowFraction(self):
+    cpdef double flow_fraction(self):
         """
         :return: the number of flows on this path.
         """
         return self._flowFraction
 
-    cpdef setFlowFraction(self, double nflows):
+    cpdef set_flow_fraction(self, double f):
         """
         Set number of flows on this path
 
-        :param nflows: the new number of flows
+        :param f: the new number of flows
         """
-        self._flowFraction = nflows
+        self._flowFraction = f
 
-    cpdef getLinks(self):
+    cpdef links(self):
         """
         :return: Return an iterator over the links in this path
         """
         # return zip(self._nodes, self._nodes[1:])
         return self._links
 
-    cpdef int getID(self):
+    cpdef int get_id(self):
+        """
+        Returns path id as int
+        """
         return self._ID
 
-    def encode(self):
+    cpdef dict encode(self):
         """
         Encode this path in dict/list form so it can be JSON-ed or MsgPack-ed
 
         :return: dictionary representation of this path
         """
-        return {'nodes': self._nodes, 'numFlows': self._flowFraction}
+        return {'type': 'Path', 'id': self._ID, 'nodes': self._nodes,
+                'flow_fraction': self._flowFraction}
+
+    @staticmethod
+    def decode(dict d):
+        """
+        Create a path from the dictionary representation
+        :param d: the dictionary
+        :return: a new Path instance
+        """
+        return Path(d['nodes'], d['id'], d['flow_fraction'])
 
     def __contains__(self, item):
         return item in self._nodes
@@ -107,38 +107,34 @@ cdef class Path:
     def __getitem__(self, item):
         return self._nodes[item]
 
-    def __hash__(self):
-        # TODO: implement a better universal hash function that computes based on _nodes
-        return self.getID()
-
-    # def __setitem__(self, key, value):
-    #     self._nodes[key] = value
-
     def __getslice__(self, int i, int j):
         return self._nodes[i:j]
 
     def __iter__(self):
-        return self._nodes.__iter__()
+        return iter(self._nodes)
 
     def __len__(self):
         return len(self._nodes)
 
     def __repr__(self):
-        return "Path(nodes={}, numFlows={})".format(str(self._nodes),
-                                                    self._flowFraction)
+        return "Path(nodes={}, flowFraction={})".format(str(self._nodes),
+                                                        self._flowFraction)
 
     # noinspection PyProtectedMember
     def __richcmp__(Path self, other not None, int op):
-        sameType = isinstance(other, Path)
+        same_type = isinstance(other, Path)
         if op == 2:
-            return sameType and listEq(self._nodes, other._nodes)
+            return same_type and listEq(self._nodes, other._nodes)
         elif op == 3:
-            return not sameType or not listEq(self._nodes, other._nodes)
+            return not same_type or not listEq(self._nodes, other._nodes)
         else:
             raise TypeError
 
-    def __copy__(self):
+    def copy(self):
         return Path(self._nodes, self._ID, self._flowFraction)
+
+    def __copy__(self):
+        return self.copy()
 
 # noinspection PyClassicStyleClass
 cdef class PathWithMbox(Path):
@@ -150,22 +146,11 @@ cdef class PathWithMbox(Path):
     :param numFlows: number of flows (if any) along this path. Default is 0.
     """
 
-    def __init__(self, nodes, useMBoxes, int ind=0, flowFraction=0):
-        super(PathWithMbox, self).__init__(nodes, ind, flowFraction)
-        self.useMBoxes = list(useMBoxes)
+    def __init__(self, nodes, use_mboxes, int pid=-1, flow_fraction=0):
+        super(self.__class__, self).__init__(nodes, pid, flow_fraction)
+        self.useMBoxes = list(use_mboxes)
 
-    @staticmethod
-    def decode(dict dictionary):
-        """
-        Create a new path from a dict
-        :param dictionary: dict type, must contain following keys:
-
-            'nodes': maps to a list of nodes
-            'useMBoxes': maps to a list of nodes at which middlebox is used
-        """
-        return PathWithMbox(dictionary['nodes'], dictionary['useMBoxes'], dictionary.get('numFlows', 0))
-
-    def usesBox(self, node):
+    cpdef bool uses_box(self, node):
         """
         Check the path uses a given middlebox
 
@@ -174,48 +159,51 @@ cdef class PathWithMbox(Path):
         """
         return node in self.useMBoxes
 
-    def fullLength(self):
+    cpdef int full_length(self):
         """
 
         :return: The full length of the path (includes all middleboxes)
         """
         return len(self._nodes) + len(self.useMBoxes)
 
-    def encode(self):
+    cpdef dict encode(self):
         """
         Encode this path in dict/list form so it can be JSON-ed or MsgPack-ed
 
         :return: dictionary representation of this path
         """
-        return {'nodes': self._nodes, 'numFlows': self._flowFraction, 'useMBoxes': self.useMBoxes,
-                'PathWithMbox': True}
+        return {'nodes': self._nodes, 'flow_fraction': self._flowFraction,
+                'use_mboxes': self.useMBoxes, 'id': self._ID,
+                'type': 'PathWithMBox'}
+
+    @staticmethod
+    def decode(dict d):
+        """
+        Create a new path from a dict
+        :param d: dict type, must contain following keys:
+        """
+        return PathWithMbox(d['nodes'], d['use_mboxes'], d['id'],
+                            d.get('flow_fraction', 0))
 
     # noinspection PyProtectedMember
     def __richcmp__(PathWithMbox self, other not None, int op):
-        sameType = isinstance(other, PathWithMbox)
+        sametype = isinstance(other, PathWithMbox)
         if op == 2:
-            return sameType and listEq(self._nodes, other._nodes) and listEq(self.useMBoxes, other.useMBoxes)
+            return sametype and listEq(self._nodes, other._nodes) and \
+                   listEq(self.useMBoxes, other.useMBoxes)
         elif op == 3:
-            return not sameType or not listEq(self._nodes, other._nodes) or not listEq(self.useMBoxes, other.useMBoxes)
+            return not sametype or not listEq(self._nodes, other._nodes) \
+                   or not listEq(self.useMBoxes, other.useMBoxes)
         else:
             raise TypeError
 
-    def __hash__(self):
-        # TODO: implement a better universal hash function that computes based on _nodes + useMBoxes
-        return self.getID()
-
-
     def __repr__(self):
-        return "PathWithMbox(nodes={}, useMBoxes={} numFlows={})". \
+        return "PathWithMbox(nodes={}, useMBoxes={} flowFraction={})". \
             format(str(self._nodes), self.useMBoxes, self._flowFraction)
 
-    def __copy__(self):
-        return PathWithMbox(self._nodes, self.useMBoxes, self._ID, self._flowFraction)
+    def copy(self):
+        return PathWithMbox(self._nodes, self.useMBoxes, self._ID,
+                            self._flowFraction)
 
-cdef double computePathCapacity(Path p, str resourceName, Topology topo):
-    b = []
-    for x in p.getNodes() + p.getLinks():
-        res = topo.getResources(x)
-        if resourceName in res:
-            b.append(res[x])
-    return min(b)
+    def __copy__(self):
+        return self.copy()
