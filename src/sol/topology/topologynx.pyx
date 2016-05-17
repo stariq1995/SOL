@@ -7,10 +7,9 @@ from os.path import sep
 import networkx as nx
 from networkx.readwrite import graphml
 
-_HAS_MBOX = 'hasMbox'
-_SWITCH = 'switch'
-_SERVICES = 'services'
-_RESOURCES = 'resources'
+from cpython cimport bool
+
+from sol.topology.varnames import _HAS_MBOX, _SWITCH, _SERVICES, _RESOURCES
 
 # noinspection PyClassicStyleClass
 cdef class Topology:
@@ -40,7 +39,7 @@ cdef class Topology:
             self._graph = nx.DiGraph()
         self._process_graph()
 
-    def _process_graph(self):
+    cdef _process_graph(self):
         """
         Initializes all the nodes to switches and sets resource dictionaries.
         """
@@ -53,7 +52,7 @@ cdef class Topology:
             if _RESOURCES not in self._graph.edge[u][v]:
                 self._graph.edge[u][v][_RESOURCES] = {}
 
-    def num_nodes(self, str service=None):
+    cpdef num_nodes(self, str service=None):
         """ Returns the number of nodes in this topology
 
         :param service: only count nodes that provide a particular service (
@@ -66,14 +65,14 @@ cdef class Topology:
                         if 'services' in self._graph.node[n] and
                         service in self._graph.node[n]['services']])
 
-    def get_graph(self):
+    cpdef get_graph(self):
         """ Return the topology graph
 
         :return: :py:mod:`networkx` topology directed graph
         """
         return self._graph
 
-    def set_graph(self, graph):
+    cpdef set_graph(self, graph):
         """ Set the graph
 
         :param graph: :py:mod:`networkx` directed graph
@@ -98,7 +97,7 @@ cdef class Topology:
         """
         self._graph = graphml.read_graphml(fname, int).to_directed()
 
-    def get_service_types(self, node):
+    cpdef get_service_types(self, node):
         """
         Returns the list of services a particular node provides
 
@@ -108,7 +107,7 @@ cdef class Topology:
         """
         return self._graph.node[node][_SERVICES].split(';')
 
-    def set_service_types(self, node, service_types):
+    cpdef set_service_types(self, node, service_types):
         """
         Set the service types for this node
 
@@ -121,7 +120,7 @@ cdef class Topology:
         else:
             self._graph.node[node][_SERVICES] = ';'.join(service_types)
 
-    def add_service_type(self, node, service_type):
+    cpdef add_service_type(self, node, service_type):
         """
         Add a single service type to the given node
 
@@ -152,7 +151,7 @@ cdef class Topology:
 
     links = edges  # Method alias here
 
-    def set_resource(self, node_or_link, str resource, double capacity):
+    cpdef set_resource(self, node_or_link, str resource, double capacity):
         """
         Set the given resources capacity on a node (or link)
         :param node_or_link: node (or link) for which resource capcity is being
@@ -190,7 +189,17 @@ cdef class Topology:
     def __repr__(self):
         return "{}(name={})".format(self.__class__, self.name)
 
-    def has_middlebox(self, node):
+    def copy(self):
+        """
+        Make a deep copy of this topology
+        :return:
+        """
+        return Topology(self.name, self._graph.copy())
+
+    def __copy__(self):
+        return self.copy()
+
+    cpdef bool has_middlebox(self, node):
         """
         Check if the given node has a middlebox attached to it
 
@@ -204,7 +213,7 @@ cdef class Topology:
 
     has_mbox = has_middlebox  # Method alias
 
-    def set_middlebox(self, node, val=True):
+    cpdef set_middlebox(self, node, val=True):
         """
         Indicate whether a middlebox is attached to a given node
 
