@@ -4,7 +4,7 @@ from sol.opt.cplexwrapper import OptimizationCPLEX, InvalidConfigException
 from sol.opt.gurobiwrapper import OptimizationGurobi
 from sol.topology.provisioning import generateTrafficClasses
 
-from sol.opt import initOptimization, getOptimization
+from sol.opt import initOptimization, get_optimization
 from sol.path.predicates import nullPredicate
 from sol.topology import provisioning
 from sol.topology.generators import complete_topology
@@ -13,15 +13,15 @@ _backends = ['cplex', 'gurobi']
 
 
 def test_getFunc():
-    opt = getOptimization('cplex')
+    opt = get_optimization('cplex')
     assert isinstance(opt, OptimizationCPLEX)
-    opt = getOptimization('CPlex')
+    opt = get_optimization('CPlex')
     assert isinstance(opt, OptimizationCPLEX)
-    opt = getOptimization('GuRobi')
+    opt = get_optimization('GuRobi')
     assert isinstance(opt, OptimizationGurobi)
 
     with pytest.raises(InvalidConfigException):
-        opt = getOptimization('fakebackend')
+        opt = get_optimization('fakebackend')
 
 
 @pytest.mark.parametrize("backend", _backends)
