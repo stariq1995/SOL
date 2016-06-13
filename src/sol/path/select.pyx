@@ -4,6 +4,10 @@
 import functools
 import random
 from collections import defaultdict
+
+import sys
+
+from sol import logger
 from sol.utils.exceptions import InvalidConfigException, SOLException
 
 from sol.opt.composer cimport compose
@@ -152,11 +156,11 @@ cpdef select_robust(apps, Topology topo):
     :param topo:
     :return:
     """
-    opt = compose(apps, topo)
+    opt = compose(apps, topo, 'sum')
     mpptc = _merge_pptc(apps)  # merged
-    opt.cap_num_paths(mpptc, (topo.num_nodes() - 1) ** 2 * 100)
+    opt.cap_num_paths(mpptc, (topo.num_nodes() - 1) ** 2 * 5)
     opt.solve()
-    opt.write('select_robust')
+    # opt.write('select_robust')
     if not opt.is_solved():
         raise SOLException("Could not solve path selection problem for"
                            "topology %s" % topo.name)

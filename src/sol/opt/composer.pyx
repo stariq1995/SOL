@@ -1,6 +1,7 @@
 # coding=utf-8
 # cython: cdivision=True
 from __future__ import division
+
 from sol.topology.topologynx cimport Topology
 from sol.opt.gurobiwrapper cimport OptimizationGurobi, add_obj_var, \
     add_named_constraints
@@ -10,7 +11,7 @@ from sol.utils.exceptions import CompositionError
 
 #XXX: this entire module is currently tied to Gurobi
 
-cpdef compose(list apps, Topology topo):
+cpdef compose(list apps, Topology topo, epoch_mode='max'):
     """
     Compose multiple applications into a single optimization
     :param apps: a list of App objects
@@ -23,12 +24,16 @@ cpdef compose(list apps, Topology topo):
         add_named_constraints(opt, app)
     logger.debug("Added named constraints")
 
-    _compose_resources(apps, topo, opt)
-    _prop_fair_obj(apps, topo, opt)
+    all_tc = set()
+    for app in apps:
+        all_tc.update(app.pptc)
+    cdef int num_tcs = len(all_tc)
+    compose_resources(apps, topo, opt)
+    prop_fair_obj(apps, topo, opt, epoch_mode)
     logger.debug("Composition complete")
     return opt
 
-cpdef _detect_cost_conflict(list apps):
+cpdef _detect_cost_conflict(apps):
     cdef int i, j
     for i in range(len(apps)):
         for j in range(i, len(apps)):
@@ -40,7 +45,7 @@ cpdef _detect_cost_conflict(list apps):
                         "Different costs for resources in overlapping traffic classes")
     logger.debug("No resource conflicts between apps")
 
-cdef _compose_resources(list apps, Topology topo, opt):
+cdef compose_resources(list apps, Topology topo, opt):
     logger.debug("Composing resources")
     _detect_cost_conflict(apps)
     node_caps = {node: topo.get_resources(node) for node in topo.nodes()}
@@ -53,7 +58,7 @@ cdef _compose_resources(list apps, Topology topo, opt):
                         {l: link_caps[l][r] for l in link_caps if
                          r in link_caps[l]})
 
-cdef _prop_fair_obj(apps, Topology topo, opt):
+cdef prop_fair_obj(apps, Topology topo, opt, epoch_mode):
     logger.debug("Composing objectives")
     cdef double total_vol = 0
     # Compute proportions according to volume
@@ -61,7 +66,7 @@ cdef _prop_fair_obj(apps, Topology topo, opt):
     logger.debug('App volumes: %s', vols)
     total_vol = sum(vols.values())
     for app in apps:
-        add_obj_var(app, opt, vols[app] / total_vol)
+        add_obj_var(app, opt, vols[app] / total_vol, epoch_mode)
     opt.get_gurobi_model().update()
 
 # TODO: introduce other fairness metrics
