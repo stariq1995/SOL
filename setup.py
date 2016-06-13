@@ -16,8 +16,8 @@ setup(
     url='https://github.com/progwriter/SOL',
     requires=['networkx', 'requests', 'netaddr', 'numpy', 'cython', 'six'],
     ext_modules=cythonize("src/sol/**/*.pyx", compiler_directives={
-        'cdivision':True,
-        # 'profile': True
+        'cdivision': True,
+        # 'profile': True,
         'embedsignature': True
     }),
     include_dirs=[numpy.get_include()]
