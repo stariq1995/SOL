@@ -9,3 +9,7 @@ cdef class TrafficClass:
     cdef public str name
     cdef public np.ndarray volFlows, volBytes
     cdef public srcIPPrefix, dstIPPrefix, srcAppPorts, dstAppPorts
+
+    cpdef tuple iepair(self)
+    cpdef int ingress(self)
+    cpdef int egress(self)

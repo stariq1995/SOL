@@ -74,8 +74,8 @@ cdef class TrafficClass(object):
         self.name = name
         self.src = src
         self.dst = dst
-        self.volFlows = vol_flows
-        self.volBytes = vol_bytes
+        self.volFlows = np.ma.masked_array(data=vol_flows, mask=np.ma.nomask)
+        self.volBytes = np.ma.masked_array(data=vol_bytes, mask=np.ma.nomask)
         assert self.volFlows.size == self.volBytes.size
         self.priority = priority
         self.srcIPPrefix = src_ip_prefix
@@ -87,7 +87,7 @@ cdef class TrafficClass(object):
         return "TrafficClass {} -> {}, {}, ID={}".format(self.src, self.dst,
                                                          self.name, self.ID)
 
-    def get_iepair(self):
+    cpdef tuple iepair(self):
         """
         Return the ingress-egress pair as a tuple
 
@@ -95,6 +95,12 @@ cdef class TrafficClass(object):
         :rtype: tuple
         """
         return self.src, self.dst
+
+    cpdef int ingress(self):
+        return self.src
+
+    cpdef int egress(self):
+        return self.dst
 
     def __hash__(self):
         return hash((self.ID, self.src, self.dst, self.name))
@@ -119,3 +125,11 @@ cdef class TrafficClass(object):
                             self.volFlows, self.volBytes, self.priority,
                             self.srcIPPrefix, self.dstIPPrefix,
                             self.srcAppPorts, self.dstAppPorts)
+
+    def encode(self):
+        return {'type': 'TrafficClass', 'src': self.src, 'dst': self.dst,
+                'name': self.name, 'id': self.ID}
+
+    @staticmethod
+    def decode(d):
+        return TrafficClass(d['id'], d['name'], d['src'], d['dst'])
