@@ -1,13 +1,38 @@
 # coding=utf-8
+import itertools
 
 import networkx as nx
+from sol.path.paths import PathWithMbox
 
 from paths cimport Path
 from sol.utils import exceptions
 
-def generatePathsPerIE(int source, int sink, topology, predicate, cutoff,
-                       maxPaths=float('inf'), modifyFunc=None,
-                       raiseOnEmpty=True):
+from cpython cimport bool
+from sol.topology.topologynx cimport Topology
+
+cpdef use_mbox_modifier(path, int offset, Topology topology, chain_length=1):
+    """
+    Path modifier function. Expands one path into multiple paths, based on how many intermediate
+    middleboxes are used.
+
+    :param path: the path containing switch node IDs
+    :param offset: the numeric id of the original path
+    :param topology: the topology we are working with
+    :param chain_length: how many middleboxes are required
+    :return: a list of paths, note the special
+        :py:class:`~sol.optimization.topology.traffic.PathWithMbox` object
+
+    .. note::
+        This with expand a single path into :math:`{n \\choose chainLength}` paths where :math:`n` is
+        the number of switches with middleboxes attached to them in the current path.
+    """
+    return [PathWithMbox(path, chain, ind + offset) for ind, chain in
+            enumerate(itertools.combinations(path, chain_length))
+            if all([topology.has_middlebox(n) for n in chain])]
+
+cpdef generate_paths_ie(int source, int sink, Topology topology, predicate,
+                        int cutoff, float max_paths=float('inf'),
+                        modify_func=None, bool raise_on_empty=True):
     """
     Generates all simple paths between source and sink using a given predicate.
 
@@ -18,29 +43,28 @@ def generatePathsPerIE(int source, int sink, topology, predicate, cutoff,
        python callable that accepts a path and a topology, returns a boolean
     :param cutoff: the maximum length of a path.
         Helps to avoid unnecessarily long paths.
-    :param maxPaths: maximum number of paths paths to return, by default no limit.
-    :param modifyFunc: a custom function may be passed to convert a list of
+    :param max_paths: maximum number of paths paths to return, by default no limit.
+    :param modify_func: a custom function may be passed to convert a list of
         nodes, to a different type of path.
 
-        For example, when choosing middleboxes, we use :py:func:`~predicates.useMboxModifier`
+        For example, when choosing middleboxes, we use :py:func:`~predicates.use_mbox_modifier`
         to expand a list of switches into all possible combinations of middleboxes
-    :param raiseOnEmpty: whether to raise an exception if no valid paths are detected.
+    :param raise_on_empty: whether to raise an exception if no valid paths are detected.
         Set to True by default.
     :raise NoPathsException: if no paths are found
     :returns: a list of path objects
     :rtype: list
     """
-    G = topology.get_graph()
     paths = []
     cdef int num = 0
 
-    for p in nx.all_simple_paths(G, source, sink, cutoff):
-        if modifyFunc is None:
+    for p in topology.paths(source, sink, cutoff):
+        if modify_func is None:
             if predicate(p, topology):
                 paths.append(Path(p, num))
                 num += 1
         else:
-            np = modifyFunc(p, num, topology)
+            np = modify_func(p, num, topology)
             if isinstance(np, list):
                 for innerp in np:
                     if predicate(innerp, topology):
@@ -50,37 +74,39 @@ def generatePathsPerIE(int source, int sink, topology, predicate, cutoff,
                 if predicate(np, topology):
                     paths.append(np)
                     num += 1
-        if num >= maxPaths:
+        if num >= max_paths:
             break
     if not paths:
-        if raiseOnEmpty:
-            raise exceptions.NoPathsException("No paths between {} and {}".format(source, sink))
+        if raise_on_empty:
+            raise exceptions.NoPathsException(
+                "No paths between {} and {}".format(source, sink))
     return paths
 
-def generatePathsPerTrafficClass(topology, trafficClasses, predicate, cutoff,
-                                 maxPaths=float('inf'), modifyFunc=None,
-                                 raiseOnEmpty=True):
+cpdef generate_paths_tc(Topology topology, traffic_classes, predicate, cutoff,
+                        max_paths=float('inf'), modify_func=None,
+                        raise_on_empty=True):
     """
     Generate all simple paths for each traffic class
 
     :param topology: topology to work with
-    :param trafficClasses: a list of traffic classes for which paths should be generated
+    :param traffic_classes: a list of traffic classes for which paths should be generated
     :param predicate: predicate to use, must be a valid preciate callable
     :param cutoff:  the maximum length of a path.
-    :param maxPaths: maximum number of paths paths to return, by default no limit.
-    :param modifyFunc: a custom function may be passed to convert a list of
+    :param max_paths: maximum number of paths paths to return, by default no limit.
+    :param modify_func: a custom function may be passed to convert a list of
         nodes, to a different type of path.
 
-        For example, when choosing middleboxes, we use :py:func:`~predicates.useMboxModifier`
+        For example, when choosing middleboxes, we use :py:func:`~predicates.use_mbox_modifier`
         to expand a list of switches into all possible combinations of middleboxes
-    :param raiseOnEmpty: whether to raise an exception if no valid paths are detected.
+    :param raise_on_empty: whether to raise an exception if no valid paths are detected.
         Set to True by default.
     :raise NoPathsException: if no paths are found for a trafficClass
     :returns: a mapping of traffic classes to a list of path objects
     :rtype: dict
     """
     result = {}
-    for t in trafficClasses:
-        result[t] = generatePathsPerIE(t.src, t.dst, topology, predicate, cutoff, maxPaths,
-                                       modifyFunc, raiseOnEmpty)
+    for t in traffic_classes:
+        result[t] = generate_paths_ie(t.src, t.dst, topology, predicate, cutoff,
+                                      max_paths,
+                                      modify_func, raise_on_empty)
     return result

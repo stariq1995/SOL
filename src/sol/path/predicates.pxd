@@ -2,7 +2,6 @@
 
 from sol.topology.topologynx cimport Topology
 
-cpdef inline nullPredicate(path, topology=*)
-cpdef useMboxModifier(path, int offset, Topology topology, chainLength=*)
-cpdef hasMboxPredicate(path, Topology topology)
-cpdef waypointMboxPredicate(path, Topology topology, order)
+cpdef null_predicate(path, topology=*)
+cpdef has_mbox_predicate(path, Topology topology)
+cpdef waypoint_mbox_predicate(path, Topology topology, order)
