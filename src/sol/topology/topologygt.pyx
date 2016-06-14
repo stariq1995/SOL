@@ -5,6 +5,7 @@
 """
 
 from os.path import sep
+import graph_tool
 from graph_tool.all import Graph, load_graph
 
 from cpython cimport bool
@@ -233,3 +234,6 @@ cdef class Topology:
     #
     # cpdef set_mbox(self, node, val=True):
     #     return self.set_middlebox(node, val)
+
+    cpdef int diameter(self):
+        return graph_tool.topology.pseudo_diameter(self._graph)

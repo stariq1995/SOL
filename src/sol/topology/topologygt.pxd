@@ -27,3 +27,5 @@ cdef class Topology:
     # cpdef bool has_mbox(self, node)
     # cpdef set_middlebox(self, node, val=*)
     # cpdef set_mbox(self, node, val=True)
+    cpdef int diameter(self)
+
