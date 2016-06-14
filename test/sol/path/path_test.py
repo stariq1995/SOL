@@ -6,16 +6,15 @@ import pytest
 from sol.path.paths import Path, PathWithMbox
 
 
-def testPathGetters():
+def test_path_getters():
     p = Path([1, 4, 6, -1])
     p2 = PathWithMbox([1, 4, 6, -1], [4, 6])
-    assert p.getFlowFraction() == 0
-    assert p.getIngress() == 1
-    assert p.getEgress() == -1
-    assert p.getIEPair() == (1, -1)
-    assert p.getNodes() == [1, 4, 6, -1]
-    # assert p.getNodesAsTuple() == (1, 4, 6, -1)
-    assert list(p.getLinks()) == [(1, 4), (4, 6), (6, -1)]
+    assert p.flow_fraction() == 0
+    assert p.ingress() == 1
+    assert p.egress() == -1
+    assert p.iepair() == (1, -1)
+    assert p.nodes() == [1, 4, 6, -1]
+    assert list(p.links()) == [(1, 4), (4, 6), (6, -1)]
 
     # test indexing/length
     assert p[1] == 4
@@ -33,12 +32,12 @@ def testPathGetters():
 
 def testPathEquality():
     p = Path([1, 2, 3, 4])
-    p1 = Path([1, 2, 3, 4], flowFraction=10)
+    p1 = Path([1, 2, 3, 4], flow_fraction=10)
     p2 = Path([1, 2, 3, 5])
 
     p3 = PathWithMbox([1, 2, 3, 4], [2])
     p4 = PathWithMbox([1, 2, 3, 4], [2, 4])
-    p5 = PathWithMbox([1, 2, 3, 4], [2, 4], flowFraction=100)
+    p5 = PathWithMbox([1, 2, 3, 4], [2, 4], flow_fraction=100)
     # NumFlows does not matter
     assert p == p1
     # Different nodes are not equal

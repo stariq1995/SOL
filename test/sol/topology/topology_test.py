@@ -10,11 +10,11 @@ from sol.topology.generators import complete_topology
 def testTopologyWriteRead(tmpdir):
     dirname = os.path.abspath(tmpdir.dirname)
     topo = complete_topology(5)
-    topo.write_graph(dirname)
+    topo.to_graphml(dirname)
     topo2 = Topology(topo.name)
     topo2.loadGraph(dirname + os.path.sep + topo.name + '.graphml')
     assert networkx.is_isomorphic(topo.get_graph(), topo2.getGraph())
-    topo.write_graph(dirname, 'lalala.graphml')
+    topo.to_graphml(dirname, 'lalala.graphml')
     topo2.loadGraph(dirname + os.path.sep + 'lalala.graphml')
     assert networkx.is_isomorphic(topo.get_graph(), topo2.getGraph())
 
