@@ -136,7 +136,7 @@ cdef compute_background_load(Topology topology, traffic_classes):
         link = (u, v)
         loads[link] = 0
     for tc in traffic_classes:
-        i, e = tc.get_iepair()
+        i, e = tc.iepair()
         path = allsp[i][e]
         for link in zip(path, path[1:]):
             load = tc.volBytes

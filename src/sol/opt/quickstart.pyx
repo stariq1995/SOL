@@ -1,8 +1,10 @@
 # coding=utf-8
 
-from sol.opt.varnames import DEFAULT_OPTIMIZER, CPLEX, GUROBI, ALLOCATE_FLOW, \
-    ROUTE_ALL, CAP_LINKS, CAP_NODES, MIN_LINK_LOAD, MIN_LATENCY, MIN_NODE_LOAD
+__all__ = ['get_optimization', 'from_app']
 
+from sol.opt.varnames import DEFAULT_OPTIMIZER, CPLEX, GUROBI
+from gurobiwrapper cimport OptimizationGurobi, add_named_constraints, \
+    add_obj_var
 from sol.utils.exceptions import InvalidConfigException
 
 def get_optimization(backend=DEFAULT_OPTIMIZER):
@@ -23,7 +25,7 @@ def get_optimization(backend=DEFAULT_OPTIMIZER):
         raise InvalidConfigException('Unsupported optimization backend')
 
 
-# def initOptimization(topology, trafficClasses, predicate=nullPredicate,
+# def initOptimization(topology, trafficClasses, predicate=null_predicate,
 #                      selectStrategy='shortest', selectNumber=10,
 #                      modifyFunc=None, backend=DEFAULT_OPTIMIZER):
 #     """
@@ -43,7 +45,7 @@ def get_optimization(backend=DEFAULT_OPTIMIZER):
 #         (in the form of a dictionary)
 #     """
 #     opt = get_optimization(backend)
-#     pptc = generatePathsPerTrafficClass(topology, trafficClasses, predicate,
+#     pptc = generate_paths_tc(topology, trafficClasses, predicate,
 #                                         networkx.diameter(topology.get_graph()) * 1.5,
 #                                         modifyFunc=modifyFunc)
 #     selectFunc = get_select_function(selectStrategy)
@@ -52,8 +54,7 @@ def get_optimization(backend=DEFAULT_OPTIMIZER):
 #     return opt, pptc
 
 cpdef from_app(topo, app, backend=GUROBI):
-    from gurobiwrapper import OptimizationGurobi, add_named_constraints,\
-        add_obj_var
+
     opt = OptimizationGurobi(topo)
     add_named_constraints(opt, app)
     node_caps = {node: topo.get_resources(node) for node in topo.nodes()}
@@ -66,4 +67,3 @@ cpdef from_app(topo, app, backend=GUROBI):
                      r in link_caps[l]})
     add_obj_var(app, opt, weight=1)
     return opt
-
