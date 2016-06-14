@@ -19,7 +19,7 @@ def fat_tree(k):
     """
     G = nx.empty_graph()
     # Let's do the pods first
-    index = 1
+    index = 0
     middle = []
     for pod in xrange(k):
         lower = xrange(index, index + k / 2)
