@@ -2,7 +2,6 @@
 """ Implements the topology for SOL optimization
 
 """
-from os.path import sep
 
 import networkx as nx
 from networkx.readwrite import graphml
@@ -79,7 +78,7 @@ cdef class Topology:
         """
         self._graph = graph
 
-    def write_graph(self, str dir_name, str fname=None):
+    def to_graphml(self, str fname):
         """
         Writes out the graph in GraphML format
 
@@ -87,17 +86,28 @@ cdef class Topology:
         :param fname: file name to use. If None, topology name with a
             '.graphml' suffix is used
         """
-        n = self.name + '.graphml' if fname is None else fname
-        graphml.write_graphml(self._graph, dir_name + sep + n)
 
-    def load_graph(self, str fname):
-        """ Loads the topology graph from a file in GraphML format
+    def write_graph(self, str fname, format='auto'):
+        if format == 'auto':
+            format = fname.split('.')[-1].lower()
+        if format == 'graphml':
+            graphml.write_graphml(self._graph, fname)
+        elif format == 'gml':
+            nx.write_gml(self._graph, fname)
+        else:
+            raise ValueError("Cannot find a supported format")
 
-        :param fname: the name of the file to read from
-        """
-        self._graph = graphml.read_graphml(fname, int).to_directed()
+    def load_graph(self, str fname, format='auto'):
+        if format == 'auto':
+            format = fname.split('.')[-1].lower()
+        if format == 'graphml':
+            self._graph = graphml.read_graphml(fname, int).to_directed()
+        elif format == 'gml':
+            self._graph = nx.read_gml(fname)
+        else:
+            raise ValueError("Cannot find a supported format")
 
-    cpdef get_service_types(self, node):
+    cpdef get_service_types(self, int node):
         """
         Returns the list of services a particular node provides
 
@@ -107,7 +117,7 @@ cdef class Topology:
         """
         return self._graph.node[node][_SERVICES].split(';')
 
-    cpdef set_service_types(self, node, service_types):
+    cpdef set_service_types(self, int node, service_types):
         """
         Set the service types for this node
 
@@ -120,7 +130,7 @@ cdef class Topology:
         else:
             self._graph.node[node][_SERVICES] = ';'.join(service_types)
 
-    cpdef add_service_type(self, node, service_type):
+    cpdef add_service_type(self, int node, service_type):
         """
         Add a single service type to the given node
 
@@ -199,7 +209,7 @@ cdef class Topology:
     def __copy__(self):
         return self.copy()
 
-    cpdef bool has_middlebox(self, node):
+    cpdef bool has_middlebox(self, int node):
         """
         Check if the given node has a middlebox attached to it
 
@@ -211,9 +221,10 @@ cdef class Topology:
         except KeyError:
             return False
 
-    has_mbox = has_middlebox  # Method alias
+    cpdef bool has_mbox(self, int node):
+        return self.has_middlebox(node)
 
-    cpdef set_middlebox(self, node, val=True):
+    cpdef set_middlebox(self, int node, val=True):
         """
         Indicate whether a middlebox is attached to a given node
 
@@ -222,4 +233,14 @@ cdef class Topology:
         """
         self._graph.node[node][_HAS_MBOX] = val
 
-    set_mbox = set_middlebox  # Method alias
+    cpdef set_mbox(self, int node, val=True):
+        return self.set_middlebox(node, val)
+
+    cpdef int diameter(self):
+        return nx.diameter(self._graph)
+
+    cpdef bool is_leaf(self, int node):
+        return self._graph.node[node]['layer'] == 'edge'
+
+    cpdef paths(self, int source, int sink, int cutoff):
+        return nx.all_simple_paths(self._graph, source, sink, cutoff)
