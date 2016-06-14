@@ -8,8 +8,8 @@ cdef class OptimizationGurobi:
 
     cdef public opt
     cdef public Topology topo
-    cdef dict expressions
-    cdef dict _varindex
+    cdef public dict expressions
+    cdef public dict _varindex
     cdef bool _do_time
     cdef double _time
 
@@ -19,9 +19,9 @@ cdef class OptimizationGurobi:
     cpdef cap_num_paths(self, pptc, int max_paths)
     cpdef enforce_single_path(self, pptc, traffic_classes)
     cdef _disable_paths(self, pptc, traffic_classes=*)
-    cdef _min_load(self, str resource, str prefix, float weight)
-    cpdef min_node_load(self, str resource, float weight=*)
-    cpdef min_link_load(self, str resource, float weight=*)
+    cdef _min_load(self, str resource, str prefix, float weight, epoch_mode)
+    cpdef min_node_load(self, str resource, float weight=*, epoch_mode=*)
+    cpdef min_link_load(self, str resource, float weight=*, epoch_mode=*)
     cpdef solve(self)
     cpdef get_path_fractions(self, pptc, bool flow_carrying_only=*)
     cpdef route_all(self, pptc)
@@ -36,7 +36,7 @@ cdef class OptimizationGurobi:
     cpdef write_solution(self, str fname)
     cpdef get_var_values(self)
     cpdef node_budget(self, budgetFunc, int bound)
-    cpdef min_latency(self, pptc, double weight=*, bool norm=*)
+    cpdef min_latency(self, pptc, double weight=*, bool norm=*, epoch_mode=*)
     cpdef max_flow(self, pptc, double weight=*)
     cdef _req_some(self, pptc, traffic_classes=*, req_type=*)
     cdef _req_all(self, pptc, traffic_classes=*, req_type=*)
@@ -56,6 +56,6 @@ cdef class OptimizationGurobi:
     cdef _consume_helper(self, tc, path, node_or_link, int num_epochs,
                          str prefix, str resource_name, double cost, caps)
 
-cpdef add_obj_var(app, opt, double weight=*)
+cpdef add_obj_var(app, opt, double weight=*, epoch_mode=*)
 cpdef get_obj_var(app, opt)
 cdef add_named_constraints(opt, app)
