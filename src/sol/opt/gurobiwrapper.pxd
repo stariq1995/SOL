@@ -8,7 +8,7 @@ cdef class OptimizationGurobi:
 
     cdef public opt
     cdef public Topology topo
-    cdef public dict expressions
+    cdef public dict expr
     cdef public dict _varindex
     cdef bool _do_time
     cdef double _time
@@ -19,9 +19,9 @@ cdef class OptimizationGurobi:
     cpdef cap_num_paths(self, pptc, int max_paths)
     cpdef enforce_single_path(self, pptc, traffic_classes)
     cdef _disable_paths(self, pptc, traffic_classes=*)
-    cdef _min_load(self, str resource, str prefix, float weight, epoch_mode)
-    cpdef min_node_load(self, str resource, float weight=*, epoch_mode=*)
-    cpdef min_link_load(self, str resource, float weight=*, epoch_mode=*)
+    cdef _min_load(self, str resource, tc, str prefix, float weight, epoch_mode)
+    cpdef min_node_load(self, str resource, tc, float weight=*, epoch_mode=*)
+    cpdef min_link_load(self, str resource, tc, float weight=*, epoch_mode=*)
     cpdef solve(self)
     cpdef get_path_fractions(self, pptc, bool flow_carrying_only=*)
     cpdef route_all(self, pptc)
