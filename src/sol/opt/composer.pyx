@@ -27,7 +27,6 @@ cpdef compose(list apps, Topology topo, epoch_mode='max'):
     all_tc = set()
     for app in apps:
         all_tc.update(app.pptc)
-    cdef int num_tcs = len(all_tc)
     compose_resources(apps, topo, opt)
     prop_fair_obj(apps, topo, opt, epoch_mode)
     logger.debug("Composition complete")
