@@ -7,6 +7,8 @@ from collections import defaultdict
 
 import sys
 
+import msgpack
+
 from sol import logger
 from sol.utils.exceptions import InvalidConfigException, SOLException
 
@@ -121,22 +123,7 @@ def get_select_function(name, kwargs=None):
     else:
         raise InvalidConfigException("Unknown select method")
 
-# cpdef select_optimal(apps, Topology topo):
-#     """
-#     Select paths to be used for given apps on a given topology.
-#     This is equivalent to the optimal solution.
-#
-#     :param apps: list of applications
-#     :param topo: network topology
-#     :return:
-#     """
-#     opt = compose(apps, topo)
-#     opt.solve()
-#     # Return paths
-#     # FIXME: return them per app
-#     return opt.getPathsFractions()
-
-cdef _merge_pptc(apps):
+cpdef merge_pptc(apps):
     result = {}
     for app in apps:
         for tc in app.pptc:
@@ -149,7 +136,7 @@ cdef _filter_pptc(apps, chosen_pptc):
         for tc in app.pptc:
             app.pptc[tc] = chosen_pptc[tc]
 
-cpdef select_robust(apps, Topology topo):
+cpdef select_robust(apps, Topology topo, debug=False):
     """
     Select paths that are capable of supporting multiple traffic matrices
     :param apps:
@@ -157,13 +144,16 @@ cpdef select_robust(apps, Topology topo):
     :return:
     """
     opt = compose(apps, topo, 'sum')
-    mpptc = _merge_pptc(apps)  # merged
+    mpptc = merge_pptc(apps)  # merged
     opt.cap_num_paths(mpptc, (topo.num_nodes() - 1) ** 2 * 5)
     opt.solve()
-    # opt.write('select_robust')
+    if debug:
+        opt.write('debug/select_robust')
     if not opt.is_solved():
         raise SOLException("Could not solve path selection problem for"
                            "topology %s" % topo.name)
+    if debug:
+        opt.write_solution('debug/select_robust_solution')
     # get the paths chosen by the optimization
     # print (opt.get_var_values())
     chosen_pptc = opt.get_chosen_paths(mpptc)
