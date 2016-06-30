@@ -24,3 +24,5 @@ my_old_examples/MaxFlowWithOnos.py
 my_old_examples/MaxMinFairness.py
 my_old_examples/Panopticon.py
 my_old_examples/SIMPLE.py
+excludes.txt
+upload.sh
