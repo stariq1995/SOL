@@ -1,14 +1,14 @@
 # coding=utf-8
-""" Implements the topology for SOL optimization
-
+"""
+Implements the topology for SOL optimization
 """
 
 import networkx as nx
-from networkx.readwrite import graphml
+from networkx.readwrite import graphml, json_graph
 
 from cpython cimport bool
-
 from sol.topology.varnames import _HAS_MBOX, _SWITCH, _SERVICES, _RESOURCES
+from sol.utils.pythonHelper import parse_bool
 
 # noinspection PyClassicStyleClass
 cdef class Topology:
@@ -217,7 +217,7 @@ cdef class Topology:
         :return: True or False
         """
         try:
-            return self._graph.node[node][_HAS_MBOX]
+            return parse_bool(self._graph.node[node][_HAS_MBOX])
         except KeyError:
             return False
 
@@ -231,7 +231,7 @@ cdef class Topology:
         :param node: node ID
         :param val: True or False
         """
-        self._graph.node[node][_HAS_MBOX] = val
+        self._graph.node[node][_HAS_MBOX] = str(val)
 
     cpdef set_mbox(self, int node, val=True):
         return self.set_middlebox(node, val)
@@ -244,3 +244,6 @@ cdef class Topology:
 
     cpdef paths(self, int source, int sink, int cutoff):
         return nx.all_simple_paths(self._graph, source, sink, cutoff)
+
+    def to_json(self):
+        return json_graph.node_link_data(self._graph.to_undirected())

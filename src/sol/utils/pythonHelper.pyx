@@ -60,3 +60,6 @@ Tree = lambda: defaultdict(Tree)
 
 def listEq(a, b):
     return len(a) == len(b) and all([x == y for x, y in itertools.izip(a, b)])
+
+def parse_bool(s):
+    return s.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup']
