@@ -1,35 +1,36 @@
 # coding=utf-8
-""" Module implements different path pruning strategies
+"""
+Module that implements different path selection (a.k.a pruning) strategies
 """
 import functools
 import random
 from collections import defaultdict
 
-import sys
-
-import msgpack
-
-from sol import logger
 from sol.utils.exceptions import InvalidConfigException, SOLException
-
 from sol.opt.composer cimport compose
 from sol.topology.topologynx cimport Topology
 from cpython cimport bool
 
+# Common string names for the path selection strategies. Must all be defined
+# and compared in lower case.
 _RANDOM = ['random', 'rand']
 _SHORTEST = ['shortest', 'short', 'kshortest', 'k-shortest', 'kshort',
              'k-short']
 
 cpdef choose_rand(dict pptc, int num_paths):
-    """ Chooses a number of paths uniformly at random
+    """
+    Chooses a specified number of paths per traffic class uniformly at
+    random
 
-    :param pptc: paths per commodity
-    :param num_paths: number of paths to pick per commodity
-    :return: the new (chosen) paths per each commodity
+    :param dict pptc: paths per traffic class
+    :param int num_paths: number of paths to pick per traffic class
+    :return: the new (chosen) paths per traffic class
     :rtype: dict
     """
     newppk = {}
     for comm in pptc:
+        # Sample only if the number of available paths is larger than
+        # given number
         if len(pptc[comm]) > num_paths:
             newppk[comm] = random.sample(pptc[comm], num_paths)
         else:
@@ -40,31 +41,34 @@ cpdef sort_paths_per_commodity(dict pptc, key=None, bool inplace=True):
     """
     Sort paths per commodity
 
-    :param pptc: paths per traffic class
-    :param key: criteria to sort by. If none, path length is used
-    :param inplace: sort in place. If False, new sorted ppk is returned.
-    :return: New ppk if *inplace=False* otherwise None
+    :param dict pptc: paths per traffic class
+    :param key: criteria to sort by. If None, path length is used
+    :param bool inplace: boolean, whether to sort in place.
+        If False, a new mapping is returned.
+    :return: a dictionary if *inplace=False*, otherwise None
     """
     if key is None:
-        key = len
+        key = len  # default is to use path length
     if inplace:
         for tc in pptc:
             pptc[tc].sort(key=len)
     else:
-        newppk = {}
+        newppk = {} # make a new objet
         for tc in pptc:
-            newppk[tc] = sorted(pptc[tc], key=key)
+            newppk[tc] = sorted(pptc[tc], key=key) # ensure that list is new
         return newppk
 
 cpdef k_shortest_paths(pptc, int num_paths, bool needs_sorting=True,
                        bool inplace=True):
-    """ Chooses K shortest paths
-    :param pptc: paths per commodity
-    :param num_paths: number of paths to choose (k) per commodity
-    :param needs_sorting: whether we need to sort the paths first
-    :param inplace: if *needs_sorting* is True, whether to sort the ppk in
-        place or make a copy
-    :return: the new (chosen) paths per commodity
+    """ Chooses $k$ shortest paths per traffic class
+
+    :param dict pptc: paths per traffic class
+    :param int num_paths: number of paths to choose ($k$) per traffic class
+    :param bool needs_sorting: whether we need to sort the paths before selection.
+        True by default
+    :param bool inplace: if *needs_sorting* is True, whether to sort the ppk in
+        place or make a copy. Default is True.
+    :return: the new (chosen) paths per traffic class
     :rtype: dict
     """
     newppk = None
@@ -77,7 +81,7 @@ cpdef k_shortest_paths(pptc, int num_paths, bool needs_sorting=True,
         result[comm] = newppk[comm][:num_paths]
     return result
 
-# TODO: check that this is even used
+# TODO: check that this method is even used, might be obsolete
 def filter_paths(dict pptc, func):
     """ Filter paths using a function.
 
@@ -97,7 +101,8 @@ def filter_paths(dict pptc, func):
 def get_select_function(name, kwargs=None):
     """
     Return the path selection function based on name.
-    Allows passing of additional keyword arguments, so that the returned function can satisfy the following signature::
+    Allows passing of additional keyword arguments, so that the returned
+    function can satisfy the following signature::
         function(pptc, selectNumber)
 
     :param name: the name of the function
@@ -124,6 +129,21 @@ def get_select_function(name, kwargs=None):
         raise InvalidConfigException("Unknown select method")
 
 cpdef merge_pptc(apps):
+    """
+    Merge paths per traffic class (:py:attr:`sol.opt.app.App.pptc`)
+    from different apps into a single dictionary.
+
+    ..warning:
+        If applications share traffic classes, paths for shared traffic classes
+        will be taken from the first encountered application.
+
+        This shouldn't cause problems since paths for the same traffic class
+        *should* be identical, but beware in case they are not!
+
+    :param list apps: list of :py:class:`sol.opt.app.App` objects
+    :return: paths per traffic class dictionary
+    :rtype: dict
+    """
     result = {}
     for app in apps:
         for tc in app.pptc:
@@ -132,23 +152,36 @@ cpdef merge_pptc(apps):
     return result
 
 cdef _filter_pptc(apps, chosen_pptc):
+    # Given a set of chosen pptc (global across all apps) modify the app's
+    # internal pptc to reflect the chosen ones.
     for app in apps:
         for tc in app.pptc:
             app.pptc[tc] = chosen_pptc[tc]
 
-cpdef select_robust(apps, Topology topo, debug=False):
+cpdef select_ilp(apps, Topology topo, num_paths=5, debug=False):
     """
-    Select paths that are capable of supporting multiple traffic matrices
-    :param apps:
-    :param topo:
-    :return:
+    Global path selection function. This chooses paths across multiple applications
+    for the given topology, under a global cap for total number of paths.
+
+    :param apps: list of applications for which we are selecting paths
+    :param topo: network topology
+    :param num_paths: number of paths per traffic class to choose.
+        This is used as a guideline for computing total path cap!
+        The actual **selected** number of paths might be more or less
+        depending on the ILP solution
+    :param debug: if True, output additional debug information,
+        and write ILP/results
+        to disk.
+
+    :return: None, the applications' :py:attr:`sol.opt.App.pptc` attribute will
+        be modified to reflect selected paths.
     """
     opt = compose(apps, topo, 'sum')
     mpptc = merge_pptc(apps)  # merged
     opt.cap_num_paths(mpptc, (topo.num_nodes() - 1) ** 2 * 5)
     opt.solve()
     if debug:
-        opt.write('debug/select_robust')
+        opt.write('debug/select_ilp')
     if not opt.is_solved():
         raise SOLException("Could not solve path selection problem for"
                            "topology %s" % topo.name)
@@ -161,4 +194,3 @@ cpdef select_robust(apps, Topology topo, debug=False):
     # return paths by modifying the pptc of the apps they are associated with
     _filter_pptc(apps, chosen_pptc)
     return opt.get_time()
-
