@@ -95,6 +95,7 @@ cdef class OptimizationGurobi:
     cpdef allocate_flow(self, pptc, allocation=None):
         """
         Allocate network flow
+
         :param pptc: paths per traffic class
         :param allocation: if given, allocation of given traffic classes will
             be set to this value.
@@ -128,8 +129,9 @@ cdef class OptimizationGurobi:
 
     cpdef route_all(self, pptc):
         """
-        Route all traffic for all traffic classes
-        :param pptc:
+        Route all traffic for all traffic classes given in pptc.
+
+        :param pptc: paths per traffic class
         :return:
         """
         cdef int epoch = 0, num_epochs = ma.compressed(
@@ -204,7 +206,7 @@ cdef class OptimizationGurobi:
         """
         logger.debug('Consume: %s' % resource_name)
         cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
-        logger.debug('Num epochs: %d' % num_epochs)
+        logger.debug('Num epochs in consume: %d' % num_epochs)
         # cdef int num_tcs = len(pptc)
         cdef int e
         if resource_name not in self.expr:
@@ -532,7 +534,8 @@ cdef class OptimizationGurobi:
     cpdef write(self, str fname):
         """
         Writes the LP/ILP formulation to disk.
-            ".lp" suffix is appended automatically
+        ".lp" suffix is appended automatically
+
         :param fname: filename of the lp file
         """
         self.opt.write("{}.lp".format(fname))
@@ -540,6 +543,7 @@ cdef class OptimizationGurobi:
     cpdef write_solution(self, str fname):
         """
         Write the solution to disk
+
         :param fname: filename of the solution file.
             ".sol" suffix is appended automatically
         """
@@ -588,6 +592,7 @@ cdef class OptimizationGurobi:
     cpdef is_solved(self):
         """
         Check if the optimization is solved
+
         :return:
         """
         # TODO: does this have other status codes for MIP, like cplex?
@@ -596,6 +601,7 @@ cdef class OptimizationGurobi:
     cdef v(self, str varname):
         """
         Return variable by name
+
         :param varname:
         :return:
         """
@@ -672,6 +678,7 @@ cdef add_named_constraints(opt, app):
 cpdef add_obj_var(app, opt, double weight=0, epoch_mode='max'):
     """
     Add the objective value of given application to the optimization
+
     :param app: the application
     :param topo:
     :param opt:
