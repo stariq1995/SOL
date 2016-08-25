@@ -8,14 +8,23 @@ from sol.opt.gurobiwrapper cimport OptimizationGurobi, add_obj_var, \
 
 from sol import logger
 from sol.utils.exceptions import CompositionError
-
+from numpy import log
 #XXX: this entire module is currently tied to Gurobi
 
-cpdef compose(list apps, Topology topo, epoch_mode='max'):
+
+logx = [0.01,0.02,0.03,0.05,0.08,0.12,0.18,0.28,0.43,0.66,1.]
+log_approx = log(logx)
+
+
+cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
     """
     Compose multiple applications into a single optimization
     :param apps: a list of App objects
     :param topo: Topology
+    :param epoch_mode: how is the objective computed across different epochs.
+    Default is 'max', that is we take the maximum obj function across epochs
+    :param obj_mode: type of objective composition. default is 'weighed', i.e.
+     a weighted sum. 'propfair' is proportionally fair, 'maxmin' in maximizing the minimum
     :return:
     """
     logger.debug("Starting composition")
@@ -24,11 +33,15 @@ cpdef compose(list apps, Topology topo, epoch_mode='max'):
         add_named_constraints(opt, app)
     logger.debug("Added named constraints")
 
-    all_tc = set()
-    for app in apps:
-        all_tc.update(app.pptc)
     compose_resources(apps, topo, opt)
-    prop_fair_obj(apps, topo, opt, epoch_mode)
+    if obj_mode == 'weighted':
+        weighted_obj(apps, topo, opt, epoch_mode)
+    elif obj_mode == 'propfair':
+        prop_fair_obj(apps, topo, opt, epoch_mode)
+    elif obj_mode == 'maxmin':
+        max_min_obj(apps, topo, opt, epoch_mode)
+    else:
+        raise ValueError('Unknown objective composition mode')
     logger.debug("Composition complete")
     return opt
 
@@ -57,7 +70,7 @@ cdef compose_resources(list apps, Topology topo, opt):
                         {l: link_caps[l][r] for l in link_caps if
                          r in link_caps[l]})
 
-cdef prop_fair_obj(apps, Topology topo, opt, epoch_mode):
+cdef weighted_obj(apps, Topology topo, opt, epoch_mode):
     logger.debug("Composing objectives")
     cdef double total_vol = 0
     # Compute proportions according to volume
@@ -67,5 +80,33 @@ cdef prop_fair_obj(apps, Topology topo, opt, epoch_mode):
     for app in apps:
         add_obj_var(app, opt, vols[app] / total_vol, epoch_mode)
     opt.get_gurobi_model().update()
+
+
+cdef prop_fair_obj(apps, Topology topo, opt, epoch_mode):
+    logger.debug("Composing objectives with prop fairness")
+    m = opt.get_gurobi_model()
+    for app in apps:
+        var = add_obj_var(app, opt, weight=0, epoch_mode=epoch_mode)
+        m.setPWLObj(var, logx, log_approx)
+    m.update()
+
+
+cdef max_min_obj(apps, Topology topo, opt, epoch_mode):
+    logger.debug("Composing objectives")
+    m = opt.get_gurobi_model()
+    obj = m.addVar(name='minobj', lb=0, obj=1)
+    for app in apps:
+        var = add_obj_var(app, opt, weight=1, epoch_mode=epoch_mode)
+        m.addConstr(obj <= var)
+    opt.get_gurobi_model().update()
+
+cdef gini_obj(apps, Topology topo, opt):
+    raise NotImplemented
+
+cdef variance_obj(apps, Topology topo, opt):
+    raise NotImplemented
+
+cdef relative_mean_deviation_obj(apps, Topology topo, opt):
+    raise NotImplemented
 
 # TODO: introduce other fairness metrics
