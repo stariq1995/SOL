@@ -6,10 +6,16 @@ import functools
 import random
 from collections import defaultdict
 
-from sol.utils.exceptions import InvalidConfigException, SOLException
+import time
+from cpython cimport bool
+from numpy import arange, power, exp, setdiff1d
+from numpy import ma
+from numpy.random import rand, choice
+from six import iterkeys
+from sol import logger
 from sol.opt.composer cimport compose
 from sol.topology.topologynx cimport Topology
-from cpython cimport bool
+from sol.utils.exceptions import InvalidConfigException, SOLException
 
 # Common string names for the path selection strategies. Must all be defined
 # and compared in lower case.
@@ -53,9 +59,9 @@ cpdef sort_paths_per_commodity(dict pptc, key=None, bool inplace=True):
         for tc in pptc:
             pptc[tc].sort(key=len)
     else:
-        newppk = {} # make a new objet
+        newppk = {}  # make a new objet
         for tc in pptc:
-            newppk[tc] = sorted(pptc[tc], key=key) # ensure that list is new
+            newppk[tc] = sorted(pptc[tc], key=key)  # ensure that list is new
         return newppk
 
 cpdef k_shortest_paths(pptc, int num_paths, bool needs_sorting=True,
@@ -103,12 +109,13 @@ def get_select_function(name, kwargs=None):
     Return the path selection function based on name.
     Allows passing of additional keyword arguments, so that the returned
     function can satisfy the following signature::
+
         function(pptc, selectNumber)
 
     :param name: the name of the function
     :param kwargs: a dictionary of keyword arguements to be passed to the function
     :return: the callable object with
-    :raise: InvalidConfigException
+    :raise: :py:class:`sol.utils.exceptions.InvalidConfigException`
         if the name passed in is not supported
 
     Supported names so far: 'random' and 'shortest' For example::
@@ -158,7 +165,7 @@ cdef _filter_pptc(apps, chosen_pptc):
         for tc in app.pptc:
             app.pptc[tc] = chosen_pptc[tc]
 
-cpdef select_ilp(apps, Topology topo, num_paths=5, debug=False):
+cpdef select_ilp(apps, Topology topo, int num_paths=5, debug=False):
     """
     Global path selection function. This chooses paths across multiple applications
     for the given topology, under a global cap for total number of paths.
@@ -176,21 +183,125 @@ cpdef select_ilp(apps, Topology topo, num_paths=5, debug=False):
     :return: None, the applications' :py:attr:`sol.opt.App.pptc` attribute will
         be modified to reflect selected paths.
     """
-    opt = compose(apps, topo, 'sum')
+    logger.info('Selection composition')
+    opt = compose(apps, topo)
     mpptc = merge_pptc(apps)  # merged
-    opt.cap_num_paths(mpptc, (topo.num_nodes() - 1) ** 2 * 5)
+    opt.cap_num_paths(mpptc, (topo.num_nodes() - 1) ** 2 * num_paths)
+    logger.info('Selection solving')
     opt.solve()
     if debug:
-        opt.write('debug/select_ilp')
+        opt.write('debug/select_ilp_{}'.format(topo.name))
     if not opt.is_solved():
-        raise SOLException("Could not solve path selection problem for"
+        raise SOLException("Could not solve path selection problem for "
                            "topology %s" % topo.name)
     if debug:
-        opt.write_solution('debug/select_robust_solution')
+        opt.write_solution('debug/select_ilp_solution_{}'.format(topo.name))
     # get the paths chosen by the optimization
     # print (opt.get_var_values())
     chosen_pptc = opt.get_chosen_paths(mpptc)
     # print (chosen_pptc)
     # return paths by modifying the pptc of the apps they are associated with
     _filter_pptc(apps, chosen_pptc)
-    return opt.get_time()
+    return opt, opt.get_time()
+
+cdef inline double _saprob(oldo, newo, temp):
+    return 1 if oldo < newo else 1 / (1 + exp(-(newo - oldo) / temp))
+
+cdef _obj_state(opt):
+    return opt.get_solved_objvalue()
+
+cpdef select_sa(apps, Topology topo, int num_paths=5):
+    logger.info('SA selection')
+    cdef int n = topo.num_nodes()
+    cdef int kmax = 500/num_paths # 500 paths per traffic class
+    cdef double tstart = 1000, t = tstart
+    allpaths = merge_pptc(apps)
+    tcind = {tc.ID: tc for tc in allpaths}
+
+    cdef int nume = ma.compressed(next(iterkeys(allpaths)).volFlows).size
+
+    per_tc_lengths = {tc.ID: len(allpaths[tc]) for tc in allpaths}
+    # print(per_tc_lengths)
+    # cdef ndarray pptcind = empty((len(apps), len(allpaths), num_paths))
+    pptcind = {}
+    bestopt = None
+    opt = None
+    bestpaths = None
+    start_time = time.time()
+    # choose random indices, and setup the legths array
+    while bestopt is None:
+        for a, app in enumerate(apps):
+            for tc in app.pptc:
+                pptcind[tc.ID] = choice(arange(per_tc_lengths[tc.ID]),
+                                        min(num_paths, per_tc_lengths[tc.ID]),
+                                        replace=False)
+
+                app.pptc[tc] = [allpaths[tc][k] for k in pptcind[tc.ID]]
+        # solve initial state
+        opt = compose(apps, topo)
+        opt.solve()
+        if opt.is_solved():
+            bestopt = opt
+            bestpaths = pptcind.copy()
+        else:
+            logger.info('No solution for initial state')
+
+    logger.info('Starting SA simulation')
+    for k in arange(kmax):
+        logger.info('k=%d/%d' % (k, kmax))
+        # generate a new set of paths
+        # first take existing paths
+        replaced = False
+        for tcid in pptcind:
+            # nothing we can do if we don't have any paths to replace with
+            if num_paths >= per_tc_lengths[tcid]:
+                continue
+            # if last optimization is unsolved, go to a random state
+            if not opt.is_solved():
+                logger.info("Previous iteration had no solution")
+                pptcind[tc.ID] = choice(arange(per_tc_lengths[tc.ID]),
+                                        min(num_paths, per_tc_lengths[tc.ID]),
+                                        replace=False)
+                replaced = True
+            # otherwise check what paths have been unused by the last optimization
+            else:
+                goodpaths = [pindex for i, pindex in enumerate(pptcind[tcid])
+                             if not all([opt.v('x_{}_{}_{}'.format(tcid,
+                                                                   allpaths[tcind[tcid]][pindex].get_id(), e)).x == 0
+                             for e in arange(nume)])]
+                if len(goodpaths) == num_paths:
+                    continue
+                pptcind[tcid] = goodpaths
+                pptcind[tcid].extend(
+                    choice(setdiff1d(arange(per_tc_lengths[tcid]), goodpaths),
+                           num_paths-len(goodpaths), replace=False))
+                replaced = True
+
+        if not replaced:
+            logger.info('No path replacement paths generated, done.')
+            break
+
+        # modify app pptc accoriding to indices
+        for app in apps:
+            for tc in app.pptc:
+                app.pptc[tc] = [allpaths[tc][z] for z in pptcind[tc.ID] if
+                                tc in app.pptc]
+
+        opt = compose(apps, topo)
+        opt.solve()
+        if not opt.is_solved():
+            logger.debug('No solution k=%d' % k)
+            continue
+
+        if _saprob(bestopt.get_solved_objective(),
+                   opt.get_solved_objective(), t) >= rand():
+            bestopt = opt
+            bestpaths = pptcind.copy()
+        t = tstart * power(.95, k)
+
+    for app in apps:
+        for tc in app.pptc:
+            app.pptc[tc] = [allpaths[tc][k] for k in bestpaths[tc.ID] if
+                            tc in app.pptc]
+        # return paths based on s
+    return bestopt, time.time() - start_time
