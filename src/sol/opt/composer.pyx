@@ -2,6 +2,8 @@
 # cython: cdivision=True
 from __future__ import division
 
+from gurobipy import quicksum
+
 from sol.topology.topologynx cimport Topology
 from sol.opt.gurobiwrapper cimport OptimizationGurobi, add_obj_var, \
     add_named_constraints
@@ -40,6 +42,8 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
         prop_fair_obj(apps, topo, opt, epoch_mode)
     elif obj_mode == 'maxmin':
         max_min_obj(apps, topo, opt, epoch_mode)
+    elif obj_mode == 'variance':
+        variance_obj(apps, topo, opt)
     else:
         raise ValueError('Unknown objective composition mode')
     logger.debug("Composition complete")
@@ -47,14 +51,31 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
 
 cpdef _detect_cost_conflict(apps):
     cdef int i, j
+    resourse_overlap = False
+    tc_overlap = False
     for i in range(len(apps)):
         for j in range(i, len(apps)):
             sameresoures = set(apps[i].resourceCost.keys()).intersection(
                 apps[j].resourceCost.keys())
             for r in sameresoures:
                 if apps[i].resourceCost[r] != apps[j].resourceCost[r]:
-                    raise CompositionError(
-                        "Different costs for resources in overlapping traffic classes")
+                    resourse_overlap = True
+                break
+            if resourse_overlap:
+                break
+        if resourse_overlap:
+            break
+    tcs = set()
+    for app in apps:
+        l = list(app.pptc.keys())
+        if tcs.intersection(l):
+            tc_overlap = True
+            break
+        tcs.update(tcs)
+
+    if resourse_overlap and tc_overlap:
+        raise CompositionError(
+            "Different costs for resources in overlapping traffic classes")
     logger.debug("No resource conflicts between apps")
 
 cdef compose_resources(list apps, Topology topo, opt):
@@ -69,6 +90,12 @@ cdef compose_resources(list apps, Topology topo, opt):
                          r in node_caps[n]},
                         {l: link_caps[l][r] for l in link_caps if
                          r in link_caps[l]})
+    # cap resources
+    res = set()
+    for app in apps:
+        res.update(app.resourceCost.keys())
+    for r in res:
+        opt.cap(r, 1)
 
 cdef weighted_obj(apps, Topology topo, opt, epoch_mode):
     logger.debug("Composing objectives")
@@ -96,15 +123,33 @@ cdef max_min_obj(apps, Topology topo, opt, epoch_mode):
     m = opt.get_gurobi_model()
     obj = m.addVar(name='minobj', lb=0, obj=1)
     for app in apps:
-        var = add_obj_var(app, opt, weight=1, epoch_mode=epoch_mode)
+        var = add_obj_var(app, opt, weight=0, epoch_mode=epoch_mode)
         m.addConstr(obj <= var)
     opt.get_gurobi_model().update()
+
 
 cdef gini_obj(apps, Topology topo, opt):
     raise NotImplemented
 
+
 cdef variance_obj(apps, Topology topo, opt):
-    raise NotImplemented
+    m = opt.get_gurobi_model()
+    average = m.addVar(name='average')
+    objvars = []
+    for app in apps:
+        var = add_obj_var(app, opt, weight=0)
+        objvars.append(var)
+    m.update()
+    m.addConstr(average == quicksum(objvars)/len(apps))
+    diffs = []
+    for var in objvars:
+        d = m.addVar()
+        m.update()
+        diffs.append(d)
+        m.addConstr(d == var - average)
+    m.update()
+    m.setObjective(quicksum([d ** 2 for d in diffs])/len(apps))
+    m.update()
 
 cdef relative_mean_deviation_obj(apps, Topology topo, opt):
     raise NotImplemented
