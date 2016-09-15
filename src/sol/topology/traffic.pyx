@@ -2,48 +2,9 @@
 """ Implements utility classes that have to do with traffic patterns, such as
     traffic matrix, and network traffic classes (commodities)
 """
-# import json
-# import random
 import numpy as np
 cimport numpy as np
 from traffic cimport TrafficClass
-
-# class TrafficMatrix(dict):
-#     """
-#     Represents a traffic matrix, extends basic dictionary type
-#
-#     """
-#
-#     def permute(self, rand=None):
-#         """
-#         Permute this traffic matrix randomly
-#
-#         :param rand: instance of a Python :py:mod:`random` object
-#         """
-#         v = self.values()
-#         random.shuffle(v, rand)
-#         for i, k in enumerate(self.iterkeys()):
-#             self[k] = v[i]
-#
-#     def dump(self, fname):
-#         """
-#         Save the traffic matrix to a file
-#         :param fname: filename to save to
-#         """
-#         with open(fname, 'w') as f:
-#             json.dump({"{}->{}".format(k[0], k[1]): v for k, v in self.iteritems()}, f)
-#
-#     @staticmethod
-#     def load(fname):
-#         """
-#         Load a traffic matrix from a file
-#         :param fname: filename to load from
-#         :return: a new TrafficMatrix
-#         """
-#         with open(fname, 'r') as f:
-#             return TrafficMatrix({tuple(map(int, k.split('->'))): v for k, v in json.load(f).iteritems()})
-
-
 
 cdef class TrafficClass(object):
     """ Represents a traffic class. All members are public
