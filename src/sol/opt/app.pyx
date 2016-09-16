@@ -11,7 +11,7 @@ class App(object):
         built using these applications.
     """
     def __init__(self, dict pptc, list constraints, dict resource_cost=None,
-                 obj=None, obj_tc=None, str name='', *args, **kwargs):
+                 obj=None, obj_tc=None, unicode name='', *args, **kwargs):
         """
         Create a new application
 
@@ -20,10 +20,10 @@ class App(object):
             A constraint is either a name or a tuple which contains a name and
             parameters
         :param dict resource_cost: dictionary mapping resource names to cost per flow
-        :param str obj: name of the objective function
+        :param unicode obj: name of the objective function
         :param obj_tc: traffic classes that contribute to the objective function.
             If None, traffic classes from *pptc* are used
-        :param str name: The name of this application. If None or empty string,
+        :param unicode name: The name of this application. If None or empty string,
             a unique uuid will be generated as the name.
         :param args:
         :param kwargs:
@@ -45,7 +45,7 @@ class App(object):
             self.objTC = pptc.keys()
         self.predicate = kwargs.get('predicate')
 
-    def uses(self, str resource_name):
+    def uses(self, unicode resource_name):
         """
         Check wheter the application uses a particular resource.
 

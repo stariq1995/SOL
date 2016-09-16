@@ -11,7 +11,7 @@ from six import iteritems
 
 from sol.path.paths cimport PathWithMbox
 from ..utils.exceptions import InvalidConfigException
-from ..utils.pythonHelper import Tree
+from ..utils.ph import Tree
 
 try:
     # noinspection PyUnresolvedReferences
