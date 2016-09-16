@@ -45,7 +45,7 @@ class App(object):
             self.objTC = pptc.keys()
         self.predicate = kwargs.get('predicate')
 
-    cpdef uses(self, str resource_name):
+    def uses(self, str resource_name):
         """
         Check wheter the application uses a particular resource.
 
