@@ -10,7 +10,7 @@ Dependencies
 SOL has multiple dependencies, most of which can be easily installed automatically using
 `pip` (or similar package manager),
 however `TMgen <https://github.com/progwriter/tmgen>`_ must be installed manually.
-`Gurobi <http://www.gurobi.com/>`_ and the python interface must be installed as well.
+`Gurobi <http://www.gurobi.com/>`_ and the gurobipy package must be installed manually as well.
 
 Download and install SOL
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26,5 +26,17 @@ The code is publicly available at `<https://github.com/progwriter/SOL>`_
 
     pip install -e .
 
-Creating an optimization
-------------------------
+Understanding *Topology* and *Traffic Classes*
+----------------------------------------------
+
+Topology and Trafic Classes are basic inputs to the optimization; Before SOL
+can crunch all the numbers, what we need in the *Topology* -- that is the network you are working with
+and *Traffic Classes* -- the traffic that will be (or you think will be) flowing through the network.
+
+Creating a basic optimization
+-----------------------------
+
+Once the Topology and Traffic Classes have been configured we can proceed to create a basic optimization.
+Let's start with a very simple maxflow problem, a classic in the networking world.
+
+To continue learning about SOL, and how to create more interesting problems, see the full `guide`
