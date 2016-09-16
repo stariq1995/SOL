@@ -1,12 +1,13 @@
 # coding=utf-8
-
+import numpy
+cimport numpy
 from cpython cimport bool
 
 # noinspection PyClassicStyleClass
 cdef class Path:
     cdef int _ID
     cdef public double _flowFraction
-    cdef public _nodes
+    cdef public numpy.ndarray _nodes
     cdef _links
 
     cpdef int ingress(self)

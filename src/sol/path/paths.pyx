@@ -3,7 +3,7 @@
     Contains implementations of SOL Path objects
 """
 import random
-
+import numpy
 from sol.utils.pythonHelper import listEq
 from paths cimport Path
 from paths cimport PathWithMbox
@@ -20,7 +20,7 @@ cdef class Path:
         :param nodes: a list of node ids that belong to a path
         :param flow_fraction: the number of flows on this path
         """
-        self._nodes = list(nodes)
+        self._nodes = numpy.array(nodes)
         self._flowFraction = flow_fraction
         self._ID = pid
         if self._ID == -1:
@@ -89,7 +89,7 @@ cdef class Path:
 
         :return: dictionary representation of this path
         """
-        return {'type': 'Path', 'id': self._ID, 'nodes': self._nodes,
+        return {'type': 'Path', 'id': self._ID, 'nodes': self._nodes.tolist(),
                 'flow_fraction': self._flowFraction}
 
     @staticmethod
@@ -172,7 +172,8 @@ cdef class PathWithMbox(Path):
 
         :return: dictionary representation of this path
         """
-        return {'nodes': self._nodes, 'flow_fraction': self._flowFraction,
+        return {'nodes': self._nodes.tolist(),
+                'flow_fraction': self._flowFraction,
                 'use_mboxes': self.useMBoxes, 'id': self._ID,
                 'type': 'PathWithMBox'}
 
