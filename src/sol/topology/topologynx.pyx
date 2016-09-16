@@ -23,9 +23,10 @@ cdef class Topology:
 
         :param name: The topology name
         :param graph: Either a
-            #) :py:mod:`networkx` graph that represents the topology
-            #) filename of a graphml file to load the graph from
-            #) None, in which case an empty directed graph is created
+
+            #. :py:mod:`networkx` graph that represents the topology
+            #. filename of a graphml file to load the graph from
+            #. None, in which case an empty directed graph is created
 
         """
         self.name = name
@@ -147,23 +148,35 @@ cdef class Topology:
 
     cpdef nodes(self, data=False):
         """
-        :param data: whether to return the attributes associated with the node
-        :return: Iterator over topology nodes as tuples of the form (nodeID, nodeData)
+        Returns an iterator over the nodes in this topology
+
+        :param data: whether to return the attributes associated with the node.
+            If True, iterator will return elements of type (nodeID, attr_dict).
+            If False, only nodeID will be returned
         """
         return self._graph.nodes_iter(data=data)
 
     cpdef edges(self, data=False):
         """
+        Returns i
         :param data: whether to return the attributes associated with the edge
         :return: Iterator over topology edge tuples (nodeID1, nodeID2, edgeData)
         """
         return self._graph.edges_iter(data=data)
 
-    links = edges  # Method alias here
+    cpdef links(self, data=False):
+        """
+        Another name for :py:meth:`edges`
+        .. seealso::
+
+            :py:meth:`edges`
+        """
+        return self.edges(data)
 
     cpdef set_resource(self, node_or_link, str resource, double capacity):
         """
         Set the given resources capacity on a node (or link)
+
         :param node_or_link: node (or link) for which resource capcity is being
             set
         :param resource: name of the resource
