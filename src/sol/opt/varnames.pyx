@@ -8,8 +8,11 @@ LINKLOAD_PREFIX = 'LinkLoad'
 LOAD_PREFIX = 'Load'
 
 MIN_LINK_LOAD = 'minlinkload'
+MAX_LINK_SPARE_CAP = 'maxlinkspare'
 MIN_NODE_LOAD = 'minnodeload'
+MAX_NODE_SPARE_CAP = 'maxnodespare'
 MIN_LATENCY = 'minlatency'
+MAX_NOT_LATENCY = 'maxnotlatency'
 MAX_ALL_FLOW = 'maxallflow'
 MAX_MIN_FLOW = 'maxminflow'
 
@@ -34,6 +37,7 @@ CPU = 'cpu'
 MEM = 'mem'
 TCAM = 'tcam'
 LATENCY = 'Latency'
+NOT_LATENCY = 'NotLatency'
 
 @cython.profile(False)
 cpdef inline str xp(TrafficClass traffic_class, Path path, int epoch=0):
