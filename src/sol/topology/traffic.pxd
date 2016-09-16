@@ -6,7 +6,7 @@ cimport numpy as np
 # noinspection PyClassicStyleClass
 cdef class TrafficClass:
     cdef public int ID, priority, src, dst
-    cdef public str name
+    cdef public unicode name
     cdef public np.ndarray volFlows, volBytes
     cdef public srcIPPrefix, dstIPPrefix, srcAppPorts, dstAppPorts
 

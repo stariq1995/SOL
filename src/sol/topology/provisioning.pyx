@@ -1,4 +1,8 @@
 # coding=utf-8
+"""
+Convenience module that helps provision network topology resources if one does
+not have actual resource capacity numbers
+"""
 from __future__ import division
 
 import networkx
@@ -12,59 +16,6 @@ from sol.opt.varnames import BANDWIDTH
 import numpy as np
 cimport numpy as np
 
-# cpdef generateIEpairs(topology):
-#     """
-#     Default way of generating ingress-egress pairs. Generates all possible n*(n-1) node combinations
-#
-#     :param topology: the topology to work with
-#     :type topology: sol.optimization.topology.topology
-#     :return: list of ingress-egress pairs (as tuples)
-#     """
-#     return [pair for pair in
-#             itertools.product([n for n in topology.nodes()], repeat=2)
-#             if pair[0] != pair[1]]
-
-
-# cpdef uniformTM(iepairs, double totalFlows):
-#     """
-#     Compute a uniform traffic matrix. That is each ingress-egress pair has the same number of flows
-#
-#     :param iepairs: list of ingress-egress tuples
-#     :param totalFlows: total number of flows in the network
-#     :return: the traffic matrix
-#     """
-#     return TrafficMatrix({ie: totalFlows / len(iepairs) for ie in iepairs})
-#
-#
-# cpdef logNormalTM(iepairs, meanFlows):
-#     """
-#     Compute the log-normal distribution of traffic across ingress-egress pairs
-#
-#     :param iepairs: ingress-egress pairs
-#     :param meanFlows: the average number of flows, around which the distribution is centered.
-#     :return: the traffic matrix
-#     """
-#     dist = numpy.random.lognormal(0, .5)
-#     return TrafficMatrix({ie: meanFlows * d for ie, d in six.zip(iepairs, dist)})
-#
-#
-# cpdef gravityTM(iepairs, double totalFlows, populationDict):
-#     """
-#     Computes the gravity model traffic matrix base
-#
-#     :param iepairs: ingress-egress pairs
-#     :param totalFlows: number of total flows in the network
-#     :param populationDict: dictionary mapping nodeIDs to populations, which will be used to compute the model
-#     :return: the traffic matrix as :py:class:`~sol.optimization.topology.traffic.TrafficMatrix`
-#     """
-#     tm = TrafficMatrix()
-#     tot_population = sum(populationDict.values())
-#
-#     for i, e in iepairs:
-#         ti_in = populationDict[i]
-#         tj_out = populationDict[e]
-#         tm[(i, e)] = ((float(ti_in * tj_out) / (tot_population ** 2)) * totalFlows)
-#     return tm
 
 cpdef traffic_classes(TrafficMatrix tm, dict fractions, dict class_bytes,
                       as_dict=False):
@@ -175,20 +126,3 @@ cpdef provision_links(Topology topology, list traffic_classes,
         capacities[link] = cap
     return capacities
 
-
-# TODO: is this method even used?
-# def compute_max_ingress_load(traffic_classes, tc_cost):
-#     """
-#     Compute the maximum load assuming all the processing would be done at
-#     ingress nodes
-#
-#     :param traffic_classes: list of traffic classes
-#     :param tc_cost: a mapping of traffic class to the processing cost (for a
-#         particular resource)
-#
-#     :returns: max ingress load
-#     """
-#     loads = defaultdict(lambda: 0)
-#     for tc in traffic_classes:
-#         loads[tc.src] += (tc.volFlows * tc_cost[tc])
-#     return float(max(loads.values()))

@@ -5,10 +5,14 @@ Implements functions that generate some basic topologies.
 """
 
 import itertools
-
 import networkx as nx
 from sol.topology.topologynx import Topology
 from six.moves import xrange
+from sol.utils.const import SWITCH
+
+CORE_LAYER = 'core'
+EDGE_LAYER = 'edge'
+AGG_LAYER = 'aggregation'
 
 
 def fat_tree(k):
@@ -30,8 +34,8 @@ def fat_tree(k):
         upper = xrange(index, index + k / 2)
         index += k / 2
         # Add upper and lower levels
-        graph.add_nodes_from(lower, layer='edge', functions='switch')
-        graph.add_nodes_from(upper, layer='aggregation', functions='switch')
+        graph.add_nodes_from(lower, layer=EDGE_LAYER, functions=SWITCH)
+        graph.add_nodes_from(upper, layer=AGG_LAYER, functions=SWITCH)
         # connect the levels
         graph.add_edges_from(itertools.product(lower, upper), capacitymult=1)
         # keep the upper level for later
@@ -39,7 +43,7 @@ def fat_tree(k):
     # Now, create the core
     core = []
     for coreswitch in xrange((k ** 2) / 4):
-        graph.add_node(index, layer='core', functions='switch')
+        graph.add_node(index, layer=CORE_LAYER, functions=SWITCH)
         core.append(index)
         index += 1
     graph.add_edges_from(itertools.product(core, middle), capacitymult=10)

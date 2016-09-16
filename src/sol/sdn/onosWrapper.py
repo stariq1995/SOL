@@ -8,7 +8,6 @@ import six
 
 from sol.topology.topologynx import Topology
 
-
 class ONOSInterface(object):
     """
         Wrapper that allows talking to the SOL-ONOS app over the REST interface

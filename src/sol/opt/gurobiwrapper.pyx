@@ -19,7 +19,7 @@ from six import iterkeys, iteritems, next
 from six.moves import range
 from cpython cimport bool
 from sol.utils.exceptions import SOLException
-from sol.utils.pythonHelper import Tree
+from sol.utils.ph import Tree
 from sol.path.paths cimport Path
 from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
@@ -56,7 +56,7 @@ cdef class OptimizationGurobi:
         cdef Path path
         cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
         cdef int epoch = 0
-        cdef str name
+        cdef unicode name
         cdef bool mod = False
         for tc in pptc:
             for path in pptc[tc]:
@@ -71,7 +71,7 @@ cdef class OptimizationGurobi:
         logger.debug("Added desicion vars")
 
     cdef _add_binary_vars(self, dict pptc, vtypes):
-        cdef str name
+        cdef unicode name
         cdef Path p
         cdef bool mod = False
         for t in vtypes:
@@ -115,7 +115,7 @@ cdef class OptimizationGurobi:
         cdef int pi
         cdef int epoch = 0, num_epochs = ma.compressed(
             next(iterkeys(pptc)).volFlows).size
-        cdef str name
+        cdef unicode name
         cdef TrafficClass tc
         for tc in pptc:
             for epoch in range(num_epochs):
@@ -146,7 +146,7 @@ cdef class OptimizationGurobi:
         """
         cdef int epoch = 0, num_epochs = ma.compressed(
             next(iterkeys(pptc)).volFlows).size
-        cdef str name
+        cdef unicode name
         for tc in pptc:
             for epoch in range(num_epochs):
                 name = al(tc, epoch)
@@ -155,8 +155,8 @@ cdef class OptimizationGurobi:
         self.opt.update()
 
         # cdef _consume_helper(self, tc, path, node_or_link, int num_epochs,
-        #                      str prefix, str resource_name, double cost, caps):
-        #     cdef str name
+        #                      unicode prefix, unicode resource_name, double cost, caps):
+        #     cdef unicode name
         #     cdef int epoch
         #     for epoch in range(num_epochs):
         #         self.expr[resource_name][node_or_link][epoch][tc].append
@@ -171,7 +171,7 @@ cdef class OptimizationGurobi:
         #         tc.volFlows.compressed()[epoch] * cost / caps[node_or_link], v)
         # self.opt.update()
 
-    cpdef consume(self, pptc, str resource, double cost, node_caps,
+    cpdef consume(self, pptc, unicode resource, double cost, node_caps,
                   link_caps):
         """
         :param pptc: paths per traffic class
@@ -203,7 +203,7 @@ cdef class OptimizationGurobi:
                                 self.v(xp(tc, path, e))] = vols[e] * cost / \
                                                            link_caps[link]
 
-    cpdef cap(self, str resource, capval=1):
+    cpdef cap(self, unicode resource, capval=1):
         for resource in self._load_dict:
             for nodeorlink in self._load_dict[resource]:
                 for e in self._load_dict[resource][nodeorlink]:
@@ -225,7 +225,7 @@ cdef class OptimizationGurobi:
                     #     if link not in self.expr[resource_name]:
                     #         self.expr[resource_name][link] = [None] * num_epochs
                     #
-                    # cdef str prefix, name
+                    # cdef unicode prefix, name
                     # for tc in pptc:
                     #     for path in pptc[tc]:
                     #         for node in path.nodes():
@@ -243,7 +243,7 @@ cdef class OptimizationGurobi:
                     #                                      prefix, resource_name,
                     #                                      cost, link_caps)
 
-    cpdef consume_per_path(self, pptc, str resource_name, double cost,
+    cpdef consume_per_path(self, pptc, unicode resource_name, double cost,
                            node_caps, link_caps):
         raise NotImplemented
 
@@ -352,7 +352,7 @@ cdef class OptimizationGurobi:
                             if name is None else NOT_LATENCY)
         cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
         cdef int epoch
-        # cdef str name
+        # cdef unicode name
         # for epoch in range(num_epochs):
         #     name = '{}_{}'.format(LATENCY, epoch)
         #     self._varindex[name] = sel.opt.addVar(name=name, lb=0, ub=None)
@@ -402,7 +402,7 @@ cdef class OptimizationGurobi:
         self.opt.addConstr(expr <= bound)
         self.opt.update()
 
-    cdef _min_load(self, str resource, tcs, str prefix, weight,
+    cdef _min_load(self, unicode resource, tcs, unicode prefix, weight,
                    epoch_mode, name):
         # this is the overall objective
         # objname = 'Max{}_{}'.format(prefix, resource)
@@ -416,7 +416,7 @@ cdef class OptimizationGurobi:
         # this will create variables for objective within each epoch
         cdef int num_epochs = ma.compressed(tcs[0].volFlows).size
         cdef int e
-        cdef str name2
+        cdef unicode name2
         per_epoch_objs = [None] * num_epochs
         for e in range(num_epochs):
             name2 = '{}_{}'.format(objname, e)
@@ -455,7 +455,7 @@ cdef class OptimizationGurobi:
         self.opt.update()
         return flipobj  # Return global obj variable (for this resource/prefix)
 
-    cpdef min_node_load(self, str resource, tcs, weight=1.0,
+    cpdef min_node_load(self, unicode resource, tcs, weight=1.0,
                         epoch_mode='max', name=None):
         """
         Minimize node load for a particular resource
@@ -468,7 +468,7 @@ cdef class OptimizationGurobi:
         return self._min_load(resource, tcs, 'NodeLoad', weight, epoch_mode,
                               name)
 
-    cpdef min_link_load(self, str resource, tcs, weight=1.0,
+    cpdef min_link_load(self, unicode resource, tcs, weight=1.0,
                         epoch_mode='max', name=None):
         return self._min_load(resource, tcs, 'LinkLoad', weight, epoch_mode,
                               name)
@@ -493,15 +493,15 @@ cdef class OptimizationGurobi:
         self.opt.update()
         return obj
 
-    cdef _get_load(self, str resource, str prefix, bool value=True):
+    cdef _get_load(self, unicode resource, unicode prefix, bool value=True):
         # logger.debug("loadstring: Max{}_{}".format(prefix, resource))
         v = self.v("Max{}_{}".format(prefix, resource))
         return v.x if value else v
 
-    cpdef get_max_link_load(self, str resource, bool value=True):
+    cpdef get_max_link_load(self, unicode resource, bool value=True):
         return self._get_load(resource, 'LinkLoad', value)
 
-    cpdef get_max_node_load(self, str resource, bool value=True):
+    cpdef get_max_node_load(self, unicode resource, bool value=True):
         return self._get_load(resource, 'NodeLoad', value)
 
     cpdef get_latency(self, bool value=True):
@@ -544,7 +544,7 @@ cdef class OptimizationGurobi:
         self.opt.update()
 
     # cdef _dump_expressions(self):
-    #     cdef str resource_name, name, prefix
+    #     cdef unicode resource_name, name, prefix
     #     cdef int epoch  #, num_epochs
     #     v = None
     #     # num_epochs = len(next(itervalues(next(itervalues(self.expressions)))))
@@ -577,7 +577,7 @@ cdef class OptimizationGurobi:
             self._time = time.time() - start
             # logger.debug('Time to solve: %f', self._time)
 
-    cpdef write(self, str fname):
+    cpdef write(self, unicode fname):
         """
         Writes the LP/ILP formulation to disk.
         ".lp" suffix is appended automatically
@@ -586,7 +586,7 @@ cdef class OptimizationGurobi:
         """
         self.opt.write("{}.lp".format(fname))
 
-    cpdef write_solution(self, str fname):
+    cpdef write_solution(self, unicode fname):
         """
         Write the solution to disk
 
@@ -611,7 +611,7 @@ cdef class OptimizationGurobi:
         """
         return {var.VarName: var.x for var in self.opt.getVars()}
 
-    cdef bool _has_var(self, str varname):
+    cdef bool _has_var(self, unicode varname):
         return varname in self._varindex
 
     def copy(self):
@@ -647,7 +647,7 @@ cdef class OptimizationGurobi:
         # TODO: does this have other status codes for MIP, like cplex?
         return self.opt.Status == GRB.OPTIMAL
 
-    cpdef v(self, str varname):
+    cpdef v(self, unicode varname):
         """
         Return variable by name
 
@@ -739,7 +739,7 @@ cpdef add_obj_var(app, opt, weight=0, epoch_mode='max'):
     :return:
     """
     assert (epoch_mode == 'max' or epoch_mode == 'sum')
-    cdef str ao, res, aol
+    cdef unicode ao, res, aol
     if isinstance(app.obj, tuple):
         ao = app.obj[0]
         res = app.obj[1]
@@ -771,7 +771,7 @@ cpdef get_obj_var(app, opt):
     :return:
     """
     return opt.v(app.name).x
-    # cdef str ao, res, aol
+    # cdef unicode ao, res, aol
     # if isinstance(app.obj, tuple):
     #     ao = app.obj[0]
     #     res = app.obj[1]

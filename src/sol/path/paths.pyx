@@ -4,7 +4,7 @@
 """
 import random
 import numpy
-from sol.utils.pythonHelper import listEq
+from sol.utils.ph import listeq
 from paths cimport Path
 from paths cimport PathWithMbox
 
@@ -124,9 +124,9 @@ cdef class Path:
     def __richcmp__(Path self, other not None, int op):
         same_type = isinstance(other, Path)
         if op == 2:
-            return same_type and listEq(self._nodes, other._nodes)
+            return same_type and listeq(self._nodes, other._nodes)
         elif op == 3:
-            return not same_type or not listEq(self._nodes, other._nodes)
+            return not same_type or not listeq(self._nodes, other._nodes)
         else:
             raise TypeError
 
@@ -190,11 +190,11 @@ cdef class PathWithMbox(Path):
     def __richcmp__(PathWithMbox self, other not None, int op):
         sametype = isinstance(other, PathWithMbox)
         if op == 2:
-            return sametype and listEq(self._nodes, other._nodes) and \
-                   listEq(self.useMBoxes, other.useMBoxes)
+            return sametype and listeq(self._nodes, other._nodes) and \
+                   listeq(self.useMBoxes, other.useMBoxes)
         elif op == 3:
-            return not sametype or not listEq(self._nodes, other._nodes) \
-                   or not listEq(self.useMBoxes, other.useMBoxes)
+            return not sametype or not listeq(self._nodes, other._nodes) \
+                   or not listeq(self.useMBoxes, other.useMBoxes)
         else:
             raise TypeError
 

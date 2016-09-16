@@ -8,7 +8,7 @@ import itertools
 from collections import defaultdict
 import warnings
 
-cpdef str tup2str(tuple t):
+cpdef unicode tup2str(tuple t):
     """ Convert tuple to string
 
     :param t: the tuple

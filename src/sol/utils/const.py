@@ -1,5 +1,10 @@
+# coding=utf-8
+"""
+Contains library-wide strings and constants
+"""
 
 LINKLOAD_PREFIX = 'LinkLoad'
+NODELOAD_PREFIX = 'NodeLoad'
 LOAD_PREFIX = 'Load'
 
 MIN_LINK_LOAD = 'minlinkload'
@@ -26,6 +31,7 @@ DEFAULT_OPTIMIZER = CPLEX
 
 SELECT_RANDOM = 'random'
 SELECT_SHORTEST = 'shortest'
+SELECT_ANNEALING = 'sa'
 
 BANDWIDTH = 'bw'
 CPU = 'cpu'
@@ -40,3 +46,7 @@ SWITCH = 'switch'
 SERVICES = 'services'
 RESOURCES = 'resources'
 
+
+FORMAT_GRAPHML = 'graphml'
+FORMAT_GML = 'gml'
+FORMAT_AUTO = 'auto'

@@ -7,11 +7,11 @@ from collections import defaultdict
 from gurobipy import Model, LinExpr, GRB
 
 # from sol.opt.composer cimport compose
-from sol.topology.topology cimport Topology
+from sol.topology.topologynx cimport Topology
 from cpython cimport bool
-from sol.utils.pythonHelper import Tree
+from sol.utils.ph import Tree
 from sol.utils.exceptions import InvalidConfigException
-from sol.path.paths cimport computePathCapacity, Path
+from sol.path.paths cimport Path
 from sol.topology.traffic cimport TrafficClass
 
 _RANDOM = ['random', 'rand']
