@@ -1,7 +1,7 @@
 # coding=utf-8
 
 """
-Generates some basic topologies. Contains utility methods as well.
+Implements functions that generate some basic topologies.
 """
 
 import itertools
@@ -12,12 +12,15 @@ from six.moves import xrange
 
 
 def fat_tree(k):
-    """ Creates a FatTree topology as a directed graph
+    """
+    Creates a FatTree topology with a given '-arity'.
+
+    .. seealso:: The `<ccr.sigcomm.org/online/files/p63-alfares.pdf>`_
 
     :param k: specify the k-value that controls the size of the topology
-    :returns: a ~:py:module:networkx DiGraph
+    :returns: a ~:py:module:`networkx.DiGraph`
     """
-    G = nx.empty_graph()
+    graph = nx.empty_graph()
     # Let's do the pods first
     index = 0
     middle = []
@@ -27,21 +30,21 @@ def fat_tree(k):
         upper = xrange(index, index + k / 2)
         index += k / 2
         # Add upper and lower levels
-        G.add_nodes_from(lower, layer='edge', functions='switch')
-        G.add_nodes_from(upper, layer='aggregation', functions='switch')
+        graph.add_nodes_from(lower, layer='edge', functions='switch')
+        graph.add_nodes_from(upper, layer='aggregation', functions='switch')
         # connect the levels
-        G.add_edges_from(itertools.product(lower, upper), capacitymult=1)
+        graph.add_edges_from(itertools.product(lower, upper), capacitymult=1)
         # keep the upper level for later
         middle.extend(upper)
     # Now, create the core
     core = []
     for coreswitch in xrange((k ** 2) / 4):
-        G.add_node(index, layer='core', functions='switch')
+        graph.add_node(index, layer='core', functions='switch')
         core.append(index)
         index += 1
-    G.add_edges_from(itertools.product(core, middle), capacitymult=10)
-    G = G.to_directed()
-    return Topology('k{}'.format(k), G)
+    graph.add_edges_from(itertools.product(core, middle), capacitymult=10)
+    graph = graph.to_directed()
+    return Topology('k{}'.format(k), graph)
 
 
 def chain_topology(n, name='chain'):
@@ -51,7 +54,7 @@ def chain_topology(n, name='chain'):
     :param n: number of nodes in the chain
     :param name: name of the topology
     :return: the new topology
-    :rtype TestTopology
+    :rtype :py:class:`sol.topology.topologynx.Topology`
     """
     G = nx.path_graph(n).to_directed()
     t = Topology(name, G)
@@ -65,7 +68,7 @@ def complete_topology(n, name='complete'):
     :param n: number of nodes in the complete graph
     :param name: name of the topology
     :return: the new topology
-    :rtype: TestTopology
+    :rtype: :py:class:`sol.topology.topologynx.Topology`
     """
     G = nx.complete_graph(n).to_directed()
     t = Topology(name, G)
