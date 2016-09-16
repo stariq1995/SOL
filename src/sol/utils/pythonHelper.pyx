@@ -16,14 +16,14 @@ cpdef str tup2str(tuple t):
     """
     return '_'.join(map(str, t))
 
-def str2tup(s, d='_'):
-    """ Convert string to tuple
-
-    :param s: string
-    :param d: delimiter
-    :return: tuple
-    """
-    return tuple(s.split(d))
+# def str2tup(s, d='_'):
+#     """ Convert string to tuple
+#
+#     :param s: string
+#     :param d: delimiter
+#     :return: tuple
+#     """
+#     return tuple(s.split(d))
 
 # Self-nesting dict
 Tree = lambda: defaultdict(Tree)

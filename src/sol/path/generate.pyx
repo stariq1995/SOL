@@ -1,7 +1,6 @@
 # coding=utf-8
 import itertools
 
-import networkx as nx
 from sol.path.paths import PathWithMbox
 
 from paths cimport Path
