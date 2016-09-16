@@ -3,8 +3,9 @@ import os
 
 import networkx
 
-from sol.topology.topology import Topology
+from sol.topology.topologynx import Topology
 from sol.topology.generators import complete_topology
+from sol.utils.const import SWITCH
 
 
 def testTopologyWriteRead(tmpdir):
@@ -27,8 +28,8 @@ def testTopologyConstructor():
 def testGetNumNodes():
     topo = complete_topology(8)
     assert topo.num_nodes() == 8
-    assert topo.num_nodes('switch') == 8
-    assert topo.num_nodes('middlebox') == 0
+    assert topo.num_nodes(SWITCH) == 8
+    assert topo.num_nodes('blah') == 0
 
 
 def testServiceTypes():

@@ -1,5 +1,4 @@
 # coding=utf-8
-import pytest
 
 import sol.utils.ph as ph
 from sol.utils.ph import tup2str
