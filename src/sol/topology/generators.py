@@ -48,10 +48,10 @@ def fat_tree(k):
         index += 1
     graph.add_edges_from(itertools.product(core, middle), capacitymult=10)
     graph = graph.to_directed()
-    return Topology('k{}'.format(k), graph)
+    return Topology(u'k{}'.format(k), graph)
 
 
-def chain_topology(n, name='chain'):
+def chain_topology(n, name=u'chain'):
     """
     Generates a chain topology
 
@@ -65,7 +65,7 @@ def chain_topology(n, name='chain'):
     return t
 
 
-def complete_topology(n, name='complete'):
+def complete_topology(n, name=u'complete'):
     """
     Generates a complete graph topology
 

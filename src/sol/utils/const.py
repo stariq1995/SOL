@@ -51,4 +51,6 @@ FORMAT_GRAPHML = u'graphml'
 FORMAT_GML = u'gml'
 FORMAT_AUTO = u'auto'
 
-ERR_NO_GUROBI = u'Cannot use Gurobi Python API. Please install Gurobi and gurobipy'
+ERR_NO_GUROBI = u'Cannot use Gurobi Python API. Please install Gurobi and ' \
+                u'gurobipy'
+ERR_FMT = u'Given format is not supported'

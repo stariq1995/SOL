@@ -25,7 +25,8 @@ cdef class Path:
         self._ID = pid
         if self._ID == -1:
             self._ID = random.randint(0, 1e6)
-            # warnings.warn('No ID given to Path constructor, generating a random path ID')
+            numpy.warnings.warn('No ID given to Path constructor, generating a '
+                                'random path ID')
         self._links = self._compute_links()
 
     cpdef int ingress(self):

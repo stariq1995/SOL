@@ -1,8 +1,9 @@
 # coding=utf-8
+
 import pytest
 
 from sol.opt.app import App
-from sol.opt.composer import _detect_cost_conflict, CompositionError
+from sol.opt.composer import _detect_cost_conflict
 
 
 def test_ResourceConflictDetection():

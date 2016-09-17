@@ -25,7 +25,7 @@ from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
 from gurobiwrapper cimport OptimizationGurobi
 from sol.opt.varnames cimport xp, al, bn, be, bp
-from sol.opt.varnames import LATENCY, MAX_ALL_FLOW, ALLOCATE_FLOW, CAP_LINKS, \
+from sol.utils.const import LATENCY, MAX_ALL_FLOW, ALLOCATE_FLOW, CAP_LINKS, \
     CAP_NODES, MIN_LINK_LOAD, MIN_LATENCY, MIN_NODE_LOAD, ROUTE_ALL, NOT_LATENCY
 from sol.utils.logger import logger
 

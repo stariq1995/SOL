@@ -8,7 +8,7 @@ from sol.topology.topologynx cimport Topology
 from sol.opt.gurobiwrapper cimport OptimizationGurobi, add_obj_var, \
     add_named_constraints
 
-from sol import logger
+from sol.utils.logger import logger
 from sol.utils.exceptions import CompositionError
 from numpy import log
 #XXX: this entire module is currently tied to Gurobi

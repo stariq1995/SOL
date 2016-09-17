@@ -6,14 +6,14 @@
 """
 import itertools
 from collections import defaultdict
-import warnings
+from six import u
 
 cpdef unicode tup2str(tuple t):
     """ Convert tuple to string
 
     :param t: the tuple
     """
-    return '_'.join(map(str, t))
+    return u'_'.join(map(u, (map(str, t))))
 
 # Self-nesting dict
 Tree = lambda: defaultdict(Tree)

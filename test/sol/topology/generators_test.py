@@ -2,7 +2,9 @@
 import networkx
 
 from sol.topology.topologynx import Topology
-from sol.topology.generators import complete_topology, chain_topology, fat_tree
+from sol.topology.generators import complete_topology, chain_topology, \
+    fat_tree, CORE_LAYER
+from sol.utils.const import SWITCH
 
 
 def test_generators():
@@ -14,10 +16,12 @@ def test_generators():
     assert isinstance(topo, Topology)
     assert isinstance(topo.get_graph(), networkx.DiGraph)
     assert topo.num_nodes() == 5
+    assert networkx.is_isomorphic(topo.get_graph(), networkx.complete_graph(5))
 
     topo = chain_topology(10)
     assert isinstance(topo, Topology)
     assert isinstance(topo.get_graph(), networkx.DiGraph)
+    assert networkx.is_isomorphic(topo.get_graph(), networkx.line_graph(5))
 
 
 def test_fattree_generator():
@@ -33,10 +37,10 @@ def test_fattree_generator():
     assert topo.num_nodes() == 80
     G = topo.get_graph()
     # every node has a layer attribute
-    assert all(['layer' in G.node[n] for n in G.nodes_iter()])
+    assert all([u'layer' in G.node[n] for n in G.nodes_iter()])
     # there are correct number of core switches
-    len([n for n in G.nodes_iter() if G.node[n]['layer'] == 'core']) == 16
-    assert all(['capacitymult' in G.edge[u][v] for u, v in G.edges_iter()])
+    len([n for n in G.nodes_iter() if G.node[n][u'layer'] == CORE_LAYER]) == 16
+    assert all([u'capacitymult' in G.edge[u][v] for u, v in G.edges_iter()])
 
 
 def test_switch_labels():
@@ -46,4 +50,4 @@ def test_switch_labels():
     """
     topo = complete_topology(5)
     for node in topo.nodes():
-        assert 'switch' in topo.get_service_types(node)
+        assert SWITCH in topo.get_service_types(node)

@@ -5,7 +5,7 @@ from sol.utils.ph import tup2str
 
 
 def testConverters():
-    assert tup2str((1, 2, 'hi')) == '1_2_hi'
+    assert tup2str((1, 2, u'hi')) == u'1_2_hi'
 
 
 def testlisteq():

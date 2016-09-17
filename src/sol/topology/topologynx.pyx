@@ -6,8 +6,9 @@ import networkx as nx
 from networkx.readwrite import graphml, json_graph
 
 from cpython cimport bool
+from sol.topology.generators import EDGE_LAYER
 from sol.utils.const import FORMAT_AUTO, FORMAT_GRAPHML, FORMAT_GML, SERVICES, \
-    SWITCH, RESOURCES, HAS_MBOX
+    SWITCH, RESOURCES, HAS_MBOX, ERR_FMT
 from sol.utils.ph import parse_bool
 
 
@@ -78,16 +79,12 @@ cdef class Topology:
         """
         self._graph = graph
 
-    def to_graphml(self, unicode fname):
-        """
-        Writes out the graph in GraphML format
-
-        :param dir_name: directory to write to
-        :param fname: file name to use. If None, topology name with a
-            '.graphml' suffix is used
-        """
-
     def write_graph(self, unicode fname, fmt='auto'):
+        """ Save the topology to disk
+        :param fname: the filename
+        :param fmt: format either 'auto' for autodetection based on extension,
+            'graphml' or 'gml'
+        """
         if fmt == FORMAT_AUTO:
             fmt = fname.split('.')[-1].lower()
         if fmt == FORMAT_GRAPHML:
@@ -95,9 +92,15 @@ cdef class Topology:
         elif fmt == FORMAT_GML:
             nx.write_gml(self._graph, fname)
         else:
-            raise ValueError("Cannot find a supported format")
+            raise ValueError(ERR_FMT)
 
     def load_graph(self, unicode fname, fmt='auto'):
+        """
+        Load topology from disk
+        :param fname: filename
+        :param fmt: format either 'auto' for autodetection based on extension,
+            'graphml' or 'gml'
+        """
         if fmt == FORMAT_AUTO:
             fmt = fname.split('.')[-1].lower()
         if fmt == FORMAT_GRAPHML:
@@ -105,7 +108,7 @@ cdef class Topology:
         elif fmt == FORMAT_GML:
             self._graph = nx.read_gml(fname)
         else:
-            raise ValueError("Cannot find a supported format")
+            raise ValueError(ERR_FMT)
 
     cpdef get_service_types(self, int node):
         """
@@ -128,7 +131,7 @@ cdef class Topology:
         if isinstance(service_types, str):
             self._graph.node[node][SERVICES] = service_types
         else:
-            self._graph.node[node][SERVICES] = ';'.join(service_types)
+            self._graph.node[node][SERVICES] = u';'.join(service_types)
 
     cpdef add_service_type(self, int node, service_type):
         """
@@ -143,7 +146,7 @@ cdef class Topology:
             types.add(service_type)
         else:
             types = [service_type]
-        self._graph.node[node][SERVICES] = ';'.join(types)
+        self._graph.node[node][SERVICES] = u';'.join(types)
 
     cpdef nodes(self, data=False):
         """
@@ -209,7 +212,7 @@ cdef class Topology:
                 return {}
 
     def __repr__(self):
-        return "{}(name={})".format(self.__class__, self.name)
+        return u"{}(name={})".format(self.__class__, self.name)
 
     def copy(self):
         """
@@ -253,7 +256,7 @@ cdef class Topology:
         return nx.diameter(self._graph)
 
     cpdef bool is_leaf(self, int node):
-        return self._graph.node[node]['layer'] == 'edge'
+        return self._graph.node[node][u'layer'] == EDGE_LAYER
 
     cpdef paths(self, int source, int sink, int cutoff):
         return nx.all_simple_paths(self._graph, source, sink, cutoff)

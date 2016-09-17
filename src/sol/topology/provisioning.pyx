@@ -8,11 +8,11 @@ from __future__ import division
 import networkx
 from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
+from sol.utils.const import BANDWIDTH
 from tmgen cimport TrafficMatrix
 from six import iteritems, iterkeys
 from six.moves import range, zip
 from cpython cimport bool
-from sol.opt.varnames import BANDWIDTH
 import numpy as np
 cimport numpy as np
 
@@ -118,8 +118,8 @@ cpdef provision_links(Topology topology, list traffic_classes,
     for u, v, data in topology.links(True):
         link = (u, v)
         mult = 1
-        if 'capacitymult' in data:
-            mult = data['capacitymult']
+        if u'capacitymult' in data:
+            mult = data[u'capacitymult']
         cap = overprovision * max_bg * mult
         if set_attr:
             topology.set_resource(link, BANDWIDTH, cap)

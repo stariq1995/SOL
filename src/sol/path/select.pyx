@@ -14,7 +14,7 @@ from numpy import arange, power, exp, inf
 from numpy import ma
 from numpy.random import rand, choice
 from six import iterkeys
-from sol import logger
+from sol.utils.logger import logger
 from sol.opt.composer import compose
 from sol.topology.topologynx cimport Topology
 from sol.utils.exceptions import InvalidConfigException, SOLException
