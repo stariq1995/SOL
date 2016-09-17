@@ -229,7 +229,7 @@ cdef class Topology:
         :return: True or False
         """
         try:
-            return parse_bool(self._graph.node[node][_HAS_MBOX])
+            return parse_bool(self._graph.node[node][HAS_MBOX])
         except KeyError:
             return False
 

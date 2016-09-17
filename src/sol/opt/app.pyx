@@ -11,7 +11,7 @@ class App(object):
         built using these applications.
     """
     def __init__(self, dict pptc, list constraints, dict resource_cost=None,
-                 obj=None, obj_tc=None, unicode name='', *args, **kwargs):
+                 obj=None, obj_tc=None, unicode name=u'', *args, **kwargs):
         """
         Create a new application
 
@@ -77,7 +77,7 @@ class App(object):
             return self.obj
 
     def __repr__(self):
-        return '<sol.App {}>'.format(self.name)
+        return u'<sol.App {}>'.format(self.name)
 
     def __hash__(self):
         return hash(self.name)

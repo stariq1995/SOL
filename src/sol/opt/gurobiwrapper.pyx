@@ -8,7 +8,7 @@ try:
     # noinspection PyPackageRequirements
     from gurobipy import *
 except ImportError as e:
-    print("Cannot use Gurobi Python API. Please install Gurobi and gurobipy")
+    print(ERR_NO_GUROBI)
     raise e
 
 import copy
@@ -75,21 +75,21 @@ cdef class OptimizationGurobi:
         cdef Path p
         cdef bool mod = False
         for t in vtypes:
-            if t.lower() == 'node':
+            if t.lower() == u'node':
                 for n in self.topo.nodes(False):
                     name = bn(n)
                     if not self._has_var(name):
                         self._varindex[name] = self.opt.addVar(vtype=GRB.BINARY,
                                                                name=name)
                         mod = True
-            elif t.lower() == 'edge':
+            elif t.lower() == u'edge':
                 for u, v in self.topo.links(False):
                     name = be(u, v)
                     if not self._has_var(name):
                         self._varindex[name] = self.opt.addVar(vtype=GRB.BINARY,
                                                                name=name)
                         mod = True
-            elif t.lower() == 'path':
+            elif t.lower() == u'path':
                 for tc in pptc:
                     for p in pptc[tc]:
                         name = bp(tc, p)
@@ -178,9 +178,9 @@ cdef class OptimizationGurobi:
         :param resource: resource to be consumed
         :param cost: cost per flow for this resource
         """
-        logger.debug('Consume: %s' % resource)
+        logger.debug(u'Consume: %s' % resource)
         cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
-        logger.debug('Num epochs in consume: %d' % num_epochs)
+        logger.debug(u'Num epochs in consume: %d' % num_epochs)
         cdef int e
         #
         # for nodelink in chain(node_caps, link_caps):
@@ -230,14 +230,14 @@ cdef class OptimizationGurobi:
                     #     for path in pptc[tc]:
                     #         for node in path.nodes():
                     #             if node in node_caps and path.uses_box(node):
-                    #                 prefix = 'NodeLoad_{}_{}'.format(resource_name, node)
+                    #                 prefix = u'NodeLoad_{}_{}'.format(resource_name, node)
                     #                 self._consume_helper(tc, path, node, num_epochs,
                     #                                      prefix, resource_name, cost,
                     #                                      node_caps)
                     #
                     #         for link in path.links():
                     #             if link in link_caps:
-                    #                 prefix = 'LinkLoad_{}_{}'.format(resource_name,
+                    #                 prefix = u'LinkLoad_{}_{}'.format(resource_name,
                     #                                                  tup2str(link))
                     #                 self._consume_helper(tc, path, link, num_epochs,
                     #                                      prefix, resource_name,
@@ -250,16 +250,16 @@ cdef class OptimizationGurobi:
     cdef _req_all(self, pptc, traffic_classes=None, req_type=None):
         self._disable_paths(pptc)
         if req_type is None:
-            raise SOLException('A type of constraint is needed for reqAll()')
+            raise SOLException(u'A type of constraint is needed for reqAll()')
         cdef int pi
         if traffic_classes is None:
             traffic_classes = pptc.keys()
-        if req_type.lower() == 'node':
+        if req_type.lower() == u'node':
             for tc in traffic_classes:
                 for pi, path in enumerate(pptc[tc]):
                     for n in path:
                         self.opt.addConstr(self.v(bp(tc, pi)) <= self.v(bn(n)))
-        elif req_type.lower() == 'edge' or req_type.lower == 'link':
+        elif req_type.lower() == u'edge' or req_type.lower == u'link':
             for tc in traffic_classes:
                 for pi, path in enumerate(pptc[tc]):
                     # TODO: see if this can be optimized
@@ -267,24 +267,24 @@ cdef class OptimizationGurobi:
                         self.opt.addConstr(
                             self.v(bp(tc, pi)) <= self.v(be(*link)))
         else:
-            raise SOLException('Unknown type of constraint for reqAll()')
+            raise SOLException(u'Unknown type of constraint for reqAll()')
         self.opt.update()
 
     cdef _req_some(self, pptc, traffic_classes=None, req_type=None):
         self._disable_paths(pptc)
         if req_type is None:
-            raise SOLException('A type of constraint is needed for reqSome()')
+            raise SOLException(u'A type of constraint is needed for reqSome()')
         cdef int pi
         if traffic_classes is None:
             traffic_classes = iterkeys(pptc.keys)
-        if req_type.lower() == 'node':
+        if req_type.lower() == u'node':
             for tc in traffic_classes:
                 for pi, path in enumerate(pptc[tc]):
                     expr = LinExpr()
                     for n in path:
                         expr.add(self.v(bn(n)))
                     self.opt.addConstr(self.v(bp(tc, pi)) <= expr)
-        elif req_type.lower() == 'edge' or req_type.lower == 'link':
+        elif req_type.lower() == u'edge' or req_type.lower == u'link':
             for tc in traffic_classes:
                 for pi, path in enumerate(pptc[tc]):
                     expr = LinExpr()
@@ -293,23 +293,23 @@ cdef class OptimizationGurobi:
                         expr.add(self.v(be(*link)))
                     self.opt.addConstr(self.v(bp(tc, pi)) <= expr)
         else:
-            raise SOLException('Unknown type of constraint for reqSome()')
+            raise SOLException(u'Unknown type of constraint for reqSome()')
         self.opt.update()
 
     cpdef req_all_nodes(self, pptc, traffic_classes=None):
-        return self.reqAll(pptc, traffic_classes, 'node')
+        return self.reqAll(pptc, traffic_classes, u'node')
 
     cpdef req_all_links(self, pptc, traffic_classes=None):
-        return self._req_all(pptc, traffic_classes, 'link')
+        return self._req_all(pptc, traffic_classes, u'link')
 
     cpdef req_some_nodes(self, pptc, traffic_classes=None):
-        return self._req_some(pptc, traffic_classes, 'node')
+        return self._req_some(pptc, traffic_classes, u'node')
 
     cpdef req_some_links(self, pptc, traffic_classes=None):
-        return self._req_some(pptc, traffic_classes, 'link')
+        return self._req_some(pptc, traffic_classes, u'link')
 
     cdef _disable_paths(self, pptc, traffic_classes=None):
-        self._add_binary_vars(pptc, ['path'])
+        self._add_binary_vars(pptc, [u'path'])
         if traffic_classes is None:
             traffic_classes = iterkeys(pptc)
         cdef TrafficClass tc
@@ -338,17 +338,17 @@ cdef class OptimizationGurobi:
         # self.opt.addConstr(quicksum() <= max_paths)
         self.opt.addConstr(quicksum([v for v in self.opt.getVars() if
                                      v.varName.startswith(
-                                         'binpath')]) <= max_paths,
-                           name='cap.paths')
+                                         u'binpath')]) <= max_paths,
+                           name=u'cap.paths')
         self.opt.update()
 
     cpdef min_latency(self, pptc, weight=1.0,
-                      bool norm=True, epoch_mode='max', name=None):
+                      bool norm=True, epoch_mode=u'max', name=None):
         self._varindex[LATENCY if name is None else name] = latency = \
             self.opt.addVar(name=LATENCY if name is None else name)
-        self._varindex['flip_{}'.format(name)\
+        self._varindex[u'flip_{}'.format(name)\
                        if name is None else NOT_LATENCY] = notlatency = \
-            self.opt.addVar(name='flip_{}'.format(name)\
+            self.opt.addVar(name=u'flip_{}'.format(name)\
                             if name is None else NOT_LATENCY)
         cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
         cdef int epoch
@@ -364,7 +364,7 @@ cdef class OptimizationGurobi:
             norm_factor = 1.0 * self.topo.diameter() * self.topo.num_nodes() \
                           * self.topo.num_nodes()
 
-        if epoch_mode == 'max':
+        if epoch_mode == u'max':
             for epoch in range(num_epochs):
                 latency_expr = LinExpr()
                 for tc in pptc:
@@ -373,7 +373,7 @@ cdef class OptimizationGurobi:
                                                                    epoch)))
 
                 self.opt.addConstr(latency >= latency_expr / norm_factor)
-        elif epoch_mode == 'sum':
+        elif epoch_mode == u'sum':
             latency_expr = LinExpr()
             for epoch in range(num_epochs):
                 for tc in pptc:
@@ -382,7 +382,7 @@ cdef class OptimizationGurobi:
                                                                    epoch)))
             self.opt.addConstr(latency >= latency_expr / norm_factor)
         else:
-            raise ValueError('Unknown epoch_mode')
+            raise ValueError(u'Unknown epoch_mode')
         self.opt.addConstr(notlatency == 1 - latency)
         self.opt.update()
         return notlatency
@@ -395,7 +395,7 @@ cdef class OptimizationGurobi:
         :param bound:
         :return:
         """
-        self._add_binary_vars(None, ['node'])
+        self._add_binary_vars(None, [u'node'])
         expr = LinExpr()
         for n in self.topo.nodes(data=False):
             expr.add(self.v(bn(n)), budgetFunc(n))
@@ -405,9 +405,9 @@ cdef class OptimizationGurobi:
     cdef _min_load(self, unicode resource, tcs, unicode prefix, weight,
                    epoch_mode, name):
         # this is the overall objective
-        # objname = 'Max{}_{}'.format(prefix, resource)
+        # objname = u'Max{}_{}'.format(prefix, resource)
         objname = name
-        flipobjname = 'MinSpare{}_{}'.format(prefix, resource)
+        flipobjname = u'MinSpare{}_{}'.format(prefix, resource)
         self._varindex[objname] = obj = self.opt.addVar(name=objname)
         self._varindex[flipobjname] = \
             flipobj = self.opt.addVar(name=flipobjname, obj=weight)
@@ -441,13 +441,13 @@ cdef class OptimizationGurobi:
 
         # Now set the global objective based on per-epoch objectives.
         # There are two possible modes: 'max' and 'sum'
-        if epoch_mode == 'max':
+        if epoch_mode == u'max':
             for e in range(num_epochs):
                 self.opt.addConstr(obj >= per_epoch_objs[e])
-        elif epoch_mode == 'sum':
+        elif epoch_mode == u'sum':
             self.opt.addConstr(obj >= quicksum(per_epoch_objs))
         else:
-            raise ValueError('Unkown epoch_mode objective mode composition')
+            raise ValueError(u'Unkown epoch_mode objective mode composition')
 
         # flipped objective is just 1 - real objective
         self.opt.addConstr(flipobj == 1 - obj)
@@ -456,7 +456,7 @@ cdef class OptimizationGurobi:
         return flipobj  # Return global obj variable (for this resource/prefix)
 
     cpdef min_node_load(self, unicode resource, tcs, weight=1.0,
-                        epoch_mode='max', name=None):
+                        epoch_mode=u'max', name=None):
         """
         Minimize node load for a particular resource
         :param resource:
@@ -465,12 +465,12 @@ cdef class OptimizationGurobi:
         :param epoch_mode:
         :return:
         """
-        return self._min_load(resource, tcs, 'NodeLoad', weight, epoch_mode,
+        return self._min_load(resource, tcs, u'NodeLoad', weight, epoch_mode,
                               name)
 
     cpdef min_link_load(self, unicode resource, tcs, weight=1.0,
-                        epoch_mode='max', name=None):
-        return self._min_load(resource, tcs, 'LinkLoad', weight, epoch_mode,
+                        epoch_mode=u'max', name=None):
+        return self._min_load(resource, tcs, u'LinkLoad', weight, epoch_mode,
                               name)
 
     cpdef max_flow(self, pptc, weight=1.0, name=None):
@@ -499,10 +499,10 @@ cdef class OptimizationGurobi:
         return v.x if value else v
 
     cpdef get_max_link_load(self, unicode resource, bool value=True):
-        return self._get_load(resource, 'LinkLoad', value)
+        return self._get_load(resource, u'LinkLoad', value)
 
     cpdef get_max_node_load(self, unicode resource, bool value=True):
-        return self._get_load(resource, 'NodeLoad', value)
+        return self._get_load(resource, u'NodeLoad', value)
 
     cpdef get_latency(self, bool value=True):
         """
@@ -551,10 +551,10 @@ cdef class OptimizationGurobi:
     #     for resource_name in self.expr:
     #         for node_or_link in self.expr[resource_name]:
     #             if isinstance(node_or_link, tuple):
-    #                 prefix = 'LinkLoad_{}_{}'.format(resource_name,
+    #                 prefix = u'LinkLoad_{}_{}'.format(resource_name,
     #                                                  tup2str(node_or_link))
     #             else:
-    #                 prefix = 'NodeLoad_{}_{}'.format(resource_name,
+    #                 prefix = u'NodeLoad_{}_{}'.format(resource_name,
     #                                                  node_or_link)
     #             for epoch, expr in enumerate(
     #                     self.expr[resource_name][node_or_link]):
@@ -575,7 +575,7 @@ cdef class OptimizationGurobi:
         if self._do_time:
             # logger.debug(time.time())
             self._time = time.time() - start
-            # logger.debug('Time to solve: %f', self._time)
+            # logger.debug(u'Time to solve: %f', self._time)
 
     cpdef write(self, unicode fname):
         """
@@ -691,8 +691,8 @@ cdef class OptimizationGurobi:
         cdef int tcid, pid
         for v in self.opt.getVars():
             # Look only on binary path variables
-            if v.varName.startswith('binpath'):
-                l = v.varName.split('_')
+            if v.varName.startswith(u'binpath'):
+                l = v.varName.split(u'_')
                 tcid = int(l[1])
                 pid = int(l[2])
                 if v.x > 0:  # Was picked
@@ -727,7 +727,7 @@ cdef add_named_constraints(opt, app):
         else:
             raise InvalidConfigException("Unsupported constraint type")
 
-cpdef add_obj_var(app, opt, weight=0, epoch_mode='max'):
+cpdef add_obj_var(app, opt, weight=0, epoch_mode=u'max'):
     """
     Add the objective value of given application to the optimization
 
@@ -738,7 +738,7 @@ cpdef add_obj_var(app, opt, weight=0, epoch_mode='max'):
     :param resource:
     :return:
     """
-    assert (epoch_mode == 'max' or epoch_mode == 'sum')
+    assert (epoch_mode == u'max' or epoch_mode == u'sum')
     cdef unicode ao, res, aol
     if isinstance(app.obj, tuple):
         ao = app.obj[0]
