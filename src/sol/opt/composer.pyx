@@ -53,14 +53,17 @@ cpdef _detect_cost_conflict(apps):
     cdef int i, j
     resourse_overlap = False
     tc_overlap = False
+    # For each app pair
     for i in range(len(apps)):
         for j in range(i, len(apps)):
+            # Check for overlapping resources
             sameresoures = set(apps[i].resourceCost.keys()).intersection(
                 apps[j].resourceCost.keys())
             for r in sameresoures:
                 if apps[i].resourceCost[r] != apps[j].resourceCost[r]:
                     resourse_overlap = True
                 break
+            # don't do extra work, break if at least one conflict detected
             if resourse_overlap:
                 break
         if resourse_overlap:

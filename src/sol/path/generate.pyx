@@ -8,6 +8,7 @@ from sol.utils import exceptions
 
 from cpython cimport bool
 from sol.topology.topologynx cimport Topology
+from sol.utils.const import ERR_NO_PATH
 
 cpdef use_mbox_modifier(path, int offset, Topology topology, chain_length=1):
     """
@@ -22,7 +23,8 @@ cpdef use_mbox_modifier(path, int offset, Topology topology, chain_length=1):
         :py:class:`~sol.optimization.topology.traffic.PathWithMbox` object
 
     .. note::
-        This with expand a single path into :math:`{n \\choose chainLength}` paths where :math:`n` is
+        This with expand a single path into :math:`{n \\choose chainLength}`
+        paths where :math:`n` is
         the number of switches with middleboxes attached to them in the current path.
     """
     return [PathWithMbox(path, chain, ind + offset) for ind, chain in
@@ -77,8 +79,7 @@ cpdef generate_paths_ie(int source, int sink, Topology topology, predicate,
             break
     if not paths:
         if raise_on_empty:
-            raise exceptions.NoPathsException(
-                "No paths between {} and {}".format(source, sink))
+            raise exceptions.NoPathsException(ERR_NO_PATH.format(source, sink))
     return paths
 
 cpdef generate_paths_tc(Topology topology, traffic_classes, predicate, cutoff,
@@ -106,6 +107,5 @@ cpdef generate_paths_tc(Topology topology, traffic_classes, predicate, cutoff,
     result = {}
     for t in traffic_classes:
         result[t] = generate_paths_ie(t.src, t.dst, topology, predicate, cutoff,
-                                      max_paths,
-                                      modify_func, raise_on_empty)
+                                      max_paths, modify_func, raise_on_empty)
     return result

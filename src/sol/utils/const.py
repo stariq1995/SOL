@@ -54,3 +54,4 @@ FORMAT_AUTO = u'auto'
 ERR_NO_GUROBI = u'Cannot use Gurobi Python API. Please install Gurobi and ' \
                 u'gurobipy'
 ERR_FMT = u'Given format is not supported'
+ERR_NO_PATH = u'No paths between {} and {}'
