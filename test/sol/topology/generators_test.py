@@ -16,12 +16,14 @@ def test_generators():
     assert isinstance(topo, Topology)
     assert isinstance(topo.get_graph(), networkx.DiGraph)
     assert topo.num_nodes() == 5
-    assert networkx.is_isomorphic(topo.get_graph(), networkx.complete_graph(5))
+    assert networkx.is_isomorphic(topo.get_graph().to_undirected(),
+                                  networkx.complete_graph(5))
 
     topo = chain_topology(10)
     assert isinstance(topo, Topology)
     assert isinstance(topo.get_graph(), networkx.DiGraph)
-    assert networkx.is_isomorphic(topo.get_graph(), networkx.line_graph(5))
+    assert networkx.is_isomorphic(topo.get_graph().to_undirected(),
+                                  networkx.path_graph(10))
 
 
 def test_fattree_generator():

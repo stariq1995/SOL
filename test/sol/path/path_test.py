@@ -2,9 +2,13 @@
 import os
 
 import pytest
-
 from sol.path.paths import Path, PathWithMbox
 from sol.utils.ph import listeq
+
+
+@pytest.fixture(scope='module')
+def apath():
+    return Path([1, 9, 7, 3], 0)
 
 
 def test_path_getters():
@@ -20,8 +24,9 @@ def test_path_getters():
     # test indexing/length
     assert p[1] == 4
     assert p[-1] == -1
-    assert len(p) == 4
-    assert len(p2) == 4
+    # Length should be number of hops, not number of nodes
+    assert len(p) == 3
+    assert len(p2) == 3
 
     # test the __contains__ method
     assert 6 in p
@@ -29,8 +34,12 @@ def test_path_getters():
     assert 4 in p2 and -1 in p2
     assert not 4 not in p
 
+    # test path setters
+    with pytest.raises(TypeError):
+        p[1] = 27
 
-def testPathEquality():
+
+def test_path_equality():
     p = Path([1, 2, 3, 4])
     p1 = Path([1, 2, 3, 4], flow_fraction=10)
     p2 = Path([1, 2, 3, 5])
@@ -38,9 +47,9 @@ def testPathEquality():
     p3 = PathWithMbox([1, 2, 3, 4], [2])
     p4 = PathWithMbox([1, 2, 3, 4], [2, 4])
     p5 = PathWithMbox([1, 2, 3, 4], [2, 4], flow_fraction=100)
-    # NumFlows does not matter
+    # flow_fraction on the path does not matter when testing equality
     assert p == p1
-    # Different nodes are not equal
+    # Path with different nodes are not equal
     assert p != p2
     assert p1 != p2
 
@@ -64,6 +73,7 @@ def testPathEquality():
         p >= p2
 
 
+# At this point paths are not hashable
 # def testPathHashing():
 #     d = {}
 #     p = Path([1, 2, 3, 4])
@@ -78,35 +88,37 @@ def testPathEquality():
 #     assert d[p] == 100
 
 
-def testUsesBox():
+def test_uses_box():
     p2 = PathWithMbox([1, 4, 6, -1], [4, 6])
     assert p2.uses_box(4)
     assert p2.uses_box(6)
     assert not p2.uses_box(1)
 
 
-def testPathEncoding():
-    p = Path([1, 2, 3])
-    #TODO: update how paths are encoded
-    # assert p.encode() == {'nodes': [1, 2, 3], 'flow_fraction': 0}
-    assert p == p.decode(p.encode())
-    from six.moves import cPickle
-    l = cPickle.loads(cPickle.dumps(p, default=lambda x: x.encode()),
-                      object_hook=Path.decode)
-    assert p == l
+def test_path_encoding(apath):
+    d = apath.encode()
+    assert u'nodes' in d
+    assert d[u'type'] == u'Path'
+    assert u'flow_fraction' in d
+    assert u'id' in d
+    assert apath == Path.decode(apath.encode())
 
 
 @pytest.mark.skipif('TRAVIS' in os.environ,
-                    reason='Travis CI has old version of py.test with to warning tests')
-def testPathWarn():
+                    reason='Travis CI has old version of py.test with to '
+                           'warning tests')
+def test_path_warn():
     with pytest.warns(UserWarning):
         p = Path([1])
 
 
-def testPathWithMboxEncoding():
+def test_pathmbox_encoding():
     p = PathWithMbox([1, 2, 3], use_mboxes=[2])
-    assert p.encode() == {'nodes': [1, 2, 3], 'numFlows': 0, 'useMBoxes': [2],
-                          'PathWithMbox': True}
+    d = p.encode()
+    assert u'nodes' in d
+    assert d[u'type'] == u'PathWithMBox'
+    assert u'flow_fraction' in d
+    assert u'id' in d
+    assert listeq(d[u'use_mboxes'], [2])
     l = p.decode(p.encode())
     assert p == l
-
