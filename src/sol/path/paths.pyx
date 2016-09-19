@@ -4,6 +4,7 @@
 """
 import random
 import numpy
+from sol.utils.const import WARN_NO_PATH_ID
 from sol.utils.ph import listeq
 from paths cimport Path
 from paths cimport PathWithMbox
@@ -23,10 +24,9 @@ cdef class Path:
         self._nodes = numpy.array(nodes)
         self._flowFraction = flow_fraction
         self._ID = pid
-        if self._ID == -1:
+        if self._ID < 0:
             self._ID = random.randint(0, 1e6)
-            numpy.warnings.warn('No ID given to Path constructor, generating a '
-                                'random path ID')
+            numpy.warnings.warn(WARN_NO_PATH_ID)
         self._links = self._compute_links()
 
     cpdef int ingress(self):
@@ -90,8 +90,9 @@ cdef class Path:
 
         :return: dictionary representation of this path
         """
-        return {'type': 'Path', 'id': self._ID, 'nodes': self._nodes.tolist(),
-                'flow_fraction': self._flowFraction}
+        return {u'type': u'Path', u'id': self._ID,
+                u'nodes': self._nodes.tolist(),
+                u'flow_fraction': self._flowFraction}
 
     @staticmethod
     def decode(dict d):
@@ -100,7 +101,7 @@ cdef class Path:
         :param d: the dictionary
         :return: a new Path instance
         """
-        return Path(d['nodes'], d['id'], d['flow_fraction'])
+        return Path(d[u'nodes'], d[u'id'], d[u'flow_fraction'])
 
     def __contains__(self, item):
         return item in self._nodes
@@ -115,10 +116,13 @@ cdef class Path:
         return iter(self._nodes)
 
     def __len__(self):
-        return len(self._nodes)
+        """ Returns the length of the path as the number of hops in the path
+        (this is equivalent to number of nodes in the path -1)
+        """
+        return len(self._nodes)-1
 
     def __repr__(self):
-        return "Path(nodes={}, flowFraction={})".format(str(self._nodes),
+        return u"Path(nodes={}, flowFraction={})".format(str(self._nodes),
                                                         self._flowFraction)
 
     # noinspection PyProtectedMember
@@ -142,9 +146,9 @@ cdef class PathWithMbox(Path):
     """
     Create a new path with middleboxes
 
-    :param nodes: path nodes (an ordered list)
-    :param useMBoxes: at which nodes the middleboxes will be used
-    :param numFlows: number of flows (if any) along this path. Default is 0.
+    :param nodes: Path nodes (an ordered list)
+    :param use_mboxes: At which nodes the middleboxes will be used
+    :param flow_fraction: Fraction of flows along this path. Default is 0.
     """
 
     def __init__(self, nodes, use_mboxes, int pid=-1, flow_fraction=0):
@@ -160,23 +164,16 @@ cdef class PathWithMbox(Path):
         """
         return node in self.useMBoxes
 
-    cpdef int full_length(self):
-        """
-
-        :return: The full length of the path (includes all middleboxes)
-        """
-        return len(self._nodes) + len(self.useMBoxes)
-
     cpdef dict encode(self):
         """
         Encode this path in dict/list form so it can be JSON-ed or MsgPack-ed
 
         :return: dictionary representation of this path
         """
-        return {'nodes': self._nodes.tolist(),
-                'flow_fraction': self._flowFraction,
-                'use_mboxes': self.useMBoxes, 'id': self._ID,
-                'type': 'PathWithMBox'}
+        return {u'nodes': self._nodes.tolist(),
+                u'flow_fraction': self._flowFraction,
+                u'use_mboxes': self.useMBoxes, u'id': self._ID,
+                u'type': u'PathWithMBox'}
 
     @staticmethod
     def decode(dict d):
@@ -184,8 +181,8 @@ cdef class PathWithMbox(Path):
         Create a new path from a dict
         :param d: dict type, must contain following keys:
         """
-        return PathWithMbox(d['nodes'], d['use_mboxes'], d['id'],
-                            d.get('flow_fraction', 0))
+        return PathWithMbox(d[u'nodes'], d[u'use_mboxes'], d[u'id'],
+                            d.get(u'flow_fraction', 0))
 
     # noinspection PyProtectedMember
     def __richcmp__(PathWithMbox self, other not None, int op):
@@ -200,7 +197,7 @@ cdef class PathWithMbox(Path):
             raise TypeError
 
     def __repr__(self):
-        return "PathWithMbox(nodes={}, useMBoxes={} flowFraction={})". \
+        return u"PathWithMbox(nodes={}, useMBoxes={} flowFraction={})". \
             format(str(self._nodes), self.useMBoxes, self._flowFraction)
 
     def copy(self):

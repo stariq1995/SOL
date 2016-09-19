@@ -27,4 +27,3 @@ cdef class PathWithMbox(Path):
 
     cpdef dict encode(self)
     cpdef bool uses_box(self, node)
-    cpdef int full_length(self)
