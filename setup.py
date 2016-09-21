@@ -1,7 +1,13 @@
 # coding=utf-8
+from distutils.core import setup
+from distutils.extension import Extension
+
 import numpy
 from Cython.Build import cythonize
-from distutils.core import setup
+
+ext = [Extension('*', sources=["src/sol/**/*.pyx"],
+                 include_dirs=[numpy.get_include()],
+                 define_macros=[('CYTHON_TRACE', '1')])]
 
 setup(
     name='sol',
@@ -14,11 +20,11 @@ setup(
     package_dir={'': 'src'},
     packages=['sol'],
     url='https://github.com/progwriter/SOL',
-    requires=['networkx', 'requests', 'netaddr', 'numpy', 'cython', 'six'],
-    ext_modules=cythonize("src/sol/**/*.pyx", compiler_directives={
+    requires=['networkx', 'requests', 'netaddr', 'numpy', 'cython', 'six',
+              'bitstring'],
+    ext_modules=cythonize(ext, compiler_directives={
         'cdivision': True,
-        # 'profile': True,
-        'embedsignature': True
+        'embedsignature': True,
     }),
-    include_dirs=[numpy.get_include()]
+    package_data={'sol': ['*.pxd']}
 )
