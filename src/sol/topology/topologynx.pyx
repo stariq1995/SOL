@@ -81,9 +81,11 @@ cdef class Topology:
 
     def write_graph(self, unicode fname, fmt='auto'):
         """ Save the topology to disk
+
         :param fname: the filename
         :param fmt: format either 'auto' for autodetection based on extension,
             'graphml' or 'gml'
+
         """
         if fmt == FORMAT_AUTO:
             fmt = fname.split('.')[-1].lower()
@@ -97,9 +99,11 @@ cdef class Topology:
     def load_graph(self, unicode fname, fmt='auto'):
         """
         Load topology from disk
+
         :param fname: filename
         :param fmt: format either 'auto' for autodetection based on extension,
             'graphml' or 'gml'
+
         """
         if fmt == FORMAT_AUTO:
             fmt = fname.split('.')[-1].lower()

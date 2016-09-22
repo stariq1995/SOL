@@ -3,8 +3,8 @@
 from sol.topology.topologynx cimport Topology
 from cpython cimport bool
 
-cpdef choose_rand(dict pptc, int num_paths)
-cpdef sort_paths_per_commodity(dict pptc, key=*, bool inplace=*)
+cpdef choose_rand(pptc, int num_paths)
+cpdef sort_paths(pptc, key=*, bool inplace=*)
 cpdef select_ilp(apps, Topology topo, int num_paths=*, debug=*, mode=*)
 cpdef merge_pptc(apps, sort=*, key=*)
 cpdef select_sa(apps, Topology topo, int num_paths=*, int max_iter=*,

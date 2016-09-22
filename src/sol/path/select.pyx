@@ -4,7 +4,6 @@ Module that implements different path selection (a.k.a pruning) strategies
 """
 import functools
 import random
-from collections import defaultdict
 
 import time
 from itertools import combinations
@@ -26,15 +25,16 @@ _RANDOM = ['random', 'rand']
 _SHORTEST = ['shortest', 'short', 'kshortest', 'k-shortest', 'kshort',
              'k-short']
 
-cpdef choose_rand(dict pptc, int num_paths):
+cpdef choose_rand(pptc, int num_paths):
     """
     Chooses a specified number of paths per traffic class uniformly at
     random
 
-    :param dict pptc: paths per traffic class
+    :param pptc: paths per traffic class
     :param int num_paths: number of paths to pick per traffic class
     :return: the new (chosen) paths per traffic class
     :rtype: dict
+
     """
     newppk = {}
     for comm in pptc:
@@ -46,21 +46,22 @@ cpdef choose_rand(dict pptc, int num_paths):
             newppk[comm] = pptc[comm]
     return newppk
 
-cpdef sort_paths_per_commodity(dict pptc, key=None, bool inplace=True):
+cpdef sort_paths(pptc, key=None, bool inplace=True):
     """
     Sort paths per commodity
 
-    :param dict pptc: paths per traffic class
+    :param pptc: paths per traffic class
     :param key: criteria to sort by. If None, path length is used
     :param bool inplace: boolean, whether to sort in place.
         If False, a new mapping is returned.
     :return: a dictionary if *inplace=False*, otherwise None
+
     """
     if key is None:
-        key = len  # default is to use path length
+        key=len  # default is to use path length
     if inplace:
         for tc in pptc:
-            pptc[tc].sort(key=len)
+            pptc[tc].sort(key=key)
     else:
         newppk = {}  # make a new objet
         for tc in pptc:
@@ -69,9 +70,9 @@ cpdef sort_paths_per_commodity(dict pptc, key=None, bool inplace=True):
 
 cpdef k_shortest_paths(pptc, int num_paths, bool needs_sorting=True,
                        bool inplace=True):
-    """ Chooses $k$ shortest paths per traffic class
+    """ Chooses :math:`k` shortest paths per traffic class
 
-    :param dict pptc: paths per traffic class
+    :param pptc: paths per traffic class
     :param int num_paths: number of paths to choose ($k$) per traffic class
     :param bool needs_sorting: whether we need to sort the paths before selection.
         True by default
@@ -79,64 +80,94 @@ cpdef k_shortest_paths(pptc, int num_paths, bool needs_sorting=True,
         place or make a copy. Default is True.
     :return: the new (chosen) paths per traffic class
     :rtype: dict
+
     """
-    newppk = None
+    newpptc = None
     if needs_sorting:
-        newppk = sort_paths_per_commodity(pptc, key=len, inplace=inplace)
-    if newppk is None:
-        newppk = pptc
+        newpptc = sort_paths(pptc, key=len, inplace=inplace)
+    if newpptc is None:
+        newpptc = pptc
     result = {}
-    for comm in pptc:
-        result[comm] = newppk[comm][:num_paths]
+    for tc in newpptc:
+        result[tc] = newpptc[tc][:num_paths]
     return result
 
-# TODO: check that this method is even used, might be obsolete
-def filter_paths(dict pptc, func):
-    """ Filter paths using a function.
+# # TODO: check that this method is even used, might be obsolete
+# def filter_paths(pptc, func):
+#     """ Filter paths using a function.
+#
+#     :param pptc: paths per traffic class
+#     :param func: function to be applied to each path
+#     :return: new paths per commodity with paths for which *func* returned a
+#         true value
+#     """
+#     assert (hasattr(func, '__call__'))  # ensure this is a function
+#     result = defaultdict(lambda: [])
+#     for tc in pptc:
+#         for path in pptc[tc]:
+#             if func(path):
+#                 result[tc].append(path)
+#     return result
 
-    :param pptc: paths per traffic class
-    :param func: function to be applied to each path
-    :return: new paths per commodity with paths for which *func* returned a
-        true value
-    """
-    assert (hasattr(func, '__call__'))  # ensure this is a function
-    result = defaultdict(lambda: [])
-    for tc in pptc:
-        for path in pptc[tc]:
-            if func(path):
-                result[tc].append(path)
-    return result
-
-def get_select_function(name, kwargs=None):
-    """
-    Return the path selection function based on name.
-    Allows passing of additional keyword arguments, so that the returned
-    function can satisfy the following signature::
-
-        function(pptc, selectNumber)
-
-    :param name: the name of the function
-    :param kwargs: a dictionary of keyword arguements to be passed to the function
-    :return: the callable object with
-    :raise: :py:class:`sol.utils.exceptions.InvalidConfigException`
-        if the name passed in is not supported
-
-    Supported names so far: 'random' and 'shortest' For example::
-
-        f = get_select_function('random')
-        pptc = f(pptc, 5)
-
-    will give you 5 paths per traffic class, randomly chosen
-
-    """
-    if kwargs is None:
-        kwargs = {}
-    if name.lower() in _RANDOM:
-        return functools.partial(choose_rand, **kwargs)
-    elif name.lower() in _SHORTEST:
-        return functools.partial(k_shortest_paths, **kwargs)
-    else:
-        raise InvalidConfigException("Unknown select method")
+# def get_select_function(name, kwargs=None):
+#     """
+#     Return the path selection function based on name.
+#     Allows passing of additional keyword arguments, so that the returned
+#     function can satisfy the following signature::
+#
+#         function(pptc, selectNumber)
+#
+#     :param name: the name of the function
+#     :param kwargs: a dictionary of keyword arguements to be passed to the function
+#     :return: the callable object with
+#     :raise: :py:class:`sol.utils.exceptions.InvalidConfigException`
+#         if the name passed in is not supported
+#
+#     Supported names so far: 'random' and 'shortest' For example::
+#
+#         f = get_select_function('random')
+#         pptc = f(pptc, 5)
+#
+#     will give you 5 paths per traffic class, randomly chosen
+#
+#     """
+#     if kwargs is None:
+#         kwargs = {}
+#     if name.lower() in _RANDOM:
+#         return functools.partial(choose_rand, **kwargs)
+#     elif name.lower() in _SHORTEST:
+#         return functools.partial(k_shortest_paths, **kwargs)
+#     else:
+#         raise InvalidConfigExceptef get_select_function(name, kwargs=None):
+#     """
+#     Return the path selection function based on name.
+#     Allows passing of additional keyword arguments, so that the returned
+#     function can satisfy the following signature::
+#
+#         function(pptc, selectNumber)
+#
+#     :param name: the name of the function
+#     :param kwargs: a dictionary of keyword arguements to be passed to the function
+#     :return: the callable object with
+#     :raise: :py:class:`sol.utils.exceptions.InvalidConfigException`
+#         if the name passed in is not supported
+#
+#     Supported names so far: 'random' and 'shortest' For example::
+#
+#         f = get_select_function('random')
+#         pptc = f(pptc, 5)
+#
+#     will give you 5 paths per traffic class, randomly chosen
+#
+#     """
+#     if kwargs is None:
+#         kwargs = {}
+#     if name.lower() in _RANDOM:
+#         return functools.partial(choose_rand, **kwargs)
+#     elif name.lower() in _SHORTEST:
+#         return functools.partial(k_shortest_paths, **kwargs)
+#     else:
+#         raise InvalidConfigException("Unknown select method")
 
 cpdef merge_pptc(apps, sort=False, key=None):
     """
@@ -151,8 +182,10 @@ cpdef merge_pptc(apps, sort=False, key=None):
         *should* be identical, but beware in case they are not!
 
     :param list apps: list of :py:class:`sol.opt.app.App` objects
+    :param sort: whether to sort paths per traffic class after merging
     :return: paths per traffic class dictionary
     :rtype: dict
+
     """
     result = {}
     for app in apps:
@@ -160,7 +193,7 @@ cpdef merge_pptc(apps, sort=False, key=None):
             if tc not in result:
                 result[tc] = app.pptc[tc]
     if sort:
-        sort_paths_per_commodity(result, key, inplace=True)
+        sort_paths(result, key, inplace=True)
     return result
 
 cdef _filter_pptc(apps, chosen_pptc):
@@ -188,6 +221,7 @@ cpdef select_ilp(apps, Topology topo, int num_paths=5, debug=False,
 
     :return: None, the applications' :py:attr:`sol.opt.App.pptc` attribute will
         be modified to reflect selected paths.
+
     """
     logger.info('Selection composition')
     opt = compose(apps, topo, obj_mode=mode)

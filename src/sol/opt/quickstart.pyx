@@ -2,7 +2,7 @@
 
 __all__ = ['get_optimization', 'from_app']
 
-from sol.opt.varnames import DEFAULT_OPTIMIZER, CPLEX, GUROBI
+from sol.utils.const import DEFAULT_OPTIMIZER, CPLEX, GUROBI
 from gurobiwrapper cimport OptimizationGurobi, add_named_constraints, \
     add_obj_var
 from sol.utils.exceptions import InvalidConfigException
