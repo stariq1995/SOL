@@ -28,12 +28,13 @@ class App(object):
         :param args:
         :param kwargs:
         :return:
+
         """
         self.pptc = pptc
         # Check that the objective is either a string or a tuple
         if obj is not None:
-            assert isinstance(obj, str) or (isinstance(obj, tuple) and
-                                            isinstance(obj[0], str))
+            assert isinstance(obj, unicode) or (isinstance(obj, tuple) and
+                                            isinstance(obj[0], unicode))
         self.obj = obj
         self.resourceCost = resource_cost
         self.name = name
@@ -69,6 +70,7 @@ class App(object):
     def objstr(self):
         """
         Returns the string name of this application
+
         :return:
         """
         if isinstance(self.obj, tuple):

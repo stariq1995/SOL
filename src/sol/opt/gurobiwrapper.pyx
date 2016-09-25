@@ -25,8 +25,8 @@ from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
 from gurobiwrapper cimport OptimizationGurobi
 from sol.opt.varnames cimport xp, al, bn, be, bp
-from sol.utils.const import LATENCY, MAX_ALL_FLOW, ALLOCATE_FLOW, CAP_LINKS, \
-    CAP_NODES, MIN_LINK_LOAD, MIN_LATENCY, MIN_NODE_LOAD, ROUTE_ALL, NOT_LATENCY
+from sol.utils.const import RES_LATENCY, MAX_ALL_FLOW, ALLOCATE_FLOW, CAP_LINKS, \
+    CAP_NODES, OBJ_MIN_LINK_LOAD, OBJ_MIN_LATENCY, MIN_NODE_LOAD, ROUTE_ALL, RES_NOT_LATENCY
 from sol.utils.logger import logger
 
 # noinspection PyClassicStyleClass
@@ -344,12 +344,12 @@ cdef class OptimizationGurobi:
 
     cpdef min_latency(self, pptc, weight=1.0,
                       bool norm=True, epoch_mode=u'max', name=None):
-        self._varindex[LATENCY if name is None else name] = latency = \
-            self.opt.addVar(name=LATENCY if name is None else name)
+        self._varindex[RES_LATENCY if name is None else name] = latency = \
+            self.opt.addVar(name=RES_LATENCY if name is None else name)
         self._varindex[u'flip_{}'.format(name)\
-                       if name is None else NOT_LATENCY] = notlatency = \
+                       if name is None else RES_NOT_LATENCY] = notlatency = \
             self.opt.addVar(name=u'flip_{}'.format(name)\
-                            if name is None else NOT_LATENCY)
+                            if name is None else RES_NOT_LATENCY)
         cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
         cdef int epoch
         # cdef unicode name
@@ -510,7 +510,7 @@ cdef class OptimizationGurobi:
         :param value:
         :return:
         """
-        v = self.v(LATENCY)
+        v = self.v(RES_LATENCY)
         # logger.debug("Latency is %f" % v.x)
         return v.x if value else v
 
@@ -746,10 +746,10 @@ cpdef add_obj_var(app, opt, weight=0, epoch_mode=u'max'):
     else:
         ao = app.obj
     aol = ao.lower()  # App objective lower -- aol
-    if aol == MIN_LINK_LOAD:
+    if aol == OBJ_MIN_LINK_LOAD:
         return opt.min_link_load(res, app.objTC, weight, epoch_mode,
                                  name=app.name)
-    elif aol == MIN_LATENCY:
+    elif aol == OBJ_MIN_LATENCY:
         return opt.min_latency({tc: app.pptc[tc] for tc in app.objTC},
                                weight, epoch_mode=epoch_mode,
                                name=app.name)
