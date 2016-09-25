@@ -13,7 +13,7 @@ cpdef inline unicode xp(TrafficClass traffic_class, Path path, int epoch=0):
     :returns: variable name of the form *x_classid_pathindex*
     :rtype: str
     """
-    return 'x_{}_{}_{}'.format(traffic_class.ID, path.get_id(), epoch)
+    return u'x_{}_{}_{}'.format(traffic_class.ID, path.get_id(), epoch)
 
 @cython.profile(False)
 cpdef unicode al(TrafficClass traffic_class, int epoch=0):
@@ -23,7 +23,7 @@ cpdef unicode al(TrafficClass traffic_class, int epoch=0):
     :param traffic_class: the traffic class object
     :return: variable name of the form *a_classid*
     """
-    return 'a_{}_{}'.format(traffic_class.ID, epoch)
+    return u'a_{}_{}'.format(traffic_class.ID, epoch)
 
 cpdef unicode bn(int node):
     """
@@ -32,7 +32,7 @@ cpdef unicode bn(int node):
     :param node: nodeID
     :return: variable name of the form *binnode_nodeID*
     """
-    return 'binnode_{}'.format(node)
+    return u'binnode_{}'.format(node)
 
 cpdef unicode be(int head, int tail):
     """
@@ -42,7 +42,7 @@ cpdef unicode be(int head, int tail):
     :param tail: edge tail (nodeID)
     :return: variable name of the form *binedge_headID_tailID*
     """
-    return 'binedge_{}_{}'.format(head, tail)
+    return u'binedge_{}_{}'.format(head, tail)
 
 @cython.profile(False)
 cpdef unicode bp(TrafficClass traffic_class, Path path):
@@ -53,7 +53,7 @@ cpdef unicode bp(TrafficClass traffic_class, Path path):
     :param pathIndex: path index in the list of paths per traffic class
     :return: variable name of the form *binpath_classid_pathindex*
     """
-    return 'binpath_{}_{}'.format(traffic_class.ID, path.get_id())
+    return u'binpath_{}_{}'.format(traffic_class.ID, path.get_id())
 
 cpdef unicode nl(int node, unicode resource, int epoch=0):
     """
@@ -62,7 +62,7 @@ cpdef unicode nl(int node, unicode resource, int epoch=0):
     :param node: node ID
     :param resource: the resource
     """
-    return 'Load_{}_{}_{}'.format(resource, node, epoch)
+    return u'Load_{}_{}_{}'.format(resource, node, epoch)
 
 cpdef unicode el(tuple link, unicode resource, int epoch=0):
     """
@@ -71,7 +71,7 @@ cpdef unicode el(tuple link, unicode resource, int epoch=0):
     :param link:
     :param resource:
     """
-    return 'Load_{}_{}_{}'.format(resource, tup2str(link), epoch)
+    return u'Load_{}_{}_{}'.format(resource, tup2str(link), epoch)
 
 cpdef unicode nc(int node, unicode resource, int epoch=0):
     """
@@ -80,4 +80,4 @@ cpdef unicode nc(int node, unicode resource, int epoch=0):
     :param node:
     :param resource:
     """
-    return 'Cap_{}_{}_{}'.format(resource, node, epoch)
+    return u'Cap_{}_{}_{}'.format(resource, node, epoch)

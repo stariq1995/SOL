@@ -8,7 +8,7 @@ $init = <<SCRIPT
   sudo apt-get install -y build-essential \
    libssl-dev \
    python-all python-twisted-conch git tmux vim python-pip python-paramiko \
-   python-sphinx openjdk-8-jdk
+   python-sphinx openjdk-8-jdk maven
   sudo pip install alabaster
   echo 'export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"' >> ~/.profile
   source ~/.profile
