@@ -1,5 +1,5 @@
 # coding=utf-8
-
+import numpy
 import pytest
 import tmgen
 from six import iteritems, itervalues
@@ -21,7 +21,7 @@ def pptc(request):
     tm = tmgen.uniform_tm(request.param, 20, 50, 1)
     tc = traffic_classes(tm, {u'all': 1}, {u'all': 10})
     # generate all possibe paths
-    res = generate_paths_tc(topo, tc, null_predicate, 100, 100)
+    res = generate_paths_tc(topo, tc, null_predicate, 10, numpy.inf)
     return res
 
 
@@ -29,7 +29,6 @@ def pptc(request):
 # of paths in place and not
 def test_shortest(pptc, inplace):
     subset = k_shortest_paths(pptc, 4, inplace=inplace)
-    print subset
     # ensure correct number of paths
     for tc, paths in iteritems(subset):
         assert len(paths) == min(4, len(pptc[tc]))
