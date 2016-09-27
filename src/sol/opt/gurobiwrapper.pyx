@@ -349,7 +349,8 @@ cdef class OptimizationGurobi:
         self._varindex[u'flip_{}'.format(name)\
                        if name is None else RES_NOT_LATENCY] = notlatency = \
             self.opt.addVar(name=u'flip_{}'.format(name)\
-                            if name is None else RES_NOT_LATENCY)
+                            if name is None else RES_NOT_LATENCY,
+                            obj=weight)
         cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
         cdef int epoch
         # cdef unicode name
