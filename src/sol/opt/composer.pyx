@@ -1,22 +1,23 @@
 # coding=utf-8
 # cython: cdivision=True
 from __future__ import division
+from __future__ import print_function
+from __future__ import print_function
 
 from gurobipy import quicksum
 
-from sol.topology.topologynx cimport Topology
+from numpy import log
 from sol.opt.gurobiwrapper cimport OptimizationGurobi, add_obj_var, \
     add_named_constraints
-
-from sol.utils.logger import logger
+from sol.topology.topologynx cimport Topology
 from sol.utils.exceptions import CompositionError
-from numpy import log
+from sol.utils.logger import logger
+
 #XXX: this entire module is currently tied to Gurobi
 
 
-logx = [0.01,0.02,0.03,0.05,0.08,0.12,0.18,0.28,0.43,0.66,1.]
+logx = [0.01, 0.02, 0.03, 0.05, 0.08, 0.12, 0.18, 0.28, 0.43, 0.66, 1.]
 log_approx = log(logx)
-
 
 cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
     """
@@ -57,12 +58,14 @@ cpdef _detect_cost_conflict(apps):
     for i in range(len(apps)):
         for j in range(i, len(apps)):
             # Check for overlapping resources
-            sameresoures = set(apps[i].resourceCost.keys()).intersection(
-                apps[j].resourceCost.keys())
+            sameresoures = set(list(apps[i].resourceCost.keys())) \
+                .intersection(list(apps[j].resourceCost.keys()))
+            print(sameresoures)
             for r in sameresoures:
+                print(r)
                 if apps[i].resourceCost[r] != apps[j].resourceCost[r]:
                     resourse_overlap = True
-                break
+                    break
             # don't do extra work, break if at least one conflict detected
             if resourse_overlap:
                 break
@@ -74,12 +77,13 @@ cpdef _detect_cost_conflict(apps):
         if tcs.intersection(l):
             tc_overlap = True
             break
-        tcs.update(tcs)
+        tcs.update(l)
 
     if resourse_overlap and tc_overlap:
         raise CompositionError(
             "Different costs for resources in overlapping traffic classes")
     logger.debug("No resource conflicts between apps")
+    return resourse_overlap, tc_overlap
 
 cdef compose_resources(list apps, Topology topo, opt):
     logger.debug("Composing resources")
@@ -111,7 +115,6 @@ cdef weighted_obj(apps, Topology topo, opt, epoch_mode):
         add_obj_var(app, opt, vols[app] / total_vol, epoch_mode)
     opt.get_gurobi_model().update()
 
-
 cdef prop_fair_obj(apps, Topology topo, opt, epoch_mode):
     logger.debug("Composing objectives with prop fairness")
     m = opt.get_gurobi_model()
@@ -119,7 +122,6 @@ cdef prop_fair_obj(apps, Topology topo, opt, epoch_mode):
         var = add_obj_var(app, opt, weight=0, epoch_mode=epoch_mode)
         m.setPWLObj(var, logx, log_approx)
     m.update()
-
 
 cdef max_min_obj(apps, Topology topo, opt, epoch_mode):
     logger.debug("Composing objectives")
@@ -130,10 +132,8 @@ cdef max_min_obj(apps, Topology topo, opt, epoch_mode):
         m.addConstr(obj <= var)
     opt.get_gurobi_model().update()
 
-
 cdef gini_obj(apps, Topology topo, opt):
     raise NotImplemented
-
 
 cdef variance_obj(apps, Topology topo, opt):
     m = opt.get_gurobi_model()
@@ -143,7 +143,7 @@ cdef variance_obj(apps, Topology topo, opt):
         var = add_obj_var(app, opt, weight=0)
         objvars.append(var)
     m.update()
-    m.addConstr(average == quicksum(objvars)/len(apps))
+    m.addConstr(average == quicksum(objvars) / len(apps))
     diffs = []
     for var in objvars:
         d = m.addVar()
@@ -151,7 +151,7 @@ cdef variance_obj(apps, Topology topo, opt):
         diffs.append(d)
         m.addConstr(d == var - average)
     m.update()
-    m.setObjective(quicksum([d ** 2 for d in diffs])/len(apps))
+    m.setObjective(quicksum([d ** 2 for d in diffs]) / len(apps))
     m.update()
 
 cdef relative_mean_deviation_obj(apps, Topology topo, opt):
