@@ -1,5 +1,6 @@
 # coding=utf-8
-from sol import from_app
+
+from sol.opt.quickstart import from_app
 from sol.opt.app import App
 from sol.path.generate import generate_paths_tc
 from sol.path.predicates import null_predicate
@@ -10,7 +11,7 @@ from sol.utils.const import ALLOCATE_FLOW, ROUTE_ALL, OBJ_MIN_LATENCY, RES_BANDW
 if __name__ == '__main__':
 
     # Generate a topology:
-    topo = complete_topology(8)  # 8 nodes
+    topo = complete_topology(5)  # 5 nodes
 
     # Application configuration
     appconfig = {
@@ -24,10 +25,10 @@ if __name__ == '__main__':
     # Generate a single traffic class:
     # TrafficClass (id, name, source node, destination node)
     # For now don't worry about IP addresses.
-    tc = [TrafficClass(1, u'classname', 0, 5)]
+    tc = [TrafficClass(1, u'classname', 0, 4)]
     # Generate all paths for this traffic class
     pptc = generate_paths_tc(topo, tc, appconfig['predicate'],
-                             cutoff=100, max_paths=200)
+                             cutoff=100)
     # Create an application based on our config
     app = App(pptc, **appconfig)
 
