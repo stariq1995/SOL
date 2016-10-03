@@ -3,14 +3,12 @@
 Implements the topology for SOL optimization
 """
 import networkx as nx
-from networkx.readwrite import graphml, json_graph
-
 from cpython cimport bool
+from networkx.readwrite import graphml, json_graph
 from sol.topology.generators import EDGE_LAYER
 from sol.utils.const import FORMAT_AUTO, FORMAT_GRAPHML, FORMAT_GML, SERVICES, \
     SWITCH, RESOURCES, HAS_MBOX, ERR_FMT
 from sol.utils.ph import parse_bool
-
 
 # noinspection PyClassicStyleClass
 cdef class Topology:
@@ -267,3 +265,16 @@ cdef class Topology:
 
     def to_json(self):
         return json_graph.node_link_data(self._graph.to_undirected())
+
+    @staticmethod
+    def from_json(data):
+        """
+        Create a new topology from a JSON dictionary
+
+        :param data: the JSON data
+        :return: a new Topology object
+
+        """
+        name = data[u'name']
+        return Topology(name, json_graph.node_link_graph(data, directed=True,
+                                                         multigraph=False))
