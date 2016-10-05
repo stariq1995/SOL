@@ -8,7 +8,7 @@ $init = <<SCRIPT
   sudo apt-get install -y build-essential \
    libssl-dev \
    python-all python-twisted-conch git tmux vim python-pip python-paramiko \
-   python-sphinx openjdk-8-jdk maven
+   python-sphinx openjdk-8-jdk maven curl
   sudo pip install alabaster
   echo 'export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"' >> ~/.profile
   source ~/.profile
@@ -45,8 +45,11 @@ $onos = <<SCRIPT
   git clone https://gerrit.onosproject.org/onos
   pushd onos
   git checkout 1.6.0
+  mvn clean install
   popd
 SCRIPT
+
+$onosdev = "source ~/onos/tools/dev/bash_profile"
 
 $gurobi = <<SCRIPT
   wget --quiet http://packages.gurobi.com/6.5/gurobi6.5.2_linux64.tar.gz
@@ -85,14 +88,15 @@ Vagrant.configure("2") do |config|
 
   ## Guest config
   config.vm.hostname = "solvm"
-  # config.vm.network :private_network, ip: "192.168.0.100"
-  config.vm.network :forwarded_port, guest:6633, host:6633 # OpenFlow
-  config.vm.network :forwarded_port, guest:8181, host:8181 # Web UI
-  config.vm.network :forwarded_port, guest:8080, host:8080 # ONOS REST API
+  config.vm.network "private_network", type: "dhcp"
+  # config.vm.network :forwarded_port, guest:6633, host:6633 # OpenFlow
+  # config.vm.network :forwarded_port, guest:8181, host:8181 # Web UI
+  # config.vm.network :forwarded_port, guest:8080, host:8080 # ONOS REST API
 
   ## Provisioning
   config.vm.provision :shell, privileged: false, :inline => $init
   config.vm.provision :shell, privileged: false, :inline => $onos
+  config.vm.provision :shell, privileged: false, run: 'always', :inline => $onosdev
   config.vm.provision :shell, privileged: false, :inline => $gurobi
   config.vm.provision :shell, privileged: false, :inline => $tmgen
   config.vm.provision :shell, privileged: false, :inline => $sol
