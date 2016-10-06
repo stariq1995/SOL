@@ -30,13 +30,14 @@ def hi():
 
 @app.route('/api/v1/compose')
 @doc.doc()
-def compose(apps, topology, mode, epoch_mode='max', fairness_mode='weighted'):
-    return ""
+def compose(apps, mode, epoch_mode='max', fairness_mode='weighted'):
+    abort(501)  # not implemented yet
 
 
 @app.route('/api/v1/topology/', methods=['GET', 'POST'])
 @doc.doc()
 def topology():
+    """ Set or return the stored topology """
     global _topology
     if request.method == 'GET':
         return jsonify(_topology.to_json())
