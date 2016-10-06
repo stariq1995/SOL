@@ -88,10 +88,10 @@ Vagrant.configure("2") do |config|
 
   ## Guest config
   config.vm.hostname = "solvm"
-  config.vm.network "private_network", type: "dhcp"
   # config.vm.network :forwarded_port, guest:6633, host:6633 # OpenFlow
   # config.vm.network :forwarded_port, guest:8181, host:8181 # Web UI
   # config.vm.network :forwarded_port, guest:8080, host:8080 # ONOS REST API
+  config.vm.network :private_network, type:"dhcp"
 
   ## Provisioning
   config.vm.provision :shell, privileged: false, :inline => $init
