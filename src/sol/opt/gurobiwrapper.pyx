@@ -29,11 +29,15 @@ from sol.utils.const import RES_LATENCY, MAX_ALL_FLOW, ALLOCATE_FLOW, CAP_LINKS,
     CAP_NODES, OBJ_MIN_LINK_LOAD, OBJ_MIN_LATENCY, MIN_NODE_LOAD, ROUTE_ALL, RES_NOT_LATENCY
 from sol.utils.logger import logger
 
+OBJ_MAX_LINK_SPARE_CAP = u'maxlinkspare'
+OBJ_MAX_NODE_SPARE_CAP = u'maxnodespare'
+OBJ_MAX_NOT_LATENCY = u'maxnotlatency'
+
 # noinspection PyClassicStyleClass
 cdef class OptimizationGurobi:
     """
     Represents a SOL optimization problem.
-    Uses Gurobi for building the model and solving it.
+    Uses Gurobi for building and solving the model.
     """
     def __init__(self, Topology topo, bool measure_time=True):
         self.opt = Model()
@@ -52,6 +56,13 @@ cdef class OptimizationGurobi:
         logger.debug("Initialized Gurobi wrapper")
 
     cpdef _add_decision_vars(self, dict pptc):
+        """
+        Add desicision variables of the form x_* responsible for determining the amount
+        of flow on each path for each trafficlass (and potentially per each epoch).
+
+        :param pptc:
+        :return:
+        """
         cdef TrafficClass tc
         cdef Path path
         cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
@@ -104,12 +115,13 @@ cdef class OptimizationGurobi:
 
     cpdef allocate_flow(self, pptc, allocation=None):
         """
-        Allocate network flow
+        Allocate network flow for each traffic class by allocating flow on each
+        path (and summing it up for each traffic class)
 
         :param pptc: paths per traffic class
-        :param allocation: if given, allocation of given traffic classes will
-            be set to this value.
-        :return:
+        :param allocation: if given, allocation for given traffic classes will
+            be set to this value. Allocation must be between 0 and 1
+        :raises: ValueError if the given allocation is not between 0 and 1
         """
         self._add_decision_vars(pptc)
         cdef int pi
@@ -131,6 +143,8 @@ cdef class OptimizationGurobi:
                         lhs.addTerms(1, self.v(xp(tc, path, epoch)))
                     self.opt.addConstr(lhs == self.v(name))
         else:
+            if not 0<= allocation <= 1:
+                raise ValueError(ERR_ALLOCATION)
             for tc in pptc:
                 for epoch in range(num_epochs):
                     name = self.al(tc, epoch)
@@ -139,10 +153,11 @@ cdef class OptimizationGurobi:
 
     cpdef route_all(self, pptc):
         """
-        Route all traffic for all traffic classes given in pptc.
+        Ensure that all available traffic is routed (no drops)
+        by forcing the allocation of flow to be 1
+        for all of the given traffic classes.
 
         :param pptc: paths per traffic class
-        :return:
         """
         cdef int epoch = 0, num_epochs = ma.compressed(
             next(iterkeys(pptc)).volFlows).size

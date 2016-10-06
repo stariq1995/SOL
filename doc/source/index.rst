@@ -5,5 +5,5 @@ SOL's documentation
    :maxdepth: 2
 
    gstarted.rst
+   guide.rst
    api.rst
-
