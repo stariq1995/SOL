@@ -40,12 +40,10 @@ RES_TCAM = u'tcam'
 RES_LATENCY = u'Latency'
 RES_NOT_LATENCY = u'NotLatency'
 
-
 HAS_MBOX = u'hasMbox'
 SWITCH = u'switch'
 SERVICES = u'services'
 RESOURCES = u'resources'
-
 
 FORMAT_GRAPHML = u'graphml'
 FORMAT_GML = u'gml'
@@ -58,3 +56,6 @@ ERR_NO_PATH = u'No paths between {} and {}'
 
 WARN_NO_PATH_ID = u'No ID given to Path constructor, ' \
                   u'generating a random path ID'
+CORE_LAYER = u'core'
+EDGE_LAYER = u'edge'
+AGG_LAYER = u'aggregation'

@@ -5,9 +5,8 @@ Implements the topology for SOL optimization
 import networkx as nx
 from cpython cimport bool
 from networkx.readwrite import graphml, json_graph
-from sol.topology.generators import EDGE_LAYER
 from sol.utils.const import FORMAT_AUTO, FORMAT_GRAPHML, FORMAT_GML, SERVICES, \
-    SWITCH, RESOURCES, HAS_MBOX, ERR_FMT
+    SWITCH, RESOURCES, HAS_MBOX, ERR_FMT, EDGE_LAYER
 from sol.utils.ph import parse_bool
 
 # noinspection PyClassicStyleClass

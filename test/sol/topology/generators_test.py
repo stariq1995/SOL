@@ -4,7 +4,7 @@ import networkx
 from sol.topology.topologynx import Topology
 from sol.topology.generators import complete_topology, chain_topology, \
     fat_tree, CORE_LAYER
-from sol.utils.const import SWITCH
+from sol.utils.const import SWITCH, CORE_LAYER
 
 
 def test_generators():

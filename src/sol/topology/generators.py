@@ -5,15 +5,11 @@ Implements functions that generate some basic topologies.
 """
 
 import itertools
+
 import networkx as nx
-from sol.topology.topologynx import Topology
 from six.moves import xrange
-from sol.utils.const import SWITCH
-
-CORE_LAYER = 'core'
-EDGE_LAYER = 'edge'
-AGG_LAYER = 'aggregation'
-
+from sol.topology.topologynx import Topology
+from sol.utils.const import SWITCH, CORE_LAYER, EDGE_LAYER, AGG_LAYER
 
 def fat_tree(k):
     """
