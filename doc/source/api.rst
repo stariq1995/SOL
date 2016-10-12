@@ -53,7 +53,25 @@ Optimization
 ------------
 
 .. automodule:: sol.opt.quickstart
+    :members:
 
 .. py:currentmodule:: sol.opt.gurobiwrapper
 .. autoclass:: OptimizationGurobi
+    :members:
+
+
+Utils & Logging
+---------------
+
+.. automodule:: sol.utils.ph
+    :members:
+    :autodata: Tree
+
+.. automodule:: sol.utils.logger
+    :members:
+
+Exceptions
+----------
+
+.. automodule:: sol.utils.exceptions
     :members:

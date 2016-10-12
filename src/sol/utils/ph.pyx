@@ -1,8 +1,6 @@
 # coding=utf-8
-""" Various utility functions
-
-.. note::
-    Some code copied from other projects, might not be related
+"""
+Various utility functions
 """
 import itertools
 from collections import defaultdict
