@@ -58,6 +58,7 @@ cdef class OptimizationGurobi:
     cpdef consume_per_path(self, pptc, unicode resource_name, double cost,
                            node_caps, link_caps)
     cpdef cap(self, unicode resource, capval=*)
+    cpdef fix_paths(self, pptc)
 
 cpdef add_obj_var(app, opt, weight=*, epoch_mode=*)
 cpdef get_obj_var(app, opt)

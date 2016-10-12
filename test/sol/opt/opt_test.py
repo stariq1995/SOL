@@ -9,6 +9,7 @@ from sol.topology.traffic import TrafficClass
 from sol.utils.const import ALLOCATE_FLOW, ROUTE_ALL, OBJ_MIN_LATENCY, \
     RES_BANDWIDTH
 from sol.utils.ph import listeq
+from fixtures import mock_topo, mock_min_latency_app, mock_max_flow_app
 
 
 def test_shortest_path():
@@ -54,3 +55,21 @@ def test_shortest_path():
 
     assert listeq(list(path.nodes()), [0, 5])
     assert path.flow_fraction() == 1.0
+
+
+def test_fixed_paths():
+    topo = mock_topo()
+    app = mock_max_flow_app(topo)
+    for tc in app.pptc:
+        for p in app.pptc[tc]:
+            p.set_flow_fraction(.008)
+
+    opt = from_app(topo, app)
+    opt.fix_paths(app.pptc)
+    opt.write(u'testfp')
+    opt.solve()
+    paths = opt.get_path_fractions(app.pptc)[0]
+    for tc in paths:
+        for p in app.pptc[tc]:
+            assert p.flow_fraction() == .008
+

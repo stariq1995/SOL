@@ -715,12 +715,20 @@ cdef class OptimizationGurobi:
                     result[ii[tcid]].append(iip[tcid][pid])
         return result
 
-    # cpdef enable_timing(self):
-    #     """
-    #     Measure and store the time it took to solve the optimization
-    #     :return:
-    #     """
-    #     self._do_time = True
+    cpdef fix_paths(self, pptc):
+        """
+        Fix flow allocation of for given paths to a precise value.
+
+        :param pptc: path per traffic class, with flow fractions set
+        """
+        cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
+        for tc in pptc:
+            for p in pptc[tc]:
+                for e in range(num_epochs):
+                    self.opt.addConstr(self.v(xp(tc, p, e)) ==\
+                                       p.flow_fraction())
+        self.opt.update()
+
 
     cpdef double get_time(self):
         """
