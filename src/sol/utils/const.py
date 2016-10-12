@@ -13,7 +13,7 @@ MIN_NODE_LOAD = u'minnodeload'
 MAX_NODE_SPARE_CAP = u'maxnodespare'
 OBJ_MIN_LATENCY = u'minlatency'
 MAX_NOT_LATENCY = u'maxnotlatency'
-MAX_ALL_FLOW = u'maxallflow'
+OBJ_MAX_ALL_FLOW = u'maxallflow'
 MAX_MIN_FLOW = u'maxminflow'
 
 ALLOCATE_FLOW = u'allocate_flow'

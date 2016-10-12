@@ -25,7 +25,7 @@ from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
 from gurobiwrapper cimport OptimizationGurobi
 from sol.opt.varnames cimport xp, al, bn, be, bp
-from sol.utils.const import RES_LATENCY, MAX_ALL_FLOW, ALLOCATE_FLOW, CAP_LINKS, \
+from sol.utils.const import RES_LATENCY, OBJ_MAX_ALL_FLOW, ALLOCATE_FLOW, CAP_LINKS, \
     CAP_NODES, OBJ_MIN_LINK_LOAD, OBJ_MIN_LATENCY, MIN_NODE_LOAD, ROUTE_ALL, RES_NOT_LATENCY
 from sol.utils.logger import logger
 
@@ -490,8 +490,8 @@ cdef class OptimizationGurobi:
                               name)
 
     cpdef max_flow(self, pptc, weight=1.0, name=None):
-        self._varindex[MAX_ALL_FLOW if name is None else name] = obj = \
-            self.opt.addVar(name=MAX_ALL_FLOW if name is None else name,
+        self._varindex[OBJ_MAX_ALL_FLOW if name is None else name] = obj = \
+            self.opt.addVar(name=OBJ_MAX_ALL_FLOW if name is None else name,
                             obj=weight, lb=0, ub=1)
         self.opt.update()
         self.opt.addConstr(
@@ -531,7 +531,7 @@ cdef class OptimizationGurobi:
         return v.x if value else v
 
     cpdef get_maxflow(self, bool value=True):
-        v = self.v(MAX_ALL_FLOW)
+        v = self.v(OBJ_MAX_ALL_FLOW)
         return v.x if value else v
 
     cpdef relax_to_lp(self):
@@ -738,7 +738,7 @@ cdef add_named_constraints(opt, app):
             opt.capLinks(app.pptc, *c[1:])
         elif c[0] == CAP_NODES:
             opt.capNodes(app.pptc, *c[1:])
-        elif c == MAX_ALL_FLOW:
+        elif c == OBJ_MAX_ALL_FLOW:
             opt.max_flow(app.pptc)
         else:
             raise InvalidConfigException("Unsupported constraint type")
@@ -772,7 +772,7 @@ cpdef add_obj_var(app, opt, weight=0, epoch_mode=u'max'):
     elif aol == MIN_NODE_LOAD:
         return opt.min_node_load(res, app.objTC, weight, epoch_mode,
                                  name=app.name)
-    elif aol == MAX_ALL_FLOW:
+    elif aol == OBJ_MAX_ALL_FLOW:
         return opt.max_flow(app.pptc, weight, name=app.name)
     else:
         raise InvalidConfigException("Unknown objective")
