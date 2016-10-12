@@ -3,7 +3,6 @@
     "directed",
     "graph",
     "links",
-    "multigraph",
     "nodes"
   ],
   "type": "object",
