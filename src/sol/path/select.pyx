@@ -336,7 +336,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
             # TODO: optimize so this is only recomputed if we moved to a new accepted state
             for pindex in bestpaths[tcid].findall('0b1'):
                 # The path should have been used in at least one epoch to be considered good
-                if not all([bestopt.v('x_{}_{}_{}'.format(tcid, allpaths[tcind[tcid]][pindex].get_id(), e)).x == 0 for e in arange(nume)]):
+                if not all([bestopt.v(u'x_{}_{}_{}'.format(tcid, allpaths[tcind[tcid]][pindex].get_id(), e)).x == 0 for e in arange(nume)]):
                     goodpaths.append(pindex)
                 else:
                     badpaths.append(pindex)

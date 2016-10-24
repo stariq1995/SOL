@@ -84,6 +84,9 @@ cdef class Path:
         """
         return self._ID
 
+    cpdef bool uses_box(self, node):
+        return False
+
     cpdef dict encode(self):
         """
         Encode this path in dict/list form so it can be JSON-ed or MsgPack-ed

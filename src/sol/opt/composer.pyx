@@ -60,9 +60,7 @@ cpdef _detect_cost_conflict(apps):
             # Check for overlapping resources
             sameresoures = set(list(apps[i].resourceCost.keys())) \
                 .intersection(list(apps[j].resourceCost.keys()))
-            print(sameresoures)
             for r in sameresoures:
-                print(r)
                 if apps[i].resourceCost[r] != apps[j].resourceCost[r]:
                     resourse_overlap = True
                     break

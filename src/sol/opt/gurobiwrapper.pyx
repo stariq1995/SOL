@@ -435,7 +435,7 @@ cdef class OptimizationGurobi:
         cdef unicode name2
         per_epoch_objs = [None] * num_epochs
         for e in range(num_epochs):
-            name2 = '{}_{}'.format(objname, e)
+            name2 = u'{}_{}'.format(objname, e)
             self._varindex[name] = per_epoch_objs[e] = \
                 self.opt.addVar(lb=0, name=name)
         self.opt.update()

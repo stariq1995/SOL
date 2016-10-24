@@ -20,6 +20,7 @@ cdef class Path:
     cpdef nodes(self)
     cpdef int get_id(self)
     cpdef dict encode(self)
+    cpdef bool uses_box(self, node)
 
 # noinspection PyClassicStyleClass
 cdef class PathWithMbox(Path):

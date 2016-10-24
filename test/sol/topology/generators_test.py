@@ -50,6 +50,6 @@ def test_switch_labels():
     Ensure that switches are labeled appropriately
 
     """
-    topo = complete_topology(5)
-    for node in topo.nodes():
-        assert SWITCH in topo.get_service_types(node)
+    for topo in [complete_topology(5), chain_topology(5)]:
+        for node in topo.nodes():
+            assert SWITCH in topo.get_service_types(node)

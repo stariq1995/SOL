@@ -11,6 +11,7 @@ from six.moves import xrange
 from sol.topology.topologynx import Topology
 from sol.utils.const import SWITCH, CORE_LAYER, EDGE_LAYER, AGG_LAYER
 
+
 def fat_tree(k):
     """
     Creates a FatTree topology with a given '-arity'.
