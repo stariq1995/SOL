@@ -1,0 +1,115 @@
+swagger: "2.0"
+info:
+  title: SOL server API
+  version: "1.1"
+  description: Server that uses SOL to compute solutions to network optimization problems
+basePath: /api/v1/
+consumes:
+  - application/json
+produces:
+  - application/json
+  - 'text/plain; charset=utf-8'
+schemes:
+  - "http"
+  - "https"
+paths:
+  /topology:
+    get:
+      summary: Get the topology currently stored in on the server
+      responses:
+        "200":
+          description: The currently stored topology is returned
+          schema:
+            $ref: '#/definitions/Topology'
+        "400":
+          description: The topology is not available because it was not set
+      tags:
+        - Topology
+    post:
+      summary: Set the topology on which SOL should operate. This is a required step before composition.
+      responses:
+        "201":
+          description: The topology was successfully set
+      tags:
+        - Topology
+  /compose:
+    post:
+      summary: Submit a series of paths for composition
+      responses:
+        "200":
+          description: Returns forwarding paths for each application
+      tags:
+        - Composition
+  /hi:
+    get:
+      summary: Return a hello world response to ensure the service is allive
+      responses:
+        "200":
+          description: Everything is fine, we are live!
+      tags:
+        - Test
+
+definitions:
+  TrafficClass:
+    properties:
+      id:
+        type: integer
+        description: Unique ID number of this traffic class
+      name:
+        type: string
+        description: Human-readable name to identify this traffic class
+      src:
+        type: integer
+        description: Source (ingress) node for the traffic class
+      dst:
+        type: integer
+        description: Destination (egress) node for the traffic class
+      vol_flows:
+        type: integer
+        description: Volume of this traffic class in flows
+      src_ip_prefix:
+        type: string
+        description: Source IP prefix that matches traffic in this class (CIDR notation)
+      dst_ip_prefix:
+        type: string
+        description: Destination IP prefix that matches traffic in this class (CIDR notation)
+  Topology:
+    properties:
+      name:
+        type: string
+        description: Name of the topology
+      directed:
+        type: boolean
+        description: Whether the graph is directed
+      graph:
+        type: object
+      nodes:
+        type: array
+        items:
+          $ref: '#/definitions/node'
+      links:
+        type: array
+        items:
+          $ref: '#/definitions/link'
+  node:
+    properties:
+      id:
+        type: integer
+        description: Node identifier
+      services:
+        type: array
+        description: List of services available at this node.
+        items:
+          type: string
+      resources:
+        type: object
+  link:
+    properties:
+      source:
+        type: integer
+        description: The source node of this edge
+      target:
+        type: integer
+        description: The destination (target) node of this edge
+      resources:
+        type: object

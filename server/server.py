@@ -1,13 +1,15 @@
 import argparse
 
+import flask
 from flask import Flask, request, jsonify
 from flask import abort
-from flask_autodoc import Autodoc
+from flask import send_from_directory
+from flask import url_for
 from flask_compress import Compress
+from sol.opt.app import App
 from sol.topology.topologynx import Topology
 
 app = Flask(__name__)
-doc = Autodoc(app)
 
 # REST-specific configuration here
 __API_VERSION = 1  # the current api version
@@ -19,7 +21,6 @@ _topology = None
 
 @app.route('/')
 @app.route('/api/v1/hi')
-@doc.doc()
 def hi():
     """
     A simple greeting to ensure the server is up
@@ -29,28 +30,62 @@ def hi():
 
 
 @app.route('/api/v1/compose')
-@doc.doc()
-def compose(apps, mode, epoch_mode='max', fairness_mode='weighted'):
+def compose(data, apps, mode, fairness_mode='weighted'):
+    """
+    Create a new composed opimization and return
+    :param apps:
+    :param mode:
+    :param fairness_mode:
+    :return:
+
+    """
+    try:
+        data = request.json
+    except 
+    tc = data['tc']
+    apps = [App(**a) for a in data['apps']]
+    mode = data['mode']
+    epoch_mode = data.get('fairness', 'weighted')
     abort(501)  # not implemented yet
 
 
 @app.route('/api/v1/topology/', methods=['GET', 'POST'])
-@doc.doc()
 def topology():
-    """ Set or return the stored topology """
+    """
+    Set or return the stored topology
+
+    """
     global _topology
     if request.method == 'GET':
+        if _topology is None:
+            return
         return jsonify(_topology.to_json())
     elif request.method == 'POST':
         _topology = Topology.from_json(request.data)
+        return
     else:
         abort(405)  # method not allowed
 
 
-@app.route('/doc')
-@app.route('/docs')
-def docs():
-    return doc.generate()
+@app.route('/apidocs/')
+def docs(path='index.html'):
+    """
+    Endpoint for swagger UI
+    :param path:
+    :return:
+    """
+    return send_from_directory('static/swaggerui/', path)
+
+
+@app.route('/spec')
+def swagger_json():
+    """
+    Endpoint that returns the swagger api using JSON
+    :return:
+    """
+    with open('static/api.json', 'r') as f:
+        return jsonify(flask.json.loads(f.read()))
+    # return url_for('static', filename='api.json')
 
 
 if __name__ == '__main__':
