@@ -30,23 +30,23 @@ def hi():
 
 
 @app.route('/api/v1/compose')
-def compose(data, apps, mode, fairness_mode='weighted'):
+def compose():
     """
-    Create a new composed opimization and return
-    :param apps:
-    :param mode:
-    :param fairness_mode:
+    Create a new composed opimization, solve and return the
+
     :return:
 
     """
+    abort(501)  # not implemented yet
+
     try:
         data = request.json
-    except 
-    tc = data['tc']
+    except KeyError:  # todo: is this right exception?
+        abort(401)
+
+    # For now we assume we can pre-load paths from disk
     apps = [App(**a) for a in data['apps']]
-    mode = data['mode']
-    epoch_mode = data.get('fairness', 'weighted')
-    abort(501)  # not implemented yet
+    fairness_mode = data.get('fairness', 'weighted')
 
 
 @app.route('/api/v1/topology/', methods=['GET', 'POST'])
