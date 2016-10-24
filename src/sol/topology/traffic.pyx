@@ -105,15 +105,17 @@ cdef class TrafficClass(object):
         in it.
         :return:
         """
-        return {'type': 'TrafficClass', 'src': self.src, 'dst': self.dst,
-                'name': self.name, 'id': self.ID}
+        d =  {'type': 'TrafficClass', 'src': self.src, 'dst': self.dst,
+              'name': self.name, 'id': self.ID}
+        return d
 
     @staticmethod
     def decode(d):
         """
         Return a traffic calss from a given dictionary. Must contain
         'id', 'name', 'src' and 'dst' fields.
-        :param d:
+
+        :param d: the dictionary
         :return:
         """
         return TrafficClass(d['id'], d['name'], d['src'], d['dst'])
