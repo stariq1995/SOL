@@ -47,6 +47,7 @@ Path generation and selection
 
 .. automodule:: sol.path.select
     :members:
+    :exclude-members: rand, choice
 
 
 Optimization
@@ -65,10 +66,16 @@ Utils & Logging
 
 .. automodule:: sol.utils.ph
     :members:
-    :autodata: Tree
 
 .. automodule:: sol.utils.logger
     :members:
+
+Provisioning
+------------
+
+.. automodule:: sol.topology.provisioning
+    :members:
+    :undoc-members:
 
 Exceptions
 ----------

@@ -2,7 +2,7 @@
 
 # from .topology.topologynx import Topology
 # from .path.paths import Path, PathWithMbox
-# from .utils.logger import *
+from .utils.logger import *
 # from .opt.quickstart import *
 
 

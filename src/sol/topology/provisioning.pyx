@@ -1,7 +1,7 @@
 # coding=utf-8
 """
-Convenience module that helps provision network topology resources if one does
-not have actual resource capacity numbers
+Utility module that helps provision network topology resources in a
+deterministic fashion, if one does not have actual resource capacity values
 """
 from __future__ import division
 
