@@ -28,7 +28,7 @@ cdef class Topology:
         """
         self.name = name
         if graph is not None:
-            if isinstance(graph, str):
+            if isinstance(graph, str) or isinstance(graph, unicode):
                 self.load_graph(graph)
             else:
                 self._graph = graph
@@ -94,7 +94,7 @@ cdef class Topology:
         else:
             raise ValueError(ERR_FMT)
 
-    def load_graph(self, unicode fname, fmt='auto'):
+    def load_graph(self, fname, fmt='auto'):
         """
         Load topology from disk
 
