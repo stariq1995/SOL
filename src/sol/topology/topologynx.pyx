@@ -299,7 +299,9 @@ cdef class Topology:
             This could be a lot of paths! And there is no guaranteed order in
             which they will be returned/traversed.
         """
-        return nx.all_simple_paths(self._graph, source, sink, cutoff)
+        # TODO: update documentation
+        # return nx.all_simple_paths(self._graph, source, sink, cutoff)
+        return nx.shortest_simple_paths(self._graph, source, sink)
 
     def to_json(self):
         return json_graph.node_link_data(self._graph.to_undirected())

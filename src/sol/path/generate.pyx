@@ -27,11 +27,11 @@ cpdef use_mbox_modifier(path, int offset, Topology topology, chain_length=1):
         paths where :math:`n` is
         the number of switches with middleboxes attached to them in the current path.
     """
-    return [PathWithMbox(path, chain, ind + offset) for ind, chain in
+    return [PathWithMbox(path.nodes(), chain, ind + offset) for ind, chain in
             enumerate(itertools.combinations(path, chain_length))
             if all([topology.has_middlebox(n) for n in chain])]
 
-cpdef generate_paths_ie(int source, int sink, Topology topology, predicate,
+def generate_paths_ie(int source, int sink, Topology topology, predicate,
                         int cutoff, float max_paths=float('inf'),
                         modify_func=None, bool raise_on_empty=True):
     """
@@ -56,31 +56,35 @@ cpdef generate_paths_ie(int source, int sink, Topology topology, predicate,
     :returns: a list of path objects
     :rtype: list
     """
-    paths = []
+    # paths = []
     cdef int num = 0
 
+    # TODO: update documentation if the generator thing works out
     for p in topology.paths(source, sink, cutoff):
         if modify_func is None:
             if predicate(p, topology):
-                paths.append(Path(p, num))
+                # paths.append(Path(p, num))
+                yield Path(p, num)
                 num += 1
         else:
             np = modify_func(p, num, topology)
             if isinstance(np, list):
                 for innerp in np:
                     if predicate(innerp, topology):
-                        paths.append(innerp)
+                        # paths.append(innerp)
                         num += 1
+                        yield innerp
             else:
                 if predicate(np, topology):
-                    paths.append(np)
+                    # paths.append(np)
                     num += 1
+                    yield np
         if num >= max_paths:
-            break
-    if not paths:
-        if raise_on_empty:
-            raise exceptions.NoPathsException(ERR_NO_PATH.format(source, sink))
-    return paths
+            return
+    # if not paths:
+    #     if raise_on_empty:
+    #         raise exceptions.NoPathsException(ERR_NO_PATH.format(source, sink))
+    # return paths
 
 cpdef generate_paths_tc(Topology topology, traffic_classes, predicate, cutoff,
                         max_paths=float('inf'), modify_func=None,
