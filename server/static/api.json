@@ -45,6 +45,15 @@
                 },
                 "tags": [
                     "Topology"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "topology",
+                        "schema": {
+                            "$ref": "#/definitions/Topology"
+                        }
+                    }
                 ]
             }
         },
@@ -53,17 +62,29 @@
                 "summary": "Submit a series of paths for composition",
                 "responses": {
                     "200": {
-                        "description": "Returns forwarding paths for each application"
+                        "description": "Returns forwarding paths for each application",
+                        "schema": {
+                            "$ref": "#/definitions/ComposeResponse"
+                        }
                     }
                 },
                 "tags": [
                     "Composition"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "composeobj",
+                        "schema": {
+                            "$ref": "#/definitions/ComposeObject"
+                        }
+                    }
                 ]
             }
         },
         "/hi": {
             "get": {
-                "summary": "Return a hello world response to ensure the service is allive",
+                "summary": "Return a hello world response to ensure the service is alive",
                 "responses": {
                     "200": {
                         "description": "Everything is fine, we are live!"
@@ -78,13 +99,9 @@
     "definitions": {
         "TrafficClass": {
             "properties": {
-                "id": {
+                "tcid": {
                     "type": "integer",
                     "description": "Unique ID number of this traffic class"
-                },
-                "name": {
-                    "type": "string",
-                    "description": "Human-readable name to identify this traffic class"
                 },
                 "src": {
                     "type": "integer",
@@ -165,6 +182,108 @@
                 },
                 "resources": {
                     "type": "object"
+                }
+            }
+        },
+        "App": {
+            "properties": {
+                "traffic_classes": {
+                    "type": "array",
+                    "description": "List of traffic classes this application is responsible for (claims ownership of)",
+                    "items": {
+                        "$ref": "#/definitions/TrafficClass"
+                    }
+                },
+                "predicate": {
+                    "type": "string",
+                    "description": "Path predicate for this application"
+                },
+                "constraints": {
+                    "type": "array",
+                    "description": "List of optimization constraints",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "objective": {
+                    "type": "string",
+                    "description": "The app's objective function"
+                },
+                "id": {
+                    "type": "string",
+                    "description": "Identification string for this application"
+                },
+                "resource_cost": {
+                    "$ref": "#/definitions/ResourceCost"
+                }
+            }
+        },
+        "ResourceCost": {
+            "properties": {
+                "resource": {
+                    "type": "string",
+                    "description": "Name of the resource"
+                },
+                "cost": {
+                    "type": "number",
+                    "description": "Resource consumption cost"
+                }
+            }
+        },
+        "ComposeObject": {
+            "properties": {
+                "fairness": {
+                    "type": "string",
+                    "default": "weighted",
+                    "description": "The fairness mode for composition. A weighted sum is the default. Other options include 'maxmin' and max-min and 'propfair' for proportional fairness."
+                },
+                "apps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/App"
+                    },
+                    "description": "List of applications to compose"
+                }
+            }
+        },
+        "ComposeResponse": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/ResultPaths"
+            }
+        },
+        "Path": {
+            "properties": {
+                "tcid": {
+                    "type": "integer",
+                    "description": "The traffic class this path belongs to"
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "description": "List of nodes in this path"
+                },
+                "fraction": {
+                    "description": "The fraction of traffic (of an associated traffic class) that should be flowing on this path. Between 0 and 1.",
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                }
+            }
+        },
+        "ResultPaths": {
+            "properties": {
+                "app": {
+                    "type": "string",
+                    "description": "The ID of the application for which this path is destined"
+                },
+                "paths": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Path"
+                    }
                 }
             }
         }
