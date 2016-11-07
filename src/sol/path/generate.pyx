@@ -1,13 +1,12 @@
 # coding=utf-8
 import itertools
 
-from sol.path.paths import PathWithMbox
-
-from paths cimport Path
-from sol.utils import exceptions
-
 from cpython cimport bool
+from networkx import NetworkXNoPath
+from paths cimport Path
+from sol.path.paths import PathWithMbox
 from sol.topology.topologynx cimport Topology
+from sol.utils import exceptions
 from sol.utils.const import ERR_NO_PATH
 
 cpdef use_mbox_modifier(path, int offset, Topology topology, chain_length=1):
@@ -27,13 +26,13 @@ cpdef use_mbox_modifier(path, int offset, Topology topology, chain_length=1):
         paths where :math:`n` is
         the number of switches with middleboxes attached to them in the current path.
     """
-    return [PathWithMbox(path.nodes(), chain, ind + offset) for ind, chain in
+    return [PathWithMbox(path, chain, ind + offset) for ind, chain in
             enumerate(itertools.combinations(path, chain_length))
             if all([topology.has_middlebox(n) for n in chain])]
 
 def generate_paths_ie(int source, int sink, Topology topology, predicate,
-                        int cutoff, float max_paths=float('inf'),
-                        modify_func=None, bool raise_on_empty=True):
+                      int cutoff, float max_paths=float('inf'),
+                      modify_func=None, bool raise_on_empty=True):
     """
     Generates all simple paths between source and sink using a given predicate.
 
@@ -53,38 +52,47 @@ def generate_paths_ie(int source, int sink, Topology topology, predicate,
     :param raise_on_empty: whether to raise an exception if no valid paths are detected.
         Set to True by default.
     :raise NoPathsException: if no paths are found
-    :returns: a list of path objects
-    :rtype: list
+    :returns: a generator over the path objects
     """
     # paths = []
-    cdef int num = 0
+    num = 0
 
-    # TODO: update documentation if the generator thing works out
-    for p in topology.paths(source, sink, cutoff):
-        if modify_func is None:
-            if predicate(p, topology):
-                # paths.append(Path(p, num))
-                yield Path(p, num)
-                num += 1
-        else:
-            np = modify_func(p, num, topology)
-            if isinstance(np, list):
-                for innerp in np:
-                    if predicate(innerp, topology):
-                        # paths.append(innerp)
-                        num += 1
-                        yield innerp
-            else:
-                if predicate(np, topology):
-                    # paths.append(np)
+    try:
+        for p in topology.paths(source, sink, cutoff):
+            if modify_func is None:
+                if predicate(p, topology):
+                    # paths.append(Path(p, num))
                     num += 1
-                    yield np
-        if num >= max_paths:
+                    yield Path(p, num)
+                else:
+                    continue
+            else:
+                np = modify_func(p, num, topology)
+                if isinstance(np, list):
+                    for innerp in np:
+                        if predicate(innerp, topology):
+                            # paths.append(innerp)
+                            num += 1
+                            yield innerp
+                        else:
+                            continue
+                else:
+                    if predicate(np, topology):
+                        # paths.append(np)
+                        num += 1
+                        yield np
+                    else:
+                        continue
+            if num >= max_paths:
+                return
+    except NetworkXNoPath:
+        if raise_on_empty:
+            raise exceptions.NoPathsException(ERR_NO_PATH.format(source, sink))
+        else:
             return
-    # if not paths:
-    #     if raise_on_empty:
-    #         raise exceptions.NoPathsException(ERR_NO_PATH.format(source, sink))
-    # return paths
+    # print("num == %d" % num)
+    if num == 0 and raise_on_empty:
+        raise exceptions.NoPathsException(ERR_NO_PATH.format(source, sink))
 
 cpdef generate_paths_tc(Topology topology, traffic_classes, predicate, cutoff,
                         max_paths=float('inf'), modify_func=None,
@@ -110,6 +118,7 @@ cpdef generate_paths_tc(Topology topology, traffic_classes, predicate, cutoff,
     """
     result = {}
     for t in traffic_classes:
-        result[t] = generate_paths_ie(t.src, t.dst, topology, predicate, cutoff,
-                                      max_paths, modify_func, raise_on_empty)
+        result[t] = list(
+            generate_paths_ie(t.src, t.dst, topology, predicate, cutoff,
+                              max_paths, modify_func, raise_on_empty))
     return result

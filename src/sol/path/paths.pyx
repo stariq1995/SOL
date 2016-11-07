@@ -3,13 +3,13 @@
     Contains implementations of SOL Path objects
 """
 import random
+
 import numpy
-from sol.utils.const import WARN_NO_PATH_ID
-from sol.utils.ph import listeq
+from cpython cimport bool
 from paths cimport Path
 from paths cimport PathWithMbox
-
-from cpython cimport bool
+from sol.utils.const import WARN_NO_PATH_ID
+from sol.utils.ph import listeq
 
 # noinspection PyClassicStyleClass
 cdef class Path:
@@ -122,11 +122,11 @@ cdef class Path:
         """ Returns the length of the path as the number of hops in the path
         (this is equivalent to number of nodes in the path -1)
         """
-        return len(self._nodes)-1
+        return len(self._nodes) - 1
 
     def __repr__(self):
         return u"Path(nodes={}, flowFraction={})".format(str(self._nodes),
-                                                        self._flowFraction)
+                                                         self._flowFraction)
 
     # noinspection PyProtectedMember
     def __richcmp__(Path self, other not None, int op):

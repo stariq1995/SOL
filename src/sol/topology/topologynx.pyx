@@ -285,23 +285,28 @@ cdef class Topology:
             return False
 
 
-    cpdef paths(self, int source, int sink, int cutoff):
+    def paths(self, int source, int sink, int cutoff):
         """
         Return an iterator over all of the simple paths in this topology.
+        Starts with shortest paths.
 
         :param source: the start node path
         :param sink: the end node of the path
         :param cutoff: maximum length of the path
         :return: an iterator over a list of paths (where each path is simply a
-            list of nodes)
+            list of nodes, not a Path object yet)
 
         .. warning:
-            This could be a lot of paths! And there is no guaranteed order in
-            which they will be returned/traversed.
+            This could be a lot of paths!
         """
-        # TODO: update documentation
         # return nx.all_simple_paths(self._graph, source, sink, cutoff)
-        return nx.shortest_simple_paths(self._graph, source, sink)
+        for p in nx.shortest_simple_paths(self._graph, source, sink):
+            # We need the -1 here because len(p) will count nodes, not hops.
+            # Hops is the expected length metric for Path objects
+            if len(p)-1 <= cutoff:
+                yield p
+            else:
+                return
 
     def to_json(self):
         return json_graph.node_link_data(self._graph.to_undirected())

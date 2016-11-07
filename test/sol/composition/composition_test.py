@@ -29,11 +29,11 @@ def pptc(request):
     return res
 
 def test_ResourceConflictDetection(pptc):
-    a1 = App(pptc, [], {'r1': 200, 'r2': 300})
-    a2 = App(pptc, [], {'r1': 200, 'r2': 300, 'r3': 500})
-    print(_detect_cost_conflict([a1, a2]))
-    print(_detect_cost_conflict([a1]))
-    print(_detect_cost_conflict([]))
+    # a1 = App(pptc, [], {'r1': 200, 'r2': 300})
+    # a2 = App(pptc, [], {'r1': 200, 'r2': 300, 'r3': 500})
+    # print(_detect_cost_conflict([a1, a2]))
+    # print(_detect_cost_conflict([a1]))
+    # print(_detect_cost_conflict([]))
     # with pytest.raises(TypeError):
     #     _detect_cost_conflict({})
     a1 = App(pptc, [], {'r1': 200, 'r2': 300})

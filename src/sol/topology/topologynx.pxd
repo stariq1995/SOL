@@ -26,4 +26,4 @@ cdef class Topology:
     cpdef set_mbox(self, int node, val=*)
     cpdef int diameter(self)
     cpdef bool is_leaf(self, int node)
-    cpdef paths(self, int source, int sink, int cutoff)
+    # cpdef paths(self, int source, int sink, int cutoff)
