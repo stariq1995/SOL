@@ -13,7 +13,7 @@ from sol.topology.provisioning import traffic_classes
 
 
 # paramertize with different topology sizes
-@pytest.fixture(params=[5, 8], scope='function')
+@pytest.fixture(params=[5], scope='function')
 def pptc(request):
     # get a complete topology
     topo = complete_topology(request.param)

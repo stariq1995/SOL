@@ -17,7 +17,7 @@ from sol.topology.generators import complete_topology
 from sol.topology.provisioning import traffic_classes
 
 
-@pytest.fixture(params=[5, 8])
+@pytest.fixture(params=[5])
 def pptc(request):
     # get a complete topology
     topo = complete_topology(request.param)
