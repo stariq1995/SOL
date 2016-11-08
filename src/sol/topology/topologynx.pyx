@@ -323,3 +323,9 @@ cdef class Topology:
         name = data[u'name']
         return Topology(name, json_graph.node_link_graph(data, directed=True,
                                                          multigraph=False))
+
+    def __reduce__(self):
+        return (_rebuild, (self.name, self._graph))
+
+def _rebuild(name, graph):
+    return Topology(name, graph)
