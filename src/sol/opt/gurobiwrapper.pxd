@@ -2,6 +2,7 @@
 
 from sol.topology.topologynx cimport Topology
 from cpython cimport bool
+from numpy cimport ndarray
 
 # noinspection PyClassicStyleClass
 cdef class OptimizationGurobi:
@@ -13,6 +14,10 @@ cdef class OptimizationGurobi:
     cdef bool _do_time
     cdef double _time
     cdef public _load_dict
+    cdef dict _res_dict
+    cdef int num_epochs
+    cdef ndarray _load_array
+    cdef ndarray _xps
 
     cpdef _add_decision_vars(self, dict pptc)
     cdef _add_binary_vars(self, dict pptc, vtypes)
@@ -57,8 +62,10 @@ cdef class OptimizationGurobi:
                   link_caps)
     cpdef consume_per_path(self, pptc, unicode resource_name, double cost,
                            node_caps, link_caps)
-    cpdef cap(self, unicode resource, capval=*)
+    cpdef cap(self, unicode resource, double capval=*)
     cpdef fix_paths(self, pptc)
+    cpdef get_xps(self)
+    cpdef get_fractions(self)
 
 cpdef add_obj_var(app, opt, weight=*, epoch_mode=*)
 cpdef get_obj_var(app, opt)

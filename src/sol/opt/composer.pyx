@@ -30,7 +30,15 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
     :return:
     """
     logger.debug("Starting composition")
-    opt = OptimizationGurobi(topo)
+
+    # TODO: this merging should be a temporary workaround until better solution
+    all_pptc = {}
+    for app in apps:
+        for tc in app.pptc:
+            if tc not in all_pptc:
+                all_pptc[tc] = app.pptc[tc]
+
+    opt = OptimizationGurobi(topo, all_pptc)
     for app in apps:
         add_named_constraints(opt, app)
     logger.debug("Added named constraints")

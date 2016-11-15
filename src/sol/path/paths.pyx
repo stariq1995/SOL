@@ -209,3 +209,20 @@ cdef class PathWithMbox(Path):
 
     def __copy__(self):
         return self.copy()
+
+
+cdef class PPTC:
+    def __init__(self):
+        pass
+
+
+
+
+
+def path_decoder(o):
+    if o[u'type'] == u'Path':
+        return Path.decode(o)
+    elif o[u'type'] == u'PathWithMBox':
+        return PathWithMbox.decode(o)
+    else:
+        raise KeyError('Unknown path type')
