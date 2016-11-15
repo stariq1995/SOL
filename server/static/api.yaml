@@ -168,11 +168,8 @@ definitions:
     type: array
     items:
       $ref: "#/definitions/ResultPaths"
-  Path:
+  ResultPath:
     properties:
-      tcid:
-        type: integer
-        description: The traffic class this path belongs to
       nodes:
         type: array
         items:
@@ -183,6 +180,14 @@ definitions:
         type: number
         minimum: 0
         maximum: 1
+  MultiPath:
+    properties:
+      tcid:
+        type: integer
+        description: The traffic class this path belongs to
+      path:
+        type: array
+        $ref: '#/definitions/ResultPath'
   ResultPaths:
     properties:
       app:
@@ -191,4 +196,4 @@ definitions:
       paths:
         type: array
         items:
-          $ref: '#/definitions/Path'
+          $ref: '#/definitions/MultiPath'
