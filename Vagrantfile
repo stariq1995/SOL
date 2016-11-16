@@ -92,6 +92,7 @@ Vagrant.configure("2") do |config|
   # config.vm.network :forwarded_port, guest:6633, host:6633 # OpenFlow
   config.vm.network :forwarded_port, guest:8181, host:8181 # Web UI
   config.vm.network :forwarded_port, guest:8080, host:8080 # ONOS REST API
+  config.vm.network :forwarded_port, guest:5000, host:5000 # SOL server port, for debugging
   # config.vm.network :private_network, type:"dhcp"
 
   ## Provisioning
