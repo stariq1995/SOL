@@ -10,8 +10,10 @@ from sol.opt.app import App
 from sol.path.generate import generate_paths_tc
 from sol.topology.topologynx import Topology
 from sol.topology.traffic import TrafficClass
+from logging import Logger,INFO
 
 app = Flask(__name__)
+logger = Logger('mainLogger',INFO)
 
 # REST-specific configuration here
 __API_VERSION = 1  # the current api version
@@ -117,6 +119,7 @@ def topology():
         return jsonify(_topology.to_json())
     elif request.method == 'POST':
         _topology = Topology.from_json(request.data)
+        logger.info('Topology read successfully')
         return
     else:
         abort(405)  # method not allowed
