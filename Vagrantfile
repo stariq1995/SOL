@@ -9,7 +9,8 @@ $init = <<SCRIPT
    libssl-dev \
    python-all python-twisted-conch git tmux vim python-pip python-paramiko \
    python-sphinx openjdk-8-jdk maven curl
-  sudo pip install alabaster
+  sudo pip install alabaster numpy cython msgpack-python networkx requests \
+   netaddr six bitstring progressbar2 flask flask_compress
   echo 'export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"' >> ~/.profile
   source ~/.profile
 SCRIPT
@@ -36,36 +37,34 @@ $mininet = <<SCRIPT
   sudo apt-get -y install mininet
 SCRIPT
 
-# $onos = <<SCRIPT
-#   wget --quiet http://downloads.onosproject.org/release/onos-1.6.0.tar.gz
-#   tar xzf onos-1.6.0.tar.gz
-#   rm onos-1.6.0.tar.gz
-# SCRIPT
 $onos = <<SCRIPT
-  git clone https://gerrit.onosproject.org/onos
-  pushd onos
-  git checkout 1.6.0
-  mvn clean install
-  popd
+  wget --quiet http://downloads.onosproject.org/release/onos-1.6.0.tar.gz
+  tar xzf onos-1.6.0.tar.gz
+  rm onos-1.6.0.tar.gz
 SCRIPT
-
-$onosdev = "source ~/onos/tools/dev/bash_profile"
+# $onos = <<SCRIPT
+#   git clone https://gerrit.onosproject.org/onos
+#   pushd onos
+#   git checkout 1.6.0
+#   mvn clean install
+#   popd
+# SCRIPT
+# $onosdev = "source ~/onos/tools/dev/bash_profile"
 
 $gurobi = <<SCRIPT
-  wget --quiet http://packages.gurobi.com/6.5/gurobi6.5.2_linux64.tar.gz
-  tar xzf gurobi6.5.2_linux64.tar.gz
-  rm gurobi6.5.2_linux64.tar.gz
-  pushd gurobi652/linux64
+  wget --quiet http://packages.gurobi.com/7.0/gurobi7.0.1_linux64.tar.gz
+  tar xzf gurobi7.0.1_linux64.tar.gz
+  rm gurobi7.0.1_linux64.tar.gz
+  pushd gurobi701/linux64
   sudo python setup.py install
   popd
-  echo 'export GUROBI_HOME="$HOME/gurobi652/linux64"' >> ~/.profile
+  echo 'export GUROBI_HOME="$HOME/gurobi701/linux64"' >> ~/.profile
   echo 'export PATH="${PATH}:${GUROBI_HOME}/bin"' >> ~/.profile
   echo 'export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib"' >> ~/.profile
   source ~/.profile
 SCRIPT
 
 $sol = <<SCRIPT
-  sudo pip install numpy cython msgpack-python networkx requests netaddr six bitstring
 SCRIPT
 
 $tmgen = <<SCRIPT
@@ -84,19 +83,22 @@ Vagrant.configure("2") do |config|
 
   config.vm.provider "VirtualBox" do |v|
       v.customize ["modifyvm", :id, "--memory", "2048"]
+      v.customize ["modifyvm", :id, "--cpus", "2"]
+
   end
 
   ## Guest config
   config.vm.hostname = "solvm"
   # config.vm.network :forwarded_port, guest:6633, host:6633 # OpenFlow
-  # config.vm.network :forwarded_port, guest:8181, host:8181 # Web UI
-  # config.vm.network :forwarded_port, guest:8080, host:8080 # ONOS REST API
-  config.vm.network :private_network, type:"dhcp"
+  config.vm.network :forwarded_port, guest:8181, host:8181 # Web UI
+  config.vm.network :forwarded_port, guest:8080, host:8080 # ONOS REST API
+  # config.vm.network :private_network, type:"dhcp"
 
   ## Provisioning
   config.vm.provision :shell, privileged: false, :inline => $init
   config.vm.provision :shell, privileged: false, :inline => $onos
-  config.vm.provision :shell, privileged: false, run: 'always', :inline => $onosdev
+  config.vm.provision :shell, privileged: false, :inline => $mininet
+  # config.vm.provision :shell, privileged: false, run: 'always', :inline => $onosdev
   config.vm.provision :shell, privileged: false, :inline => $gurobi
   config.vm.provision :shell, privileged: false, :inline => $tmgen
   config.vm.provision :shell, privileged: false, :inline => $sol
