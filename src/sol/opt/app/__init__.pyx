@@ -1,11 +1,9 @@
-import sys
 import uuid
 
 import numpy as np
 import six
 
-if sys.version_info < (3, 4):
-    from enum import Enum
+from enum import Enum
 
 
 class App(object):

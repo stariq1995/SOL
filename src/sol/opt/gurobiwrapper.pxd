@@ -18,8 +18,11 @@ cdef class OptimizationGurobi:
     cdef int num_epochs
     cdef ndarray _load_array
     cdef ndarray _xps
+    cdef ndarray _als
+    cdef _res_mapping
+    cdef _all_pptc
 
-    cpdef _add_decision_vars(self, dict pptc)
+    cdef _add_decision_vars(self)
     cdef _add_binary_vars(self, dict pptc, vtypes)
     cpdef allocate_flow(self, pptc, allocation=*)
     cpdef cap_num_paths(self, pptc, int max_paths)
@@ -29,7 +32,7 @@ cdef class OptimizationGurobi:
     cpdef min_node_load(self, unicode resource, tcs, weight=*, epoch_mode=*, name=*)
     cpdef min_link_load(self, unicode resource, tcs, weight=*, epoch_mode=*, name=*)
     cpdef solve(self)
-    cpdef get_path_fractions(self, pptc, bool flow_carrying_only=*)
+    cpdef get_paths(self, int epoch=*)
     cpdef route_all(self, pptc)
     cpdef get_solved_objective(self)
     cpdef is_solved(self)
@@ -65,7 +68,6 @@ cdef class OptimizationGurobi:
     cpdef cap(self, unicode resource, double capval=*)
     cpdef fix_paths(self, pptc)
     cpdef get_xps(self)
-    cpdef get_fractions(self)
 
 cpdef add_obj_var(app, opt, weight=*, epoch_mode=*)
 cpdef get_obj_var(app, opt)

@@ -1,5 +1,4 @@
 # coding=utf-8
-# cython: cdivision=True
 from __future__ import division
 from __future__ import print_function
 

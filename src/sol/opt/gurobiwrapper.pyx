@@ -1,14 +1,18 @@
 # coding=utf-8
-# cython: profile=True
-# cython: linetrace=True
 """
 Wrapper around Gurobi
 """
+
 from __future__ import division, print_function
+import sys
+from sol.utils.const import ERR_NO_GUROBI
+
 
 try:
-    # noinspection PyPackageRequirements
-    from gurobipy import *
+    if sys.version_info >= (3, 5):
+        from gurobi import *
+    else:
+        from gurobipy import *
 except ImportError as e:
     print(ERR_NO_GUROBI)
     raise e
@@ -34,6 +38,7 @@ from sol.utils.const import RES_LATENCY, OBJ_MAX_ALL_FLOW, ALLOCATE_FLOW, \
     CAP_NODES, OBJ_MIN_LINK_LOAD, OBJ_MIN_LATENCY, MIN_NODE_LOAD, ROUTE_ALL, \
     RES_NOT_LATENCY
 from sol.utils.logger import logger
+from collections import defaultdict
 from itertools import chain
 
 OBJ_MAX_LINK_SPARE_CAP = u'maxlinkspare'
@@ -59,54 +64,58 @@ cdef class OptimizationGurobi:
         # Should we measure the time it takes to solve the optimization
         self._do_time = measure_time
         self._time = 0
-        self._load_dict = Tree()
+        self._all_pptc = all_pptc
         res_set = set()
-        for elem in chain(topo.nodes(), topo.links()):
-            res_set.update(topo.get_resources(elem))
+
+        self._res_mapping = defaultdict(lambda: [])
+        for node in topo.nodes():
+            rl = topo.get_resources(node)
+            res_set.update(rl)
+            for r in rl:
+                self._res_mapping[r].append((node, node))
+
+        for link in topo.links():
+            rl = topo.get_resources(link)
+            res_set.update(rl)
+            for r in rl:
+                self._res_mapping[r].append(link)
+
+
         self._res_dict = {r: i for i, r in enumerate(res_set)}
-        # self._xps = Tree()
         if len(set([ma.compressed(x.volFlows).size for x in
                     iterkeys(all_pptc)])) != 1:
             raise ValueError(
                 'Number of epochs is inconsistent across traffic classes')
         self.num_epochs = ma.compressed(next(iterkeys(all_pptc)).volFlows).size
         cdef int max_paths = max(map(len, itervalues(all_pptc)))
-        self._xps = full((len(all_pptc), max_paths, self.num_epochs), 0,
-                         dtype=object)
+        self._xps = zeros((len(all_pptc), max_paths, self.num_epochs),
+                          dtype=object)
+        self._als = zeros((len(all_pptc), self.num_epochs), dtype=object)
         self._load_array = zeros((len(res_set), topo.num_nodes(),
                                   topo.num_nodes(),
                                   len(all_pptc), max_paths, self.num_epochs))
+        self._add_decision_vars()
 
         logger.debug("Initialized Gurobi wrapper")
 
-    cpdef _add_decision_vars(self, dict pptc):
+    cdef _add_decision_vars(self):
         """
-        Add desicision variables of the form x_* responsible for determining the amount
-        of flow on each path for each trafficlass (and potentially per each epoch).
-
-        :param pptc:
-        :return:
+        Add desicision variables of the form x_* responsible for determining
+        the amount of flow on each path for each TraffiClass (in each epoch).
         """
         cdef TrafficClass tc
         cdef int epoch, pathid
-        cdef unicode name
-        # cdef bool mod = False
-
-        for tc in pptc:
-            for pathid in arange(len(pptc[tc])):
+        for tc in self._all_pptc:
+            for pathid in arange(len(self._all_pptc[tc])):
                 for epoch in arange(self.num_epochs):
-                    if self._xps[tc.ID, pathid, epoch] == 0:
-                        self._xps[tc.ID, pathid, epoch] = self.opt.addVar(0, 1)
+                    self._xps[tc.ID, pathid, epoch] = self.opt.addVar(0, 1)
 
-        # if not self._has_var(name):
-        #     self._varindex[name] = self.opt.addVar(lb=0, ub=1,
-        #                                            name=name)
-        #     mod = True
-        # if mod:
         self.opt.update()
         logger.debug("Added desicion vars")
 
     cdef _add_binary_vars(self, dict pptc, vtypes):
+        # TODO: update bin vars
+        raise NotImplemented
         cdef unicode name
         cdef Path p
         cdef bool mod = False
@@ -138,186 +147,110 @@ cdef class OptimizationGurobi:
         if mod:
             self.opt.update()
 
-    cpdef allocate_flow(self, pptc, allocation=None):
+    cpdef allocate_flow(self, tcs, allocation=None):
         """
         Allocate network flow for each traffic class by allocating flow on each
         path (and summing it up for each traffic class)
 
-        :param pptc: paths per traffic class
+        :param tcs: traffic classes
         :param allocation: if given, allocation for given traffic classes will
             be set to this value. Allocation must be between 0 and 1
         :raises: ValueError if the given allocation is not between 0 and 1
         """
-        self._add_decision_vars(pptc)
-        cdef int pi
-        cdef int epoch = 0, num_epochs = ma.compressed(
-            next(iterkeys(pptc)).volFlows).size
-        cdef unicode name
+        cdef int pi, epoch
         cdef TrafficClass tc
-        for tc in pptc:
-            for epoch in range(num_epochs):
-                name = al(tc, epoch)
-                self._varindex[name] = self.opt.addVar(lb=0, ub=1, name=name)
-        self.opt.update()
-        if allocation is None:
-            for tc in pptc:
-                for epoch in range(num_epochs):
-                    name = al(tc, epoch)
-                    lhs = LinExpr()
-                    # for path in pptc[tc]:
-                    # lhs.addTerms(1, self.v(xp(tc, path, epoch)))
-                    ind = self._xps[tc.ID, :, epoch].nonzero()
-                    vars = self._xps[tc.ID, :, epoch][ind]
-
-                    lhs.addTerms(ones(vars.size),
-                                 vars)
-                    self.opt.addConstr(lhs == self.v(name))
-        else:
-            raise NotImplemented()
-            if not 0 <= allocation <= 1:
-                raise ValueError(ERR_ALLOCATION)
-            for tc in pptc:
-                for epoch in range(num_epochs):
-                    name = self.al(tc, epoch)
-                    self.opt.addConstr(self.v(name) == allocation)
+        for tc in tcs:
+            for epoch in range(self.num_epochs):
+                self._als[tc.ID, epoch] = v = self.opt.addVar(lb=0, ub=1)
+                # create an empty expression
+                lhs = LinExpr()
+                # get only variables for existing paths
+                ind = self._xps[tc.ID, :, epoch].nonzero()
+                vars = self._xps[tc.ID, :, epoch][ind]
+                # construct the expression: sum up all varibles per traffic class
+                lhs.addTerms(ones(vars.size),
+                             vars)
+                self.opt.addConstr(lhs == v)
+                # If we also have an allocation value, add that constraint as well
+                if allocation is not None:
+                    self.opt.addConstr(v == allocation)
         self.opt.update()
 
-    cpdef route_all(self, pptc):
+    cpdef route_all(self, tcs):
         """
         Ensure that all available traffic is routed (no drops)
         by forcing the allocation of flow to be 1
         for all of the given traffic classes.
 
-        :param pptc: paths per traffic class
+        :param tcs: list of traffic classes
         """
-        cdef int epoch = 0, num_epochs = ma.compressed(
-            next(iterkeys(pptc)).volFlows).size
-        cdef unicode name
-        for tc in pptc:
-            for epoch in range(num_epochs):
-                name = al(tc, epoch)
-                v = self.v(name)
-                v.lb = v.ub = 1
+        cdef TrafficClass tc
+        cdef int epoch
+        for tc in tcs:
+            for epoch in range(self.num_epochs):
+                # This is sufficient as it forces both lower and upper bounds
+                # on a variable to be 1
+                self._als[tc.ID, epoch].lb=1
         self.opt.update()
 
-        # cdef _consume_helper(self, tc, path, node_or_link, int num_epochs,
-        #                      unicode prefix, unicode resource_name, double cost, caps):
-        #     cdef unicode name
-        #     cdef int epoch
-        #     for epoch in range(num_epochs):
-        #         self.expr[resource_name][node_or_link][epoch][tc].append
-        # for epoch in range(num_epochs):
-        #     name = '{}_{}'.format(prefix, epoch)
-        #     if not self._has_var(name):
-        #         self._varindex[name] = self.opt.addVar(name=name, ub=1)
-        #     v = self.v(xp(tc, path, epoch))
-        #     if self.expr[resource_name][node_or_link][epoch] is None:
-        #         self.expr[resource_name][node_or_link][epoch] = LinExpr()
-        #     self.expr[resource_name][node_or_link][epoch].addTerms(
-        #         tc.volFlows.compressed()[epoch] * cost / caps[node_or_link], v)
-        # self.opt.update()
 
-    cpdef consume(self, pptc, unicode resource, double cost, node_caps,
+    cpdef consume(self, tcs, unicode resource, double cost, node_caps,
                   link_caps):
         """
-        :param pptc: paths per traffic class
+        Compute the loads on a given resource by given traffic classes
+
+        :param tcs: paths per traffic class
         :param resource: resource to be consumed
         :param cost: cost per flow for this resource
         """
         logger.debug(u'Consume: %s' % resource)
-        # cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
-        logger.debug(u'Num epochs in consume: %d' % self.num_epochs)
         cdef int e, pathid
         cdef int res_index = self._res_dict[resource]
 
-        for tc in pptc:
+        for tc in tcs:
             vols = tc.volFlows.compressed()
-            for pathid, path in enumerate(pptc[tc]):
+            for pathid, path in enumerate(self._all_pptc[tc]):
                 for node in node_caps:
                     if path.uses_box(node):
-                        # for e in range(num_epochs):
-                        # self._load_dict[resource][node][e][tc][
-                        #     self.v(xp(tc, path, e))] = vols[e] * cost / \
-                        #                                node_caps[node]
-
-                        self._load_array[
-                        res_index, node, node, tc.ID, pathid, :] = \
+                        self._load_array[res_index, node, node, tc.ID, pathid, :] = \
                             vols * cost / node_caps[node]
 
                 for link in path.links():
                     u, v = link
                     if link in link_caps:
-                        # for e in range(num_epochs):
-                        # self._load_dict[resource][link][e][tc][
-                        #     self.v(xp(tc, path, e))] = vols[e] * cost / \
-                        #                                link_caps[link]
-                        self._load_array[
-                        res_index, u, v, tc.ID, pathid, :] = \
+                        self._load_array[res_index, u, v, tc.ID, pathid, :] = \
                             vols * cost / link_caps[link]
 
     cpdef cap(self, unicode resource, double capval=1):
+        """ Cap the usage of a given resource with a given value
+
+        :param resource: the name of resource to cap
+        :param capval: the maximum utilization of given resource
+        """
+        # Sanity check on cap value
+        if not 0 <= capval <= 1:
+            raise ValueError("Cap value must be between 0 and 1")
         cdef int res_index = self._res_dict[resource]
         cdef int u, v, e
         cdef ndarray vars
-        for e in arange(self._load_array.shape[5]):
+
+        for e in arange(self.num_epochs):
             vars = self._xps[:, :, e].reshape(-1)
-            print (numpy.may_share_memory(vars, self._xps))
-            # print (len(vars))
             ind = vars.nonzero()
-            # print (len(ind[0]))
-            for u in arange(self._load_array.shape[1]):
-                for v in arange(self._load_array.shape[2]):
-                    coeffs = \
-                        self._load_array[res_index, u, v, :, :, e].reshape(-1)
-                    expr = LinExpr(coeffs[ind], vars[ind])
-                    self.opt.addConstr(expr <= capval)
+            for u, v in self._res_mapping[resource]:
+                coeffs = \
+                    self._load_array[res_index, u, v, :, :, e].reshape(-1)
+                expr = LinExpr(coeffs[ind], vars[ind])
+                self.opt.addConstr(expr <= capval)
         self.opt.update()
 
-
-                    # for resource in self._load_dict:
-                    #     for nodeorlink in self._load_dict[resource]:
-                    #         for e in self._load_dict[resource][nodeorlink]:
-                    #             expr = LinExpr()
-                    #             for tc in self._load_dict[resource][nodeorlink][e]:
-                    #                 expr.addTerms(itervalues(self._load_dict[resource][nodeorlink][e][
-                    #                                   tc]),
-                    #                               iterkeys(self._load_dict[resource][nodeorlink][e][
-                    #                                   tc]))
-                    #             self.opt.addConstr(expr <= capval)
-
-                    # old version
-                    # if resource_name not in self.expr:
-                    #     self.expr[resource_name] = {}
-                    # for node in node_caps:
-                    #     if node not in self.expr[resource_name]:
-                    #         self.expr[resource_name][node] = [None] * num_epochs
-                    # for link in link_caps:
-                    #     if link not in self.expr[resource_name]:
-                    #         self.expr[resource_name][link] = [None] * num_epochs
-                    #
-                    # cdef unicode prefix, name
-                    # for tc in pptc:
-                    #     for path in pptc[tc]:
-                    #         for node in path.nodes():
-                    #             if node in node_caps and path.uses_box(node):
-                    #                 prefix = u'NodeLoad_{}_{}'.format(resource_name, node)
-                    #                 self._consume_helper(tc, path, node, num_epochs,
-                    #                                      prefix, resource_name, cost,
-                    #                                      node_caps)
-                    #
-                    #         for link in path.links():
-                    #             if link in link_caps:
-                    #                 prefix = u'LinkLoad_{}_{}'.format(resource_name,
-                    #                                                  tup2str(link))
-                    #                 self._consume_helper(tc, path, link, num_epochs,
-                    #                                      prefix, resource_name,
-                    #                                      cost, link_caps)
 
     cpdef consume_per_path(self, pptc, unicode resource_name, double cost,
                            node_caps, link_caps):
         raise NotImplemented
 
     cdef _req_all(self, pptc, traffic_classes=None, req_type=None):
+        raise NotImplemented
         self._disable_paths(pptc)
         if req_type is None:
             raise SOLException(u'A type of constraint is needed for reqAll()')
@@ -341,6 +274,7 @@ cdef class OptimizationGurobi:
         self.opt.update()
 
     cdef _req_some(self, pptc, traffic_classes=None, req_type=None):
+        raise NotImplemented
         self._disable_paths(pptc)
         if req_type is None:
             raise SOLException(u'A type of constraint is needed for reqSome()')
@@ -379,16 +313,16 @@ cdef class OptimizationGurobi:
         return self._req_some(pptc, traffic_classes, u'link')
 
     cdef _disable_paths(self, pptc, traffic_classes=None):
+        raise NotImplemented
         self._add_binary_vars(pptc, [u'path'])
         if traffic_classes is None:
             traffic_classes = iterkeys(pptc)
         cdef TrafficClass tc
         cdef Path path
         cdef int epoch
-        cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
         for tc in traffic_classes:
             for path in pptc[tc]:
-                for epoch in range(num_epochs):
+                for epoch in range(self.num_epochs):
                     self.opt.addConstr(
                         self.v(xp(tc, path, epoch)) <= self.v(bp(tc, path)))
         self.opt.update()
@@ -421,13 +355,7 @@ cdef class OptimizationGurobi:
             self.opt.addVar(name=u'flip_{}'.format(name) \
                 if name is None else RES_NOT_LATENCY,
                             obj=weight)
-        cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
-        cdef int epoch
-        # cdef unicode name
-        # for epoch in range(num_epochs):
-        #     name = '{}_{}'.format(LATENCY, epoch)
-        #     self._varindex[name] = sel.opt.addVar(name=name, lb=0, ub=None)
-        self.opt.update()
+        cdef int epoch, pi
 
         cdef double norm_factor = 1.0
         if norm:
@@ -436,21 +364,19 @@ cdef class OptimizationGurobi:
                           * self.topo.num_nodes()
 
         if epoch_mode == u'max':
-            for epoch in range(num_epochs):
+            for epoch in range(self.num_epochs):
                 latency_expr = LinExpr()
                 for tc in pptc:
-                    for path in pptc[tc]:
-                        latency_expr.addTerms(len(path), self.v(xp(tc, path,
-                                                                   epoch)))
+                    for pi,path in enumerate(pptc[tc]):
+                        latency_expr.addTerms(len(path), self._xps[tc.ID, pi, epoch])
 
                 self.opt.addConstr(latency >= latency_expr / norm_factor)
         elif epoch_mode == u'sum':
             latency_expr = LinExpr()
-            for epoch in range(num_epochs):
+            for epoch in range(self.num_epochs):
                 for tc in pptc:
-                    for path in pptc[tc]:
-                        latency_expr.addTerms(len(path), self.v(xp(tc, path,
-                                                                   epoch)))
+                    for pi,path in enumerate(pptc[tc]):
+                        latency_expr.addTerms(len(path), self._xps[tc.ID, pi, epoch])
             self.opt.addConstr(latency >= latency_expr / norm_factor)
         else:
             raise ValueError(u'Unknown epoch_mode')
@@ -485,11 +411,10 @@ cdef class OptimizationGurobi:
         self.opt.update()
 
         # this will create variables for objective within each epoch
-        cdef int num_epochs = ma.compressed(tcs[0].volFlows).size
         cdef int e
         cdef unicode name2
-        per_epoch_objs = [None] * num_epochs
-        for e in range(num_epochs):
+        per_epoch_objs = [None] * self.num_epochs
+        for e in range(self.num_epochs):
             name2 = u'{}_{}'.format(objname, e)
             self._varindex[name] = per_epoch_objs[e] = \
                 self.opt.addVar(lb=0, name=name)
@@ -498,20 +423,19 @@ cdef class OptimizationGurobi:
         cdef int res_index = self._res_dict[resource]
         cdef int u, v, tcid, pathid
         cdef ndarray tc_inds = array([tc.ID for tc in tcs])
-        for u in range(self._load_array.shape[1]):
-            for v in range(self._load_array.shape[2]):
-                for e in range(self._load_array.shape[5]):
+        for u, v in self._res_mapping[resource]:
+            for e in range(self._load_array.shape[5]):
 
-                    vars = self._xps[tc_inds, :, e]
-                    ind = vars.nonzero()
-                    coeffs = self._load_array[res_index, u, v, tc_inds, :, e]
-                    expr = LinExpr(coeffs[ind], vars[ind])
-                    # for tcid in self._load_array.axis[4]:
-                    #     for pathid in self._load_array.axis[5]:
-                    #         expr.add(self._xps[tcid][pathid][e],
-                    #                  self._load_array[
-                    #                      res_index, u, v, e, tcid, pathid])
-                    self.opt.addConstr(expr <= per_epoch_objs[e])
+                vars = self._xps[tc_inds, :, e]
+                ind = vars.nonzero()
+                coeffs = self._load_array[res_index, u, v, tc_inds, :, e]
+                expr = LinExpr(coeffs[ind], vars[ind])
+                # for tcid in self._load_array.axis[4]:
+                #     for pathid in self._load_array.axis[5]:
+                #         expr.add(self._xps[tcid][pathid][e],
+                #                  self._load_array[
+                #                      res_index, u, v, e, tcid, pathid])
+                self.opt.addConstr(expr <= per_epoch_objs[e])
 
         # within each epoch, set per-epoch objective to be the max across
         # links/nodes for given traffic classes:
@@ -532,7 +456,7 @@ cdef class OptimizationGurobi:
         # Now set the global objective based on per-epoch objectives.
         # There are two possible modes: 'max' and 'sum'
         if epoch_mode == u'max':
-            for e in range(num_epochs):
+            for e in range(self.num_epochs):
                 self.opt.addConstr(obj >= per_epoch_objs[e])
         elif epoch_mode == u'sum':
             self.opt.addConstr(obj >= quicksum(per_epoch_objs))
@@ -568,8 +492,8 @@ cdef class OptimizationGurobi:
             self.opt.addVar(name=OBJ_MAX_ALL_FLOW if name is None else name,
                             obj=weight, lb=0, ub=1)
         self.opt.update()
-        self.opt.addConstr(
-            obj == quicksum([self.v(al(tc)) for tc in pptc]) / len(pptc))
+        for e in range(self.num_epochs):
+            self.opt.addConstr(obj == quicksum([self._als[tc.ID,e] for tc in pptc]) / len(pptc))
         self.opt.update()
         return obj
 
@@ -633,39 +557,14 @@ cdef class OptimizationGurobi:
         self.opt.params.TimeLimit = time
         self.opt.update()
 
-    # cdef _dump_expressions(self):
-    #     cdef unicode resource_name, name, prefix
-    #     cdef int epoch  #, num_epochs
-    #     v = None
-    #     # num_epochs = len(next(itervalues(next(itervalues(self.expressions)))))
-    #     for resource_name in self.expr:
-    #         for node_or_link in self.expr[resource_name]:
-    #             if isinstance(node_or_link, tuple):
-    #                 prefix = u'LinkLoad_{}_{}'.format(resource_name,
-    #                                                  tup2str(node_or_link))
-    #             else:
-    #                 prefix = u'NodeLoad_{}_{}'.format(resource_name,
-    #                                                  node_or_link)
-    #             for epoch, expr in enumerate(
-    #                     self.expr[resource_name][node_or_link]):
-    #                 if expr is not None:
-    #                     name = '{}_{}'.format(prefix, epoch)
-    #                     v = self.v(name)
-    #                     self.opt.addConstr(expr == v)
-    #     self.opt.update()
-    #     self.expr = {}
-
     cpdef solve(self):
         """
         Solve the optimization
         """
         start = time.time()
-        # logger.debug(start)
         self.opt.optimize()
         if self._do_time:
-            # logger.debug(time.time())
             self._time = time.time() - start
-            # logger.debug(u'Time to solve: %f', self._time)
 
     cpdef write(self, unicode fname):
         """
@@ -683,7 +582,6 @@ cdef class OptimizationGurobi:
         :param fname: filename of the solution file.
             ".sol" suffix is appended automatically
         """
-        # logger.debug("{}.sol".format(fname))
         self.opt.write("{}.sol".format(fname))
 
     def get_gurobi_model(self):
@@ -703,24 +601,6 @@ cdef class OptimizationGurobi:
 
     cdef bool _has_var(self, unicode varname):
         return varname in self._varindex
-
-    def copy(self):
-        """
-        Create a copy of the optimization
-        :return:
-        """
-        raise NotImplemented
-        # FIXME: should this be implemented? ¯\_(ツ)_/¯
-        c = OptimizationGurobi(self.topo)
-        c.opt = self.opt.copy()
-        c.expressions = copy.copy(self.expr)
-        c._varindex = copy.copy(self._varindex)
-        return c
-
-    def __copy__(self):
-        # Technically, this shouldn't be raised. haha. ¯\_(ツ)_/¯
-        # FIXME: don't write shitty code
-        raise NotImplemented
 
     cpdef get_solved_objective(self):
         """
@@ -746,23 +626,38 @@ cdef class OptimizationGurobi:
         """
         return self._varindex[varname]
 
-    cpdef get_path_fractions(self, pptc, bool flow_carrying_only=True):
-        cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
-        cdef int e = 0
+    cpdef get_xps(self):
+        return self._xps
+
+    cpdef get_paths(self, int epoch=0):
+        """
+        :param epoch:
+        :param flow_carrying_only:
+        :return:
+        """
+        # TODO: document
         result = {}
-        for e in range(num_epochs):
-            result[e] = {}
-            for tc, paths in iteritems(pptc):
-                result[e][tc] = []
-                for path in paths:
-                    newpath = copy.copy(path)
-                    newpath.set_flow_fraction(
-                        self.opt.getVarByName(xp(tc, path, e)).x)
-                    if newpath.flow_fraction() > 0 and flow_carrying_only:
-                        result[e][tc].append(newpath)
-                    elif not flow_carrying_only:
-                        result[e][tc].append(newpath)
-        return result
+        cdef TrafficClass tc
+        cdef int pi
+        for tc in self._all_pptc:
+            for pi in range(len(self._all_pptc[tc])):
+                self._all_pptc[tc][pi].set_flow_fraction(
+                    self._xps[tc.ID,pi,epoch].x)
+        return self._all_pptc
+
+        # for e in range(num_epochs):
+        #     result[e] = {}
+        #     for tc, paths in iteritems(pptc):
+        #         result[e][tc] = []
+        #         for path in paths:
+        #             newpath = copy.copy(path)
+        #             newpath.set_flow_fraction(
+        #                 self.opt.getVarByName(xp(tc, path, e)).x)
+        #             if newpath.flow_fraction() > 0 and flow_carrying_only:
+        #                 result[e][tc].append(newpath)
+        #             elif not flow_carrying_only:
+        #                 result[e][tc].append(newpath)
+        # return result
 
     cpdef get_chosen_paths(self, pptc):
         result = {}
@@ -795,11 +690,11 @@ cdef class OptimizationGurobi:
 
         :param pptc: path per traffic class, with flow fractions set
         """
-        cdef int num_epochs = ma.compressed(next(iterkeys(pptc)).volFlows).size
+        cdef int pi
         for tc in pptc:
-            for p in pptc[tc]:
-                for e in range(num_epochs):
-                    self.opt.addConstr(self.v(xp(tc, p, e)) == \
+            for pi,p in enumerate(pptc[tc]):
+                for e in range(self.num_epochs):
+                    self.opt.addConstr(self._xps[tc.ID, pi, e] == \
                                        p.flow_fraction())
         self.opt.update()
 
@@ -809,19 +704,7 @@ cdef class OptimizationGurobi:
         """
         return self._time
 
-    cpdef get_xps(self):
-        return self._xps
 
-    cpdef get_fractions(self):
-        return _get_path_load(self._xps)
-
-# def _extract_x(v):
-#     try:
-#         return v.x
-#     except AttributeError:
-#         return 0
-
-# _get_path_load = frompyfunc(_extract_x, 1, 1)
 
 cdef add_named_constraints(opt, app):
     for c in app.constraints:
