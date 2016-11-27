@@ -213,10 +213,100 @@ cdef class PathWithMbox(Path):
 
 cdef class PPTC:
     def __init__(self):
-        pass
+        self._data = dict()
+        self._tcindex = dict()
+        self._tcowner = dict()
+        self._name_to_tcs = dict()
 
+    cpdef add(self, name, TrafficClass tc, paths):
+        self._data[tc] = numpy.ma.array(paths, dtype=object)
+        self._tcindex[tc.ID] = tc
+        if name not in self._name_to_tcs:
+            self._name_to_tcs[name] = set()
+        self._name_to_tcs[name].add(tc)
+        if tc not in self._tcowner:
+            self._tcowner[tc] = set([name])
+        else:
+            self._tcowner[tc].add(name)
 
+    cpdef tcs(self, name=None):
+        if name is None:
+            return itervalues(self._tcindex)
+        else:
+            return iter(self._name_to_tcs[name])
 
+    cpdef TrafficClass tc_byid(self, int tcid):
+        return self._tcindex[tcid]
+
+    cpdef paths(self, TrafficClass tc):
+        return self._data[tc].compressed()
+
+    cpdef PPTC pptc(self, name):
+        r = PPTC()
+        for tc in self._name_to_tcs[name]:
+            r.add(name, tc, self._data[tc])
+        return r
+
+    cpdef mask(self, TrafficClass tc, mask):
+        # self.unmask()
+        self._data[tc].mask = mask
+
+    cpdef unmask(self, TrafficClass tc):
+        self._data[tc].mask = numpy.ma.nomask
+
+    cpdef clear_masks(self):
+        for a in itervalues(self._data):
+            a.mask = numpy.ma.nomask
+
+    cpdef int num_paths(self, tc):
+        return self._data[tc].size
+
+    cpdef update(self, PPTC other):
+        # NOTE: this is a shallow update
+        for tc in other:
+            self._data[tc] = other._data[tc]
+            self._tcindex[tc.ID] = tc
+            if tc not in self._tcowner:
+                self._tcowner[tc] = set(other._tcowner[tc])
+            else:
+                self._tcowner[tc].add(other._tcowner[tc])
+        for name, val in iteritems(other._name_to_tcs):
+            if name in self._name_to_tcs:
+                self._name_to_tcs[name].update(val)
+            else:
+                self._name_to_tcs[name] = val
+
+    cpdef int max_paths(self):
+        return max([x.size for x in itervalues(self._data)])
+
+    cpdef int total_paths(self):
+        return sum(map(len, itervalues(self._data)))
+
+    cpdef int num_tcs(self):
+        return len(self._data)
+
+    cpdef copy(self):
+        # TODO: Shallow copy here
+        r = PPTC()
+        r.update(self)
+
+    def __getitem__(self, item):
+        return self.paths(item)
+
+    def __iter__(self):
+        return iterkeys(self._data)
+
+    def __len__(self):
+        raise AttributeError('len() is abiguious use num_tcs() or total_paths()')
+
+    @staticmethod
+    def merge(alist):
+        if not all([isinstance(o, PPTC) for o in alist]):
+            raise ValueError('All objects must be of PPTC type')
+        result = PPTC()
+        for a in alist:
+            result.update(a)
+        return result
 
 
 def path_decoder(o):
