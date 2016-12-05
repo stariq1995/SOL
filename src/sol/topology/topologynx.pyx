@@ -77,7 +77,7 @@ cdef class Topology:
         assert isinstance(graph, nx.DiGraph)
         self._graph = graph
 
-    def write_graph(self, unicode fname, fmt='auto'):
+    def write_graph(self, fname, fmt='auto'):
         """ Save the topology to disk
 
         :param fname: the filename

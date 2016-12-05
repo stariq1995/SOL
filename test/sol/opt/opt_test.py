@@ -1,4 +1,5 @@
 # coding=utf-8
+from numpy import array
 
 from sol.opt.app import App
 from sol.opt.quickstart import from_app
@@ -7,7 +8,7 @@ from sol.path.predicates import null_predicate
 from sol.topology.generators import complete_topology
 from sol.topology.traffic import TrafficClass
 from sol.utils.const import ALLOCATE_FLOW, ROUTE_ALL, OBJ_MIN_LATENCY, \
-    RES_BANDWIDTH
+    RES_BANDWIDTH, OBJ_MAX_ALL_FLOW, CAP_LINKS
 from sol.utils.ph import listeq
 from fixtures import mock_topo, mock_min_latency_app, mock_max_flow_app
 
@@ -53,8 +54,20 @@ def test_shortest_path():
     assert len(paths[tc]) == 1
     path = paths[tc][0]
 
-    assert listeq(list(path.nodes()), [0, 5])
-    assert path.flow_fraction() == 1.0
+
+def test_maxflow():
+    appconfig = {
+        'name': u'mf',
+        'constraints': [ALLOCATE_FLOW, (CAP_LINKS, RES_BANDWIDTH, 1)],
+        'obj': OBJ_MAX_ALL_FLOW,
+        'predicate': null_predicate,
+        'resource_cost': {RES_BANDWIDTH: 2}
+    }
+    topo = complete_topology(4)
+    for link in topo.links():
+        topo.set_resource(link, RES_BANDWIDTH, 1)
+    tcs = [TrafficClass(0, u'classname', 0, 2, array([3]))]
+    pptc = generate_paths_tc(topo, tcs, null_predicate, cutoff=100)
 
 
 def test_fixed_paths():
@@ -66,7 +79,6 @@ def test_fixed_paths():
 
     opt = from_app(topo, app)
     opt.fix_paths(app.pptc)
-    opt.write(u'testfp')
     opt.solve()
     paths = opt.get_path_fractions(app.pptc)[0]
     for tc in paths:

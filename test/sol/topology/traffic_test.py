@@ -2,6 +2,7 @@
 
 import pytest
 import copy
+
 from sol.topology.traffic import TrafficClass
 
 
@@ -19,7 +20,7 @@ def test_traffic_class():
     assert t.iepair() == (1, 2)
     assert str(t) == u'TrafficClass 1 -> 2, web, ID=1'
     with pytest.raises(AttributeError):
-        print t3.myval
+        print (t3.myval)
     assert t != u'randomstring'
     assert not t == u'randomlkdjf;aljkd'
 

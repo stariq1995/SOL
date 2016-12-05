@@ -7,8 +7,9 @@ from Cython.Build import cythonize
 
 ext = [Extension('*', sources=["src/sol/**/*.pyx"],
                  include_dirs=[numpy.get_include()],
-                 define_macros=[('CYTHON_TRACE', 1),
-                                ('CYTHON_TRACE_NOGIL', 1)])]
+                #  define_macros=[('CYTHON_TRACE', 1),
+                                # ('CYTHON_TRACE_NOGIL', 1)]
+                                )]
 
 setup(
     name='sol',
@@ -26,6 +27,7 @@ setup(
     ext_modules=cythonize(ext, compiler_directives={
         'cdivision': True,
         'embedsignature': True,
+        'boundscheck': False
     }),
     package_data={'sol': ['*.pxd']}
 )

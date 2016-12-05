@@ -7,7 +7,6 @@ from six.moves import range
 from sol.path.generate import generate_paths_tc
 from sol.path.predicates import null_predicate
 from sol.path.select import k_shortest_paths, choose_rand
-from sol.path.select import sort_paths
 from sol.topology.generators import complete_topology
 from sol.topology.provisioning import traffic_classes
 
@@ -25,34 +24,33 @@ def pptc(request):
     return res
 
 
-@pytest.mark.parametrize('inplace', [True, False])  # do this for both sorting
 # of paths in place and not
-def test_shortest(pptc, inplace):
-    subset = k_shortest_paths(pptc, 4, inplace=inplace)
+def test_shortest(pptc):
+    k_shortest_paths(pptc, 4)
     # ensure correct number of paths
-    for tc, paths in iteritems(subset):
-        assert len(paths) == min(4, len(pptc[tc]))
+    for tc in pptc:
+        assert len(pptc.paths(tc)) == min(4, len(pptc[tc]))
+        assert len(pptc[tc]) == min(4, len(pptc[tc]))
+        assert pptc[tc].size == min(4, len(pptc[tc]))
     # ensure that the paths are actually shortest
-    for tc, paths in iteritems(subset):
-        assert map(len, paths) == [1, 2, 2, 2]
+    for tc in pptc:
+        assert map(len, pptc.paths(tc)) == [1, 2, 2, 2]
 
 
 def random_test(pptc):
     # Check number or chosen paths only
     # No good way to check their "randomness"
-    subset = choose_rand(pptc, 5)
-    for tc, paths in iteritems(subset):
-        assert len(paths) == 5
-        # check that all paths are unique
-        assert len(set(paths)) == 5
+    choose_rand(pptc, 5)
+    for tc in pptc:
+        assert len(pptc.paths(tc)) == 5
 
 
-@pytest.mark.parametrize('inplace', [True, False])
-def test_sort(pptc, inplace):
-    if inplace:
-        sort_paths(pptc, inplace=inplace)
-    else:
-        pptc = sort_paths(pptc, inplace=inplace)
-    for paths in itervalues(pptc):
-        for i in range(len(paths) - 1):
-            assert len(paths[i]) <= len(paths[i + 1])
+# @pytest.mark.parametrize('inplace', [True, False])
+# def test_sort(pptc, inplace):
+#     if inplace:
+#         sort_paths(pptc, inplace=inplace)
+#     else:
+#         pptc = sort_paths(pptc, inplace=inplace)
+#     for paths in itervalues(pptc):
+#         for i in range(len(paths) - 1):
+#             assert len(paths[i]) <= len(paths[i + 1])
