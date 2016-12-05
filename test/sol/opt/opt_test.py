@@ -1,16 +1,15 @@
 # coding=utf-8
 from numpy import array
-
-from sol.opt.app import App
 from sol.opt.gurobiwrapper import get_obj_var
 from sol.opt.quickstart import from_app
 from sol.path.generate import generate_paths_tc
 from sol.path.predicates import null_predicate
-from sol.topology.generators import complete_topology
 from sol.topology.traffic import TrafficClass
+
+from sol.opt.app import App
+from sol.topology.generators import complete_topology
 from sol.utils.const import ALLOCATE_FLOW, ROUTE_ALL, OBJ_MIN_LATENCY, \
     RES_BANDWIDTH, OBJ_MAX_ALL_FLOW, CAP_LINKS
-from sol.utils.ph import listeq
 
 
 def test_shortest_path():
@@ -41,18 +40,12 @@ def test_shortest_path():
     opt = from_app(topo, app)
     opt.solve()
 
-    # Get and print the resulting paths
-    paths = opt.get_path_fractions(pptc)
-    # we only had one epoch
-    paths = paths[0]
-    
-    # one traffic class
-    assert len(paths) == 1
-    
-    # one path
-    tc = tcs[0]
-    assert len(paths[tc]) == 1
-    path = paths[tc][0]
+    paths = opt.get_paths()
+    for pi, p in enumerate(pptc.paths(pptc.tc_byid(0))):
+        if list(p.nodes()) == [0, 2]:
+            assert p.flow_fraction() == 1
+        else:
+            assert p.flow_fraction() == 0
 
 
 def test_maxflow():
@@ -72,9 +65,7 @@ def test_maxflow():
     app = App(pptc, **appconfig)
     opt = from_app(topo, app)
     opt.solve()
-    assert get_obj_var(app,opt) == .5
-
-
+    assert get_obj_var(app, opt) == .5
 
 # TODO: bring back fixed paths
 # def test_fixed_paths():
