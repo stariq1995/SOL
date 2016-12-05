@@ -3,9 +3,10 @@ import itertools
 
 from cpython cimport bool
 from networkx import NetworkXNoPath
-from paths cimport Path
 from sol.path.paths import PathWithMbox
 from sol.topology.topologynx cimport Topology
+
+from paths cimport Path, PPTC
 from sol.utils import exceptions
 from sol.utils.const import ERR_NO_PATH
 
@@ -94,9 +95,10 @@ def generate_paths_ie(int source, int sink, Topology topology, predicate,
     if num == 0 and raise_on_empty:
         raise exceptions.NoPathsException(ERR_NO_PATH.format(source, sink))
 
-cpdef generate_paths_tc(Topology topology, traffic_classes, predicate, cutoff,
-                        max_paths=float('inf'), modify_func=None,
-                        raise_on_empty=True):
+cpdef PPTC generate_paths_tc(Topology topology, traffic_classes, predicate,
+                             cutoff,
+                             max_paths=float('inf'), modify_func=None,
+                             raise_on_empty=True, name=None):
     """
     Generate all simple paths for each traffic class
 
@@ -112,13 +114,17 @@ cpdef generate_paths_tc(Topology topology, traffic_classes, predicate, cutoff,
         to expand a list of switches into all possible combinations of middleboxes
     :param raise_on_empty: whether to raise an exception if no valid paths are detected.
         Set to True by default.
+    :param name: name of the owner for these traffic classes (and paths)
     :raise NoPathsException: if no paths are found for a trafficClass
     :returns: a mapping of traffic classes to a list of path objects
     :rtype: dict
     """
-    result = {}
+    if name is None:
+        name = 'noname'
+    result = PPTC()
     for t in traffic_classes:
-        result[t] = list(
-            generate_paths_ie(t.src, t.dst, topology, predicate, cutoff,
-                              max_paths, modify_func, raise_on_empty))
+        result.add(name, t, list(generate_paths_ie(t.src, t.dst, topology,
+                                                   predicate, cutoff,
+                                                   max_paths, modify_func,
+                                                   raise_on_empty)))
     return result

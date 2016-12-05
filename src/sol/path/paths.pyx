@@ -1,4 +1,5 @@
 # coding=utf-8
+# cython: profile=True
 """
     Contains implementations of SOL Path objects
 """
@@ -8,8 +9,11 @@ import numpy
 from cpython cimport bool
 from paths cimport Path
 from paths cimport PathWithMbox
+from six import itervalues, iterkeys, iteritems
 from sol.utils.const import WARN_NO_PATH_ID
 from sol.utils.ph import listeq
+from collections import defaultdict
+from sol.topology.traffic cimport TrafficClass
 
 # noinspection PyClassicStyleClass
 cdef class Path:
@@ -85,6 +89,12 @@ cdef class Path:
         return self._ID
 
     cpdef bool uses_box(self, node):
+        """
+        Whether the path uses a given middlebox. Returns False if the path
+        is not an instance of PathWithMBox
+        :param node:
+        :return:
+        """
         return False
 
     cpdef dict encode(self):
@@ -112,9 +122,6 @@ cdef class Path:
     def __getitem__(self, item):
         return self._nodes[item]
 
-    def __getslice__(self, int i, int j):
-        return self._nodes[i:j]
-
     def __iter__(self):
         return iter(self._nodes)
 
@@ -132,9 +139,9 @@ cdef class Path:
     def __richcmp__(Path self, other not None, int op):
         same_type = isinstance(other, Path)
         if op == 2:
-            return same_type and listeq(self._nodes, other._nodes)
+            return same_type and numpy.array_equal(self._nodes, other._nodes)
         elif op == 3:
-            return not same_type or not listeq(self._nodes, other._nodes)
+            return not same_type or not numpy.array_equal(self._nodes, other._nodes)
         else:
             raise TypeError
 
@@ -209,3 +216,135 @@ cdef class PathWithMbox(Path):
 
     def __copy__(self):
         return self.copy()
+
+
+cdef class PPTC:
+    def __init__(self):
+        self._data = dict()
+        self._tcindex = dict()
+        self._tcowner = dict()
+        self._name_to_tcs = dict()
+
+    cpdef add(self, name, TrafficClass tc, paths):
+        # print paths
+        # Strange workaound instead of directly calling numpy.ma.array(paths)
+        # Because it was complaining about mismatched dimentions
+        if isinstance(paths, numpy.ma.MaskedArray):
+            self._data[tc] = paths
+        else:
+            self._data[tc] = numpy.empty(len(paths), dtype=object)
+            for i in numpy.arange(len(paths)):
+                self._data[tc][i] = paths[i]
+            self._data[tc] = numpy.ma.array(self._data[tc])
+        self._tcindex[tc.ID] = tc
+        if name not in self._name_to_tcs:
+            self._name_to_tcs[name] = set()
+        self._name_to_tcs[name].add(tc)
+        if tc not in self._tcowner:
+            self._tcowner[tc] = {name}
+        else:
+            self._tcowner[tc].add(name)
+
+    cpdef tcs(self, name=None):
+        if name is None:
+            return itervalues(self._tcindex)
+        else:
+            return iter(self._name_to_tcs[name])
+
+    cpdef TrafficClass tc_byid(self, int tcid):
+        return self._tcindex[tcid]
+
+    cpdef paths(self, TrafficClass tc):
+        return self._data[tc].compressed()
+
+    cpdef all_paths(self, TrafficClass tc):
+        return self._data[tc].data
+
+    cpdef PPTC pptc(self, name):
+        r = PPTC()
+        for tc in self._name_to_tcs[name]:
+            r.add(name, tc, self._data[tc])
+        return r
+
+    cpdef mask(self, TrafficClass tc, mask):
+        # self.unmask()
+        self._data[tc].mask = mask
+
+    cpdef unmask(self, TrafficClass tc):
+        self._data[tc].mask = numpy.ma.nomask
+
+    cpdef clear_masks(self):
+        for a in itervalues(self._data):
+            a.mask = numpy.ma.nomask
+
+    cpdef int num_paths(self, tc):
+        return self._data[tc].size
+
+    cpdef update(self, PPTC other):
+        # NOTE: this is a shallow update
+        for tc in other:
+            self._data[tc] = other._data[tc]
+            self._tcindex[tc.ID] = tc
+            if tc not in self._tcowner:
+                self._tcowner[tc] = set(other._tcowner[tc])
+            else:
+                self._tcowner[tc].add(other._tcowner[tc])
+        for name, val in iteritems(other._name_to_tcs):
+            if name in self._name_to_tcs:
+                self._name_to_tcs[name].update(val)
+            else:
+                self._name_to_tcs[name] = val
+
+    cpdef int max_paths(self):
+        return max([x.size for x in itervalues(self._data)])
+
+    cpdef int total_paths(self):
+        return sum(map(len, itervalues(self._data)))
+
+    cpdef int num_tcs(self):
+        return len(self._data)
+
+    cpdef copy(self):
+        # TODO: Shallow copy here
+        r = PPTC()
+        r.update(self)
+
+    cpdef bool empty(self):
+        return len(self._data) == 0
+
+
+    def __getitem__(self, item):
+        return self.paths(item)
+
+    def __iter__(self):
+        return iterkeys(self._data)
+
+    def __len__(self):
+        raise AttributeError('len() is abiguious use num_tcs() or total_paths()')
+
+
+    @staticmethod
+    def merge(alist):
+        if not all([isinstance(o, PPTC) for o in alist]):
+            raise ValueError('All objects must be of PPTC type')
+        result = PPTC()
+        for a in alist:
+            result.update(a)
+        return result
+
+    @staticmethod
+    def from_dict(d, name):
+        r = PPTC()
+        for tc in d:
+            r.add(name, tc, d[tc])
+        return r
+
+
+
+def path_decoder(o):
+    if o[u'type'] == u'Path':
+        return Path.decode(o)
+    elif o[u'type'] == u'PathWithMBox':
+        return PathWithMbox.decode(o)
+    else:
+        raise KeyError('Unknown path type')

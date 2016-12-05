@@ -1,7 +1,8 @@
 # coding=utf-8
-
+from sol.path.paths cimport PPTC
 from sol.topology.topologynx cimport Topology
 from cpython cimport bool
+from numpy cimport ndarray
 
 # noinspection PyClassicStyleClass
 cdef class OptimizationGurobi:
@@ -13,27 +14,37 @@ cdef class OptimizationGurobi:
     cdef bool _do_time
     cdef double _time
     cdef public _load_dict
+    cdef dict _res_dict
+    cdef int num_epochs
+    cdef ndarray _load_array
+    cdef ndarray _xps
+    cdef ndarray _als
+    cdef ndarray _bps
+    cdef ndarray _bes
+    cdef ndarray _bns
+    cdef _res_mapping
+    cdef _all_pptc
 
-    cpdef _add_decision_vars(self, dict pptc)
-    cdef _add_binary_vars(self, dict pptc, vtypes)
+    cdef _add_decision_vars(self)
+    cdef _add_binary_vars(self, PPTC pptc, vtypes)
     cpdef allocate_flow(self, pptc, allocation=*)
-    cpdef cap_num_paths(self, pptc, int max_paths)
+    cpdef cap_num_paths(self, int max_paths, PPTC pptc=*)
     cpdef enforce_single_path(self, pptc, traffic_classes)
-    cdef _disable_paths(self, pptc, traffic_classes=*)
+    cdef _disable_paths(self, PPTC pptc, traffic_classes=*)
     cdef _min_load(self, unicode resource, tcs, unicode prefix, weight, epoch_mode, name)
     cpdef min_node_load(self, unicode resource, tcs, weight=*, epoch_mode=*, name=*)
     cpdef min_link_load(self, unicode resource, tcs, weight=*, epoch_mode=*, name=*)
     cpdef solve(self)
-    cpdef get_path_fractions(self, pptc, bool flow_carrying_only=*)
+    cpdef get_paths(self, int epoch=*)
     cpdef route_all(self, pptc)
     cpdef get_solved_objective(self)
     cpdef is_solved(self)
     cpdef v(self, unicode varname)
     cdef bool _has_var(self, unicode varname)
-    cpdef get_chosen_paths(self, pptc)
+    cpdef get_chosen_paths(self)
     cpdef set_time_limit(self, long time)
-    cpdef write(self, unicode fname)
-    cpdef write_solution(self, unicode fname)
+    cpdef write(self, fname)
+    cpdef write_solution(self, fname)
     cpdef get_var_values(self)
     cpdef get_vars(self)
     cpdef node_budget(self, budgetFunc, int bound)
@@ -57,8 +68,9 @@ cdef class OptimizationGurobi:
                   link_caps)
     cpdef consume_per_path(self, pptc, unicode resource_name, double cost,
                            node_caps, link_caps)
-    cpdef cap(self, unicode resource, capval=*)
+    cpdef cap(self, unicode resource, double capval=*)
     cpdef fix_paths(self, pptc)
+    cpdef get_xps(self)
 
 cpdef add_obj_var(app, opt, weight=*, epoch_mode=*)
 cpdef get_obj_var(app, opt)

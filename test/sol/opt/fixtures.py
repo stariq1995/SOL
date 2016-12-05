@@ -23,7 +23,7 @@ def mock_topo():
 def _get_pptc(topo, appconfig):
     # Generate a single traffic class:
     nodes = sample(list(topo.nodes()), 2)
-    tcs = [TrafficClass(1, u'classname', nodes[0], nodes[1])]
+    tcs = [TrafficClass(0, u'classname', nodes[0], nodes[1])]
     # Generate all paths for this traffic class
     pptc = generate_paths_tc(topo, tcs, appconfig['predicate'],
                              cutoff=100)

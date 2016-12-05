@@ -55,6 +55,7 @@ def get_optimization(backend=DEFAULT_OPTIMIZER):
 
 cpdef from_app(topo, app, backend=GUROBI):
     opt = OptimizationGurobi(topo, app.pptc)
+    add_named_constraints(opt, app)
     node_caps = {node: topo.get_resources(node) for node in topo.nodes()}
     link_caps = {link: topo.get_resources(link) for link in topo.links()}
     for r in app.resourceCost:
