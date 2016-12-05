@@ -39,6 +39,7 @@ cdef class PPTC:
     cpdef add(self, name, TrafficClass tc, paths)
     cpdef tcs(self, name=*)
     cpdef paths(self, TrafficClass tc)
+    cpdef all_paths(self, TrafficClass tc)
     cpdef PPTC pptc(self, name)
     cpdef mask(self, TrafficClass tc, mask)
     cpdef unmask(self, TrafficClass tc)
@@ -50,3 +51,4 @@ cdef class PPTC:
     cpdef int num_tcs(self)
     cpdef int total_paths(self)
     cpdef int num_paths(self, tc)
+    cpdef bool empty(self)
