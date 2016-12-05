@@ -1,5 +1,5 @@
 # coding=utf-8
-
+from sol.path.paths cimport PPTC
 from sol.topology.topologynx cimport Topology
 from cpython cimport bool
 from numpy cimport ndarray
@@ -19,15 +19,18 @@ cdef class OptimizationGurobi:
     cdef ndarray _load_array
     cdef ndarray _xps
     cdef ndarray _als
+    cdef ndarray _bps
+    cdef ndarray _bes
+    cdef ndarray _bns
     cdef _res_mapping
     cdef _all_pptc
 
     cdef _add_decision_vars(self)
-    cdef _add_binary_vars(self, dict pptc, vtypes)
+    cdef _add_binary_vars(self, PPTC pptc, vtypes)
     cpdef allocate_flow(self, pptc, allocation=*)
-    cpdef cap_num_paths(self, pptc, int max_paths)
+    cpdef cap_num_paths(self, int max_paths, PPTC pptc=*)
     cpdef enforce_single_path(self, pptc, traffic_classes)
-    cdef _disable_paths(self, pptc, traffic_classes=*)
+    cdef _disable_paths(self, PPTC pptc, traffic_classes=*)
     cdef _min_load(self, unicode resource, tcs, unicode prefix, weight, epoch_mode, name)
     cpdef min_node_load(self, unicode resource, tcs, weight=*, epoch_mode=*, name=*)
     cpdef min_link_load(self, unicode resource, tcs, weight=*, epoch_mode=*, name=*)
@@ -38,10 +41,10 @@ cdef class OptimizationGurobi:
     cpdef is_solved(self)
     cpdef v(self, unicode varname)
     cdef bool _has_var(self, unicode varname)
-    cpdef get_chosen_paths(self, pptc)
+    cpdef get_chosen_paths(self)
     cpdef set_time_limit(self, long time)
-    cpdef write(self, unicode fname)
-    cpdef write_solution(self, unicode fname)
+    cpdef write(self, fname)
+    cpdef write_solution(self, fname)
     cpdef get_var_values(self)
     cpdef get_vars(self)
     cpdef node_budget(self, budgetFunc, int bound)

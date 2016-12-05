@@ -1,4 +1,5 @@
 # coding=utf-8
+# cython: profile=True
 from __future__ import division
 from __future__ import print_function
 
@@ -8,6 +9,8 @@ from numpy import log
 from sol.opt.gurobiwrapper cimport OptimizationGurobi, add_obj_var, \
     add_named_constraints
 from sol.topology.topologynx cimport Topology
+
+from sol.path.paths cimport PPTC
 from sol.utils.exceptions import CompositionError
 from sol.utils.logger import logger
 
@@ -31,11 +34,9 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
     logger.debug("Starting composition")
 
     # TODO: this merging should be a temporary workaround until better solution
-    all_pptc = {}
+    all_pptc = PPTC()
     for app in apps:
-        for tc in app.pptc:
-            if tc not in all_pptc:
-                all_pptc[tc] = app.pptc[tc]
+        all_pptc.update(app.pptc)
 
     opt = OptimizationGurobi(topo, all_pptc)
     for app in apps:
@@ -77,7 +78,7 @@ cpdef _detect_cost_conflict(apps):
             break
     tcs = set()
     for app in apps:
-        l = list(app.pptc.keys())
+        l = list(app.pptc.tcs())
         if tcs.intersection(l):
             tc_overlap = True
             break
@@ -105,8 +106,8 @@ cdef compose_resources(list apps, Topology topo, opt):
     res = set()
     for app in apps:
         res.update(app.resourceCost.keys())
-    for r in res:
-        opt.cap(r, 1)
+    # for r in res:
+    #     opt.cap(r, 1)
 
 cdef weighted_obj(apps, Topology topo, opt, epoch_mode):
     logger.debug("Composing objectives")
