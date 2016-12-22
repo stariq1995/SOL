@@ -27,3 +27,6 @@ def parse_bool(s):
     """ Parse a string into a boolean. Multiple truth values are supported,
     such as 'true', 'yes', 'y' and even 'ok' """
     return s.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'ok']
+
+def noop(x):
+    return x
