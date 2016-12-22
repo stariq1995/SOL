@@ -3,6 +3,7 @@
 from __future__ import division
 from __future__ import print_function
 
+import six
 from gurobipy import quicksum
 
 from numpy import log
@@ -20,7 +21,7 @@ from sol.utils.logger import logger
 logx = [0.01, 0.02, 0.03, 0.05, 0.08, 0.12, 0.18, 0.28, 0.43, 0.66, 1.]
 log_approx = log(logx)
 
-cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
+cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted', globalcaps=None):
     """
     Compose multiple applications into a single optimization
     :param apps: a list of App objects
@@ -39,11 +40,11 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
         all_pptc.update(app.pptc)
 
     opt = OptimizationGurobi(topo, all_pptc)
-    for app in apps:
-        add_named_constraints(opt, app)
-    logger.debug("Added named constraints")
-
+    logger.debug("Composing resources")
     compose_resources(apps, topo, opt)
+    if globalcaps is not None:
+        for cap in globalcaps:
+            opt.cap(six.u(cap.resource), None, capval=cap.cap)
     if obj_mode == 'weighted':
         weighted_obj(apps, topo, opt, epoch_mode)
     elif obj_mode == 'propfair':
@@ -54,6 +55,9 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted'):
         variance_obj(apps, topo, opt)
     else:
         raise ValueError('Unknown objective composition mode')
+    logger.debug("Adding named constraints")
+    for app in apps:
+        add_named_constraints(opt, app)
     logger.debug("Composition complete")
     return opt
 
