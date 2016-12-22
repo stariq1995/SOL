@@ -23,6 +23,7 @@ cdef class Path:
     cpdef int get_id(self)
     cpdef dict encode(self)
     cpdef bool uses_box(self, node)
+    cpdef tuple mboxes(self)
 
 # noinspection PyClassicStyleClass
 cdef class PathWithMbox(Path):
@@ -43,6 +44,7 @@ cdef class PPTC:
     cpdef PPTC pptc(self, name)
     cpdef mask(self, TrafficClass tc, mask)
     cpdef unmask(self, TrafficClass tc)
+    cpdef unmaskall(self)
     cpdef clear_masks(self)
     cpdef update(self, PPTC other)
     cpdef copy(self)

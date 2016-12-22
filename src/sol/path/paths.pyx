@@ -97,6 +97,9 @@ cdef class Path:
         """
         return False
 
+    cpdef tuple mboxes(self):
+        return ()
+
     cpdef dict encode(self):
         """
         Encode this path in dict/list form so it can be JSON-ed or MsgPack-ed
@@ -148,6 +151,7 @@ cdef class Path:
     def copy(self):
         return Path(self._nodes, self._ID, self._flowFraction)
 
+
     def __copy__(self):
         return self.copy()
 
@@ -173,6 +177,9 @@ cdef class PathWithMbox(Path):
         :return: True or False
         """
         return node in self.useMBoxes
+
+    cpdef tuple mboxes(self):
+        return tuple(self.useMBoxes)
 
     cpdef dict encode(self):
         """
@@ -226,7 +233,6 @@ cdef class PPTC:
         self._name_to_tcs = dict()
 
     cpdef add(self, name, TrafficClass tc, paths):
-        # print paths
         # Strange workaound instead of directly calling numpy.ma.array(paths)
         # Because it was complaining about mismatched dimentions
         if isinstance(paths, numpy.ma.MaskedArray):
@@ -235,7 +241,7 @@ cdef class PPTC:
             self._data[tc] = numpy.empty(len(paths), dtype=object)
             for i in numpy.arange(len(paths)):
                 self._data[tc][i] = paths[i]
-            self._data[tc] = numpy.ma.array(self._data[tc])
+            self._data[tc] = numpy.ma.array(self._data[tc], mask=numpy.ma.nomask)
         self._tcindex[tc.ID] = tc
         if name not in self._name_to_tcs:
             self._name_to_tcs[name] = set()
@@ -247,7 +253,7 @@ cdef class PPTC:
 
     cpdef tcs(self, name=None):
         if name is None:
-            return itervalues(self._tcindex)
+            return iterkeys(self._data)
         else:
             return iter(self._name_to_tcs[name])
 
@@ -258,6 +264,12 @@ cdef class PPTC:
         return self._data[tc].compressed()
 
     cpdef all_paths(self, TrafficClass tc):
+        """
+        Return all paths, even masked ones
+        :param tc:
+        :return:
+        """
+
         return self._data[tc].data
 
     cpdef PPTC pptc(self, name):
@@ -267,18 +279,48 @@ cdef class PPTC:
         return r
 
     cpdef mask(self, TrafficClass tc, mask):
+        """
+
+        :param tc:
+        :param mask:
+        :return:
+        """
         # self.unmask()
         self._data[tc].mask = mask
 
     cpdef unmask(self, TrafficClass tc):
         self._data[tc].mask = numpy.ma.nomask
 
+    cpdef unmaskall(self):
+        cdef TrafficClass tc
+        for tc in self.tcs():
+            self._data[tc].mask = numpy.ma.nomask
+
     cpdef clear_masks(self):
         for a in itervalues(self._data):
             a.mask = numpy.ma.nomask
 
+    cpdef int num_tcs(self):
+        return len(self._data)
+
     cpdef int num_paths(self, tc):
-        return self._data[tc].size
+        """
+        Number of paths that a given traffic class has
+        :param tc:
+        :return:
+        """
+        return self.paths(tc).size
+
+    cpdef int max_paths(self):
+        """
+        Maximum number of paths in a traffic class
+        :return:
+        """
+        return max([self.num_paths(tc) for tc in self.tcs()])
+
+    cpdef int total_paths(self):
+        """Total number of paths"""
+        return sum(map(len, itervalues(self._data)))
 
     cpdef update(self, PPTC other):
         # NOTE: this is a shallow update
@@ -288,30 +330,20 @@ cdef class PPTC:
             if tc not in self._tcowner:
                 self._tcowner[tc] = set(other._tcowner[tc])
             else:
-                self._tcowner[tc].add(other._tcowner[tc])
+                self._tcowner[tc].update(other._tcowner[tc])
         for name, val in iteritems(other._name_to_tcs):
             if name in self._name_to_tcs:
                 self._name_to_tcs[name].update(val)
             else:
                 self._name_to_tcs[name] = val
 
-    cpdef int max_paths(self):
-        return max([x.size for x in itervalues(self._data)])
-
-    cpdef int total_paths(self):
-        return sum(map(len, itervalues(self._data)))
-
-    cpdef int num_tcs(self):
-        return len(self._data)
 
     cpdef copy(self):
-        # TODO: Shallow copy here
         r = PPTC()
         r.update(self)
 
     cpdef bool empty(self):
         return len(self._data) == 0
-
 
     def __getitem__(self, item):
         return self.paths(item)
