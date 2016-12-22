@@ -50,7 +50,7 @@ cpdef traffic_classes(TrafficMatrix tm, dict fractions, dict class_bytes,
         traffic_classes = {}
         for classname in iterkeys(fractions):
             traffic_classes[classname] = []
-    cdef int index = 1, i = 0, j = 0
+    cdef int index = 0, i = 0, j = 0
     cdef double fraction
     cdef np.ndarray volflows, volbytes
     for i in range(tm.matrix.shape[0]):
@@ -94,7 +94,7 @@ cdef compute_background_load(Topology topology, traffic_classes):
             loads[link] += load
     return loads
 
-cpdef provision_links(Topology topology, list traffic_classes,
+cpdef provision_links(Topology topology, traffic_classes,
                       float overprovision=3, bool set_attr=False):
     """ Provision the links in the topology based on the traffic classes.
     Computes shortest path routing for given traffic classes, uses the maximum
