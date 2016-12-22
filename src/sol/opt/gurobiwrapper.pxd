@@ -22,6 +22,7 @@ cdef class OptimizationGurobi:
     cdef ndarray _bps
     cdef ndarray _bes
     cdef ndarray _bns
+    cdef int _max_paths
     cdef _res_mapping
     cdef _all_pptc
 
@@ -68,9 +69,10 @@ cdef class OptimizationGurobi:
                   link_caps)
     cpdef consume_per_path(self, pptc, unicode resource_name, double cost,
                            node_caps, link_caps)
-    cpdef cap(self, unicode resource, double capval=*)
+    cpdef cap(self, unicode resource, tcs=*, double capval=*)
     cpdef fix_paths(self, pptc)
     cpdef get_xps(self)
+    cpdef get_solution(self)
 
 cpdef add_obj_var(app, opt, weight=*, epoch_mode=*)
 cpdef get_obj_var(app, opt)
