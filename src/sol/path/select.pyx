@@ -6,29 +6,26 @@ Module that implements different path selection (a.k.a pruning) strategies
 """
 import random
 import time
-from itertools import combinations
+from collections import defaultdict
+from itertools import combinations, cycle
 
 from cpython cimport bool
 from enum import IntEnum
-from numpy import arange, power, inf, mean, ones, array_equal, bitwise_xor, \
-    array, argsort
 from numpy cimport ndarray
+from numpy import arange, power, inf, mean, ones, bitwise_xor, \
+    array, argsort
 from numpy import ma
-from numpy.random import rand, choice
-from cpython cimport bool
+from numpy.random import choice
+from six import iterkeys, iteritems
 from sol.opt.composer import compose
 from sol.path.paths cimport PPTC
 from sol.path.paths import PathWithMbox, Path
 from sol.topology.topologynx cimport Topology
-
 from sol.topology.traffic cimport TrafficClass
+from sol.utils.ph import noop
+
 from sol.utils.exceptions import SOLException
 from sol.utils.logger import logger
-import operator
-
-# Common string names for the path selection strategies. Must all be defined
-# and compared in lower case.
-from sol.utils.ph import noop, Tree
 
 _RANDOM = ['random', 'rand']
 _SHORTEST = ['shortest', 'short', 'kshortest', 'k-shortest', 'kshort',
@@ -102,7 +99,7 @@ cpdef k_shortest_paths(PPTC pptc, int num_paths, bool ret_mask=False):
     for tc in pptc:
         lens = array([len(x) for x in pptc._data[tc].data])
         ind = argsort(lens)
-        mask = ones(pptc.num_paths(tc))
+        mask = ones(pptc.num_paths(tc), dtype=bool)
         mask[ind[:num_paths]] = 0
         pptc.mask(tc, mask)
         masks[tc] = mask
@@ -221,7 +218,7 @@ cdef _filter_pptc(apps, chosen_pptc):
             app.pptc[tc] = chosen_pptc[tc]
 
 cpdef select_ilp(apps, Topology topo, int num_paths=5, debug=False,
-                 mode='weighted'):
+                 mode='weighted', globalcaps=None):
     """
     Global path selection function. This chooses paths across multiple applications
     for the given topology, under a global cap for total number of paths.
@@ -262,9 +259,46 @@ cpdef select_ilp(apps, Topology topo, int num_paths=5, debug=False,
     # _filter_pptc(apps, chosen_pptc)
     return chosen_pptc, opt, opt.get_time()
 
+
+class PathTree(object):
+    def __init__(self, ndarray paths):
+        if isinstance(paths[0], PathWithMbox):
+            self.buckets = defaultdict(lambda: [])
+            for pi, p in enumerate(paths):
+                for m in p.mboxes():
+                    self.buckets[m].append(pi)
+            if self.buckets:
+                for k in self.buckets:
+                    self.buckets[k] = array(self.buckets[k])
+            # cyclical iterator over all the buckets.
+            # a dictionary with cyclic iterators inside each bucket
+            self.inner_iters = {b: cycle(v) for b, v in iteritems(self.buckets)}
+
+        elif isinstance(paths[0], Path):
+            _pathlen = array([len(x) for x in paths])
+            # only one bucket for the
+            self.buckets = dict()
+            self.inner_iters = dict()
+            self.buckets[0] = argsort(_pathlen)
+            self.inner_iters[0] = cycle(self.buckets[0])
+        else:
+            raise TypeError('Unknown path type submitted for indexing')
+        self.bucket_iter = cycle(iterkeys(self.buckets))
+
+    def next(self):
+        """
+        Return the next path index.
+        :return:
+        """
+        # get next bucket
+        b = next(self.bucket_iter)
+        # next path from the bucket
+        return next(self.inner_iters[b])
+
+
 cdef inline double _saprob(oldo, newo, temp):
     """ Return a the probablity of accepting a new state """
-    return 1 if oldo < newo else 0  # 1 / (exp(1.0 / temp))
+    return 1 if oldo <= newo else 0  # 1 / (exp(1.0 / temp))
 
 cdef _obj_state(opt):
     return opt.get_solved_objective() if opt.is_solved() else -inf
@@ -274,12 +308,14 @@ class ExpelMode(IntEnum):
     no_flow = 1
     inverse_flow = 2
     random = 3
+    all = 4
 
 
 class ReplaceMode(IntEnum):
     next_sorted = 1
     edge_disjoint = 2
     random = 3
+    pathtree = 4
 
 
 cdef _expel(tcid, existing_mask, xps, mode=ExpelMode.no_flow):
@@ -306,6 +342,10 @@ cdef _expel(tcid, existing_mask, xps, mode=ExpelMode.no_flow):
             if not maskval:  # the value was unmasked and path was used
                 if random.random() < .5:  # toss a coin
                     existing_mask[i] = 1  # mask it, it was useless path
+    elif mode == ExpelMode.all:
+        existing_mask.fill(1)
+    else:
+        raise ValueError('Unsupported annealing expel mode: %s' % mode)
     # print(goodpaths)
     return existing_mask
 
@@ -316,9 +356,9 @@ cdef bool _in(ndarray mask, explored):
             return True
     return False
 
-cdef _replace(explored, mask, tcid, num_paths,
-              mode=ReplaceMode.next_sorted):
-    cdef int num_tries = 0, max_tries = 100, i=0
+cdef _replace(explored, mask, num_paths,
+              mode=ReplaceMode.next_sorted, tree=None):
+    cdef int num_tries = 0, max_tries = 10, i = 0
     # Number of paths that still need to be enabled
     replace_len = max(0, num_paths - ((mask == 0).sum()))
     if replace_len == 0:
@@ -343,18 +383,35 @@ cdef _replace(explored, mask, tcid, num_paths,
                 mask[list(comb)] = 1
         if not found_new:
             # we've run out of possibilities, fall back to random
-            mask[choice(unused, replace_len, replace=0)] = 0
+            mask[choice(unused, replace_len, replace=False)] = 0
     elif mode == ReplaceMode.random:
-        comb = choice(unused, replace_len)
+        comb = choice(unused, replace_len, replace=False)
         mask[comb] = 0
-        while any(array_equal(mask, x) for x in explored) and \
-                        num_tries < max_tries:
+        while not _in(mask, explored) and num_tries < max_tries:
             mask[comb] = 1
             comb = choice(unused, replace_len, replace=0)
             mask[comb] = 0
             num_tries += 1
+    elif mode == ReplaceMode.pathtree:
+        comb = set()
+        while len(comb) < replace_len:
+            comb.add(next(tree))
+        comb = list(comb)
+        mask[comb] = 0
+        while _in(mask, explored) and num_tries < max_tries:
+            mask[comb] = 1
+            comb = set()
+            while len(comb) < replace_len:
+                comb.add(next(tree))
+            comb = list(comb)
+            mask[comb] = 0
+            num_tries += 1
+            # if num_tries >= max_tries:
+            #     logger.error('Pathtree method could not find new combo after %d tries' % max_tries)
     elif mode == ReplaceMode.edge_disjoint:
         raise NotImplementedError()
+    else:
+        raise ValueError('Unsupported annealing replace mode: %s' % mode)
 
 cdef _get_mboxes(x):
     return x.mboxes()
@@ -366,7 +423,8 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
                 globalcaps=None, debug=False):
     """Select optimal paths using the simulated annealing search algorithm"""
 
-    logger.info('Staring simulated annealing selection')
+    logger.info('Starting simulated annealing selection')
+    logger.debug('Replace mode %s' % replace_mode)
     # Starting temperature and probability of acceptance
     cdef double t = tstart, prob
     # Merge all paths
@@ -374,12 +432,13 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
     # compute number of epochs
     cdef int nume = ma.compressed(next(all_pptc.tcs()).volFlows).size
     # compute length of paths per each traffic class
-    pptc_len = {tc.ID: all_pptc.num_paths(tc) for tc in all_pptc.tcs()}
+    pptc_len = {tc: all_pptc.num_paths(tc) for tc in all_pptc.tcs()}
     explored = {}  # all explored combos per traffic class
-    bestopt = None # best available optimization
-    opt = None # current optimization
-    bestpaths = {tcid: None for tcid in all_pptc} # indices of best paths
+    bestopt = None  # best available optimization
+    opt = None  # current optimization
+    bestpaths = {tc: None for tc in all_pptc.tcs()}  # indices of best paths
     cdef unsigned int accepted = 1  # whether the new state was accepted or not
+    cdef int k = 0
 
     # Log our progress, for eval/debug purposes
     db = None
@@ -401,35 +460,54 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
     # choose shortest paths first
     initial_masks = k_shortest_paths(all_pptc, num_paths, ret_mask=True)
     for tc in initial_masks:
-        explored[tc.ID] = [initial_masks[tc]]
+        explored[tc] = [initial_masks[tc]]
 
-    df_paths = {}
-    for tc in all_pptc:
-        for path in all
-        df_paths[tc] = pd.DataFrame({'paths': arange(all_pptc.num_paths(tc))}, dtype=object, copy=False)
-        df_paths[tc]['len'] = df_paths[tc]['paths'].apply(len)
-        df_paths[tc]['mboxes'] = df_paths[tc]['paths'].apply(_get_mboxes)
-        df_paths[tc].set_index(['mboxes', 'len'], inplace=True)
-        print df_paths[tc]
-
+    # build the pathtrees for each traffic class
+    pathtrees = {}
+    if replace_mode == ReplaceMode.pathtree:
+        for tc in all_pptc.tcs():
+            pathtrees[tc] = PathTree(all_pptc.all_paths(tc))
+    else:
+        for tc in all_pptc.tcs():
+            pathtrees[tc] = None
 
     # Create and solve the initial problem
     opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
     opt.solve()
 
     if debug:
-        opt.write('debug/annealing_{}_0'.format(topo.name))
+        opt.write('debug/annealing_{}_{}'.format(topo.name, k))
 
-    # this is the best we have so far, even if it is unsolved
+    # We need to find at least one acceptable state
+    try:
+        from progressbar import ProgressBar, UnknownLength
+        bar = ProgressBar(max_value=UnknownLength)
+    except ImportError:
+        bar = None
+    while not opt.is_solved() and k <= max_iter:
+        # resample paths:
+        for tc in all_pptc.tcs():
+            newmask = _expel(tc.ID, explored[tc][-1], None, ExpelMode.all)
+            _replace(explored[tc], newmask, num_paths, replace_mode,
+                     tree=pathtrees[tc])
+            explored[tc].append(newmask)
+        # Re-run opt
+        opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
+        opt.solve()
+        k += 1
+        if bar is not None:
+            bar.update(k)
+    if k > max_iter:
+        raise SOLException("Could not solve the base simulated annealing problem after %d iterations" % max_iter)
+
+    # this is the best we have so far
     bestopt = opt
-    if not bestopt.is_solved():
-        logger.debug('The initial SA problem is not solved')
-    for tc in all_pptc:
-        bestpaths[tc.ID] = explored[tc.ID][0]
+    for tc in all_pptc.tcs():
+        bestpaths[tc] = explored[tc][-1]
 
     # Log our initial state
     if db is not None:
-        val = dict(obj=_obj_state(opt), solvetime=opt.get_time(), time=time.time()-start_time,
+        val = dict(obj=_obj_state(opt), solvetime=opt.get_time(), time=time.time() - start_time,
                    temperature=t, accepted=accepted, iteration=0, config_id=config_id)
         db.insert(val)
         # solution = opt.get_solution()
@@ -457,18 +535,17 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
         # Generate a new set of paths
         # Get exisiting path fractions first
         optvars = bestopt.get_xps()
-        for tcid in explored:
+        for tc in explored:
             # nothing we can do if we don't have any new paths to substitute
-            if num_paths >= pptc_len[tcid]:
+            if num_paths >= pptc_len[tc]:
                 continue
             # otherwise check what paths have been unused by the best optimization
-            newmask = _expel(tcid, bestpaths[tcid].copy(), optvars,
+            newmask = _expel(tc.ID, bestpaths[tc].copy(), optvars,
                              expel_mode)
-            _replace(explored[tcid], newmask, tcid, num_paths,
-                     replace_mode)
+            _replace(explored[tc], newmask, num_paths, replace_mode, tree=pathtrees[tc])
             # modify app pptc accoriding to indices
-            all_pptc.mask(all_pptc.tc_byid(tcid), newmask)
-            explored[tcid].append(newmask)
+            all_pptc.mask(tc, newmask)
+            explored[tc].append(newmask)
 
         opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
         opt.solve()
@@ -478,21 +555,21 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
         if not opt.is_solved():
             logger.debug('No solution k=%d' % k)
             if db is not None:
-                db.insert(solvetime=opt.get_time(), time=time.time()-start_time,
-                          temperature=t, accepted=0, iteration=k, config_id=config_id)
+                db.insert_one(dict(solvetime=opt.get_time(), time=time.time() - start_time,
+                               temperature=t, accepted=0, iteration=k, config_id=config_id))
             continue
 
         prob = _saprob(_obj_state(bestopt), _obj_state(opt), t)
         if random.random() <= prob:
             bestopt = opt
-            for tcid in explored:
-                bestpaths[tcid] = explored[tcid][-1]
+            for tc in explored:
+                bestpaths[tc] = explored[tc][-1]
             accepted = 1
         else:
             accepted = 0
 
         if db is not None:
-            val = dict(obj=_obj_state(opt), solvetime=opt.get_time(), time=time.time()-start_time,
+            val = dict(obj=_obj_state(opt), solvetime=opt.get_time(), time=time.time() - start_time,
                        temperature=t, accepted=accepted, iteration=k, config_id=config_id)
             db.insert(val)
             # solution = opt.get_solution()
@@ -508,6 +585,6 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
             #            'appcombo', 'maxiter', 'expel_mode', 'replace_mode'])
 
     for tc in all_pptc:
-        all_pptc.mask(tc, bestpaths[tc.ID])
+        all_pptc.mask(tc, bestpaths[tc])
 
     return bestopt, time.time() - start_time

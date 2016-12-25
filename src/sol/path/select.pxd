@@ -14,3 +14,4 @@ cpdef select_sa(apps, Topology topo, int num_paths=*, int max_iter=*,
                 expel_mode=*, replace_mode=*, select_config=*, globalcaps=*,
                 debug=*)
 cpdef k_shortest_paths(PPTC pptc, int num_paths, bool ret_mask=*)
+
