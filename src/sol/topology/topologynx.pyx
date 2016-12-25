@@ -320,7 +320,7 @@ cdef class Topology:
         :return: a new Topology object
 
         """
-        name = data[u'name']
+        name = data.get(u'name', u'NoName')
         return Topology(name, json_graph.node_link_graph(data, directed=True,
                                                          multigraph=False))
 
