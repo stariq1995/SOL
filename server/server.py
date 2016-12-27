@@ -1,4 +1,5 @@
 import argparse
+from pprint import pprint
 
 import flask
 import sol
@@ -118,9 +119,11 @@ def topology():
             return
         return jsonify(_topology.to_json())
     elif request.method == 'POST':
-        _topology = Topology.from_json(request.data)
+        data = request.get_json()
+        pprint(data)
+        _topology = Topology.from_json(data)
         logger.info('Topology read successfully')
-        return
+        return ""
     else:
         abort(405)  # method not allowed
 
