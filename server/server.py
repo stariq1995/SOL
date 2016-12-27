@@ -53,7 +53,7 @@ def hi():
     return u"Hello, this is SOL API version {}".format(__API_VERSION)
 
 
-@app.route('/api/v1/compose')
+@app.route('/api/v1/compose/', methods=['GET', 'POST'])
 def compose():
     """
     Create a new composed opimization, solve and return the
