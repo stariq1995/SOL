@@ -1,8 +1,8 @@
 import argparse
-from pprint import pprint
 
 import flask
-import sol
+import logging
+
 from flask import Flask, request, jsonify
 from flask import abort
 from flask import send_from_directory
@@ -12,9 +12,11 @@ from sol.path.generate import generate_paths_tc
 from sol.topology.topologynx import Topology
 from sol.topology.traffic import TrafficClass
 from logging import Logger,INFO
+from sol.opt.composer import compose
 
 app = Flask(__name__)
-logger = Logger('mainLogger',INFO)
+logger = logging.getLogger()
+logger.addHandler(logging.Handler())
 
 # REST-specific configuration here
 __API_VERSION = 1  # the current api version
@@ -53,7 +55,7 @@ def hi():
     return u"Hello, this is SOL API version {}".format(__API_VERSION)
 
 
-@app.route('/api/v1/compose', methods=['GET', 'POST'])
+@app.route('/api/v1/compose', methods=['POST'])
 def compose():
     """
     Create a new composed opimization, solve and return the
@@ -62,7 +64,8 @@ def compose():
 
     """
     try:
-        data = request.json
+        data = request.get_json()
+        logger.debug(data)
         apps_json = data['apps']
     except KeyError:  # todo: is this right exception?
         abort(400)
@@ -86,7 +89,7 @@ def compose():
         resource_cost = aj["resource_cost"]
         apps.append(App(pptc, constraints, resource_cost, objective))
     fairness_mode = data.get('fairness', 'weighted')
-    opt = sol.opt.composer.compose(apps, topology, obj_mode=fairness_mode)
+    opt = compose(apps, topology, obj_mode=fairness_mode)
     opt.solve()
     result = {}
     for app in apps:
@@ -120,9 +123,8 @@ def topology():
         return jsonify(_topology.to_json())
     elif request.method == 'POST':
         data = request.get_json()
-        pprint(data)
         _topology = Topology.from_json(data)
-        logger.info('Topology read successfully')
+        logging.info('Topology read successfully')
         return ""
     else:
         abort(405)  # method not allowed
@@ -153,6 +155,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--path-dir', required=False)
     parser.add_argument('--dev', action='store_true')
+    parser.add_argument('--debug', action='store_true')
     options = parser.parse_args()
 
     if options.dev:
@@ -162,4 +165,6 @@ if __name__ == '__main__':
     if _gzip:
         c = Compress()
         c.init_app(app)
+    if options.debug:
+        logger.setLevel(logging.DEBUG)
     app.run(debug=options.dev)
