@@ -3,12 +3,15 @@ import argparse
 import flask
 import logging
 
+import numpy
+from attrdict import AttrDict
 from flask import Flask, request, jsonify
 from flask import abort
 from flask import send_from_directory
 from flask_compress import Compress
 from sol.opt.app import App
 from sol.path.generate import generate_paths_tc
+from sol.path.predicates import null_predicate
 from sol.topology.topologynx import Topology
 from sol.topology.traffic import TrafficClass
 from logging import Logger,INFO
@@ -16,7 +19,7 @@ from sol.opt.composer import compose
 
 app = Flask(__name__)
 logger = logging.getLogger()
-logger.addHandler(logging.Handler())
+logger.addHandler(logging.StreamHandler())
 
 # REST-specific configuration here
 __API_VERSION = 1  # the current api version
@@ -25,6 +28,11 @@ _gzip = True  # whether to gzip the returned responses
 
 _topology = None
 
+
+_predicatedict = {
+    'null': null_predicate,
+    'null_predicate': null_predicate,
+}
 
 def assign_to_tc(tcs, paths):
     """
@@ -67,6 +75,7 @@ def compose():
         data = request.get_json()
         logger.debug(data)
         apps_json = data['apps']
+        topology = Topology.from_json(data['topology'])
     except KeyError:  # todo: is this right exception?
         abort(400)
 
@@ -78,18 +87,29 @@ def compose():
     #     all_predicates.add(aj["predicate"])
     apps = []
     for aj in apps_json:
-        tcs = [TrafficClass(**tcj) for tcj in aj["traffic_classes"]]
-        pptc = generate_paths_tc(_topology, tcs, aj["predicate"], 100,
+        aj = AttrDict(aj)
+        tcs = []
+        for tcj in aj.traffic_classes:
+            tc = TrafficClass(tcj.tcid, u'tc', tcj.src, tcj.dst,
+                              numpy.ndarray([tcj.vol_flows]))
+            tcs.append(tc)
+
+        pptc = generate_paths_tc(topology, tcs, _predicatedict[aj.predicate], 100,
                                  float('inf'))
         # constraints
-        constraints = aj["constraints"]
+        constraints = [(c.name) for c in aj.constraints]
         # objective
-        objective = aj["obj"]
+        if aj.objective.get('resource'):
+            objective = (aj.objective.name)
+        else:
+            objective = (aj.objective.name, aj.objective.resource)
+
         # resource_cost
-        resource_cost = aj["resource_cost"]
-        apps.append(App(pptc, constraints, resource_cost, objective))
+        resource_cost = {r.name: r.cost for r in aj["resource_costs"]}
+        apps.append(App(pptc, constraints, resource_cost, objective, name=aj.id))
     fairness_mode = data.get('fairness', 'weighted')
-    opt = compose(apps, topology, obj_mode=fairness_mode)
+    opt = compose(apps, topology, obj_mode=fairness_mode,
+                  globalcaps={r: 1 for r in resource_cost.keys()})
     opt.solve()
     result = {}
     for app in apps:
@@ -123,6 +143,7 @@ def topology():
         return jsonify(_topology.to_json())
     elif request.method == 'POST':
         data = request.get_json()
+        logger.debug(data)
         _topology = Topology.from_json(data)
         logging.info('Topology read successfully')
         return ""
