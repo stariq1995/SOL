@@ -25,3 +25,4 @@ def test_traffic_class():
     assert not t == u'randomlkdjf;aljkd'
 
     # TODO: include tests for other members: mainly IP prefixes and ports
+    # TODO: Test volume masking
