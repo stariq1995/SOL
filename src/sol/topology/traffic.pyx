@@ -12,7 +12,8 @@ cdef class TrafficClass(object):
 
     def __init__(self, int tcid, unicode name, int src, int dst,
                  np.ndarray vol_flows=np.zeros(1),
-                 np.ndarray vol_bytes=np.zeros(1), int priority=1,
+                 vol_bytes=None,
+                 int priority=1,
                  src_ip_prefix=None, dst_ip_prefix=None,
                  src_app_ports=None, dst_app_ports=None):
         """ Creates a new traffic class.
@@ -37,7 +38,10 @@ cdef class TrafficClass(object):
         self.src = src
         self.dst = dst
         self.volFlows = np.ma.masked_array(data=vol_flows, mask=np.ma.nomask)
-        self.volBytes = np.ma.masked_array(data=vol_bytes, mask=np.ma.nomask)
+        if vol_bytes is None:
+            self.volBytes = np.ma.masked_array(data=vol_flows, mask=np.ma.nomask, copy=True)
+        else:
+            self.volBytes = np.ma.masked_array(data=vol_bytes, mask=np.ma.nomask)
         # ensure that the volFlows and volBytes matches in size
         assert self.volFlows.size == self.volBytes.size
         self.priority = priority
