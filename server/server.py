@@ -1,21 +1,20 @@
 import argparse
-
-import flask
 import logging
 
+import flask
 import numpy
 from attrdict import AttrDict
 from flask import Flask, request, jsonify
 from flask import abort
 from flask import send_from_directory
 from flask_compress import Compress
-from sol.opt.app import App
+from sol.opt.composer import compose
 from sol.path.generate import generate_paths_tc
 from sol.path.predicates import null_predicate
 from sol.topology.topologynx import Topology
 from sol.topology.traffic import TrafficClass
-from logging import Logger,INFO
-from sol.opt.composer import compose
+
+from sol.opt.app import App
 
 app = Flask(__name__)
 logger = logging.getLogger()
@@ -28,11 +27,11 @@ _gzip = True  # whether to gzip the returned responses
 
 _topology = None
 
-
 _predicatedict = {
     'null': null_predicate,
     'null_predicate': null_predicate,
 }
+
 
 def assign_to_tc(tcs, paths):
     """
@@ -64,7 +63,7 @@ def hi():
 
 
 @app.route('/api/v1/compose', methods=['POST'])
-def compose():
+def composeview():
     """
     Create a new composed opimization, solve and return the
 
@@ -91,42 +90,43 @@ def compose():
         tcs = []
         for tcj in aj.traffic_classes:
             tc = TrafficClass(tcj.tcid, u'tc', tcj.src, tcj.dst,
-                              numpy.ndarray([tcj.vol_flows]))
+                              numpy.array([tcj.vol_flows]))
             tcs.append(tc)
 
+            print(tc.volFlows)
         pptc = generate_paths_tc(topology, tcs, _predicatedict[aj.predicate], 100,
-                                 float('inf'))
-        # constraints
-        constraints = [(c.name) for c in aj.constraints]
+                                 float('inf'), name=aj.id)
         # objective
-        if aj.objective.get('resource'):
+        if aj.objective.get('resource') is None:
             objective = (aj.objective.name)
         else:
             objective = (aj.objective.name, aj.objective.resource)
 
         # resource_cost
-        resource_cost = {r.name: r.cost for r in aj["resource_costs"]}
-        apps.append(App(pptc, constraints, resource_cost, objective, name=aj.id))
+        resource_cost = {r.resource: r.cost for r in map(AttrDict, aj.resource_costs)}
+        apps.append(App(pptc, list(aj.constraints), resource_cost, objective, name=aj.id))
     fairness_mode = data.get('fairness', 'weighted')
     opt = compose(apps, topology, obj_mode=fairness_mode,
-                  globalcaps={r: 1 for r in resource_cost.keys()})
+                  globalcaps=[AttrDict(resource=r, cap=1) for r in resource_cost.keys()])
     opt.solve()
-    result = {}
+    result = []
     for app in apps:
-        result[app.name] = {"app": app.name,
-                            "tcs": []}
-        result_pptc = opt.get_path_fractions(app.pptc)
-        for tc in result_pptc:
+        result_app = {"app": app.name, "tcs": []}
+        result_pptc = opt.get_paths(0)
+        for tc in app.pptc:
             obj = {
-                "tcid": tc.id,
+                "tcid": tc.ID,
                 "paths": []
             }
             for p in result_pptc[tc]:
-                obj["paths"].append({
-                    "nodes": p.nodes(),
-                    "fraction": p.fraction()
-                })
-            result[app.name]["tcs"].append(obj)
+                if p.flow_fraction() != 0:
+                    obj["paths"].append({
+                        "nodes": p.nodes().tolist(),
+                        "fraction": p.flow_fraction()
+                    })
+            result_app["tcs"].append(obj)
+        result.append(result_app)
+    logger.debug(result)
     return jsonify(result)
 
 

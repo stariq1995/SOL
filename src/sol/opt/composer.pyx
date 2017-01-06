@@ -44,7 +44,8 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted', g
     compose_resources(apps, topo, opt)
     if globalcaps is not None:
         for cap in globalcaps:
-            opt.cap(six.u(cap.resource), None, capval=cap.cap)
+            r = six.u(cap.resource) if isinstance(cap.resource, str) else cap.resource
+            opt.cap(r, tcs=None, capval=cap.cap)
     if obj_mode == 'weighted':
         weighted_obj(apps, topo, opt, epoch_mode)
     elif obj_mode == 'propfair':

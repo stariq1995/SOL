@@ -26,7 +26,7 @@ from numpy import ma, zeros, ones, arange, array, empty, not_equal
 from six import iterkeys, next
 from six.moves import range
 from cpython cimport bool
-from sol.utils.exceptions import SOLException
+from sol.utils.exceptions import SOLException, InvalidConfigException
 from sol.path.paths cimport Path, PPTC, PathWithMbox
 from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
@@ -253,7 +253,6 @@ cdef class OptimizationGurobi:
         # cdef int res_index = self._res_dict[resource]
         cdef int u, v, e
         cdef ndarray vars
-
 
         if tcs is None:
             tcs = self._all_pptc.tcs()
@@ -749,16 +748,22 @@ cdef class OptimizationGurobi:
 
 cdef add_named_constraints(opt, app):
     for c in app.constraints:
-        if c == ALLOCATE_FLOW:
+        res = None
+        if isinstance(c, tuple):
+            cl = c[0].lower()
+            res = c[1]
+        else:
+            cl = c.lower()
+        if cl == ALLOCATE_FLOW:
             opt.allocate_flow(app.pptc)
-        elif c == ROUTE_ALL:
+        elif cl == ROUTE_ALL:
             opt.route_all(app.pptc)
-        elif c[0] == CAP_LINKS or c[0] == CAP_NODES:
+        elif cl == CAP_LINKS or cl == CAP_NODES:
             opt.cap(c[1], app.pptc, c[2])
-        elif c == OBJ_MAX_ALL_FLOW:
+        elif cl == OBJ_MAX_ALL_FLOW:
             opt.max_flow(app.pptc)
         else:
-            raise InvalidConfigException("Unsupported constraint type")
+            raise InvalidConfigException("Unsupported constraint type %s" % c)
 
 cpdef add_obj_var(app, opt, weight=0, epoch_mode=u'max'):
     """
@@ -797,7 +802,7 @@ cpdef add_obj_var(app, opt, weight=0, epoch_mode=u'max'):
     elif aol == OBJ_MAX_ALL_FLOW:
         return opt.max_flow(app.pptc, weight, name=app.name)
     else:
-        raise InvalidConfigException("Unknown objective")
+        raise InvalidConfigException("Unknown objective %s" % ao)
 
 cpdef get_obj_var(app, opt):
     """
