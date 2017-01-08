@@ -48,11 +48,11 @@ cpdef choose_rand(PPTC pptc, int num_paths):
     cdef int n
     cdef ndarray mask
     for tc in pptc:
-        n = pptc.num_paths(tc)
+        n = pptc.all_paths(tc).size
         # Sample only if the number of available paths is larger than
         # given number
         if n > num_paths:
-            mask = ones(pptc.num_paths(tc))
+            mask = ones(n)
             mask[choice(arange(n), num_paths, replace=False)] = 0
             pptc.mask(tc, mask)
         else:
