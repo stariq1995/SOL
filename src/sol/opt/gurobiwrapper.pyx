@@ -746,7 +746,7 @@ cdef class OptimizationGurobi:
         #             paths.append(pd)
         return dict(variables=vars)
 
-cdef add_named_constraints(opt, app):
+cpdef add_named_constraints(opt, app):
     for c in app.constraints:
         res = None
         if isinstance(c, tuple):

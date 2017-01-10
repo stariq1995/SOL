@@ -76,4 +76,4 @@ cdef class OptimizationGurobi:
 
 cpdef add_obj_var(app, opt, weight=*, epoch_mode=*)
 cpdef get_obj_var(app, opt)
-cdef add_named_constraints(opt, app)
+cpdef add_named_constraints(opt, app)
