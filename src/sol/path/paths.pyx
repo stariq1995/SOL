@@ -322,10 +322,12 @@ cdef class PPTC:
         """Total number of paths"""
         return sum(map(len, itervalues(self._data)))
 
-    cpdef update(self, PPTC other):
-        # NOTE: this is a shallow update
+    cpdef update(self, PPTC other, deep=False):
         for tc in other:
-            self._data[tc] = other._data[tc]
+            if deep:
+                self._data[tc] = numpy.ma.copy(other._data[tc])
+            else:
+                self._data[tc] = other._data[tc]
             self._tcindex[tc.ID] = tc
             if tc not in self._tcowner:
                 self._tcowner[tc] = set(other._tcowner[tc])
@@ -335,12 +337,13 @@ cdef class PPTC:
             if name in self._name_to_tcs:
                 self._name_to_tcs[name].update(val)
             else:
-                self._name_to_tcs[name] = val
+                self._name_to_tcs[name] = val.copy()
 
 
-    cpdef copy(self):
+    cpdef copy(self, deep=False):
         r = PPTC()
-        r.update(self)
+        r.update(self, deep)
+        return r
 
     cpdef bool empty(self):
         return len(self._data) == 0

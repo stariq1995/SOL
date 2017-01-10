@@ -664,10 +664,11 @@ cdef class OptimizationGurobi:
         cdef TrafficClass tc
         cdef int pi
         cdef Path p
-        for tc in self._all_pptc.tcs():
-            for pi, p in enumerate(self._all_pptc.paths(tc)):
+        cdef PPTC c = self._all_pptc.copy(deep=True)
+        for tc in c.tcs():
+            for pi, p in enumerate(c.paths(tc)):
                 p.set_flow_fraction(self._xps[tc.ID, pi, epoch].x)
-        return self._all_pptc
+        return c
 
         # for e in range(num_epochs):
         #     result[e] = {}
