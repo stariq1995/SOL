@@ -725,8 +725,10 @@ cdef class OptimizationGurobi:
         for tc in pptc:
             for pi, p in enumerate(pptc[tc]):
                 for e in range(self.num_epochs):
-                    self.opt.addConstr(self._xps[tc.ID, pi, e] == \
-                                       p.flow_fraction())
+                    # Only fix non-zero paths
+                    if p.flow_fraction() > 0:
+                        self.opt.addConstr(self._xps[tc.ID, pi, e] == \
+                                           p.flow_fraction())
         self.opt.update()
 
     cpdef double get_time(self):
