@@ -238,6 +238,7 @@ cpdef select_ilp(apps, Topology topo, int num_paths=5, debug=False,
 
     """
     logger.info('Selection composition')
+    start_time = time.time()
     opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
     # mpptc = PPTC.merge([a.pptc for a in apps])  # merged
     opt.cap_num_paths((topo.num_nodes() - 1) ** 2 * num_paths)
@@ -257,7 +258,7 @@ cpdef select_ilp(apps, Topology topo, int num_paths=5, debug=False,
     # print (chosen_pptc)
     # return paths by modifying the pptc of the apps they are associated with
     # _filter_pptc(apps, chosen_pptc)
-    return chosen_pptc, opt, opt.get_time()
+    return chosen_pptc, opt, time.time() - start_time, opt.get_time()
 
 
 class PathTree(object):
@@ -456,6 +457,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
         # solutions.delete_many({'config_id': config_id})
 
     cdef double start_time = time.time()
+    cdef double opt_time = 0
 
     # choose shortest paths first
     initial_masks = k_shortest_paths(all_pptc, num_paths, ret_mask=True)
@@ -474,6 +476,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
     # Create and solve the initial problem
     opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
     opt.solve()
+    opt_time += opt.get_time()
 
     if debug:
         opt.write('debug/annealing_{}_{}'.format(topo.name, k))
@@ -494,6 +497,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
         # Re-run opt
         opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
         opt.solve()
+        opt_time += opt.get_time()
         k += 1
         if bar is not None:
             bar.update(k)
@@ -549,6 +553,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
 
         opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
         opt.solve()
+        opt_time += opt.get_time()
         if debug:
             opt.write('debug/annealing_{}_{}'.format(topo.name, k))
 
@@ -587,4 +592,4 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
     for tc in all_pptc:
         all_pptc.mask(tc, bestpaths[tc])
 
-    return bestopt, time.time() - start_time
+    return bestopt, time.time() - start_time, opt_time
