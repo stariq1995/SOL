@@ -174,6 +174,7 @@ cdef class OptimizationGurobi:
                 self._als[tc.ID, epoch] = v = self.opt.addVar(lb=0, ub=1,
                                                               name='a_{}_{}'.format(
                                                                   tc.ID, epoch))
+                self.opt.update()
                 # create an empty expression
                 lhs = LinExpr()
                 # get only variables for existing paths
