@@ -25,6 +25,11 @@ REQ_SOME_NODES = u'req_some_nodes'
 CAP_LINKS = u'caplinks'
 CAP_NODES = u'capnodes'
 
+COMPOSE_WEIGHTED = u'weighted'
+COMPOSE_UTILITARIAN = COMPOSE_WEIGHTED
+COMPOSE_PROPFAIR = u'propfair'
+COMPOSE_MAXMIN = u'maxmin'
+
 CPLEX = u'cplex'
 GUROBI = u'gurobi'
 DEFAULT_OPTIMIZER = CPLEX
