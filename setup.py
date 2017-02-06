@@ -23,7 +23,7 @@ setup(
     packages=['sol'],
     url='https://github.com/progwriter/SOL',
     requires=['networkx', 'requests', 'netaddr', 'numpy', 'cython', 'six',
-              'bitstring'],
+              'bitstring', 'gurobipy'],
     ext_modules=cythonize(ext, compiler_directives={
         'cdivision': True,
         'embedsignature': True,
