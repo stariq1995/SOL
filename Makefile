@@ -4,10 +4,10 @@ all:
 
 .PHONY: clean
 clean:
-	rm -r build
+	rm -rf ./build
 	find . -name '*.c' -exec rm {} \;
 	find . -name '*.so' -exec rm {} \;
-	find . -name '__pycache__' -exec rm {} \;
+	find . -name '__pycache__' -exec rm -rf {} \;
 
 .PHONY: watch
 watch:
