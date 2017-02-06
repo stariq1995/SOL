@@ -2,9 +2,9 @@
 """
 Various utility functions
 """
-import itertools
 from collections import defaultdict
 from six import u
+from six.moves import zip
 
 cpdef unicode tup2str(tuple t):
     """ Convert tuple to string
@@ -21,7 +21,7 @@ def listeq(a, b):
     """
         Checks that two lists have equal elements
     """
-    return len(a) == len(b) and all([x == y for x, y in itertools.izip(a, b)])
+    return len(a) == len(b) and all([x == y for x, y in zip(a, b)])
 
 def parse_bool(s):
     """ Parse a string into a boolean. Multiple truth values are supported,
