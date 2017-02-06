@@ -9,7 +9,8 @@ from flask import abort
 from flask import send_from_directory
 from flask_compress import Compress
 from sol.opt.composer import compose
-from sol.path.generate import generate_paths_tc
+from sol.path.generate import generate_paths_ie
+from sol.path.paths import PPTC
 from sol.path.predicates import null_predicate
 from sol.topology.topologynx import Topology
 from sol.topology.traffic import TrafficClass
@@ -33,7 +34,7 @@ _predicatedict = {
 }
 
 
-def assign_to_tc(tcs, paths):
+def assign_to_tc(tcs, paths, name):
     """
     Assign paths to traffic classes based on the ingress & egress nodes.
     To be used only if there is one traffic class (predicate)
@@ -46,9 +47,9 @@ def assign_to_tc(tcs, paths):
 
     :return: paths per traffic class
     """
-    pptc = {}
+    pptc = PPTC()
     for tc in tcs:
-        pptc[tc] = paths[tc.ingress()][tc.egress()]
+        pptc.add(name, tc, paths[tc.ingress()][tc.egress()])
     return pptc
 
 
@@ -78,12 +79,7 @@ def composeview():
     except KeyError:  # todo: is this right exception?
         abort(400)
 
-    # TODO: load paths from disk based on predicates and topology
-    # For now, extract list of predicates and generate paths for them
-    # on the fly. Will be slower.
-    # all_predicates = set()
-    # for aj in apps_json:
-    #     all_predicates.add(aj["predicate"])
+    # TODO: take predicate into account
     apps = []
     for aj in apps_json:
         aj = AttrDict(aj)
@@ -93,9 +89,9 @@ def composeview():
                               numpy.array([tcj.vol_flows]))
             tcs.append(tc)
 
-            print(tc.volFlows)
-        pptc = generate_paths_tc(topology, tcs, _predicatedict[aj.predicate], 100,
-                                 float('inf'), name=aj.id)
+        pptc = assign_to_tc(tcs, _paths, aj.id)
+        # pptc = generate_paths_tc(topology, tcs, _predicatedict[aj.predicate], 20,
+        #                          float('inf'), name=aj.id)
         # objective
         if aj.objective.get('resource') is None:
             objective = (aj.objective.name)
@@ -136,7 +132,7 @@ def topology():
     Set or return the stored topology
 
     """
-    global _topology
+    global _topology, _paths
     if request.method == 'GET':
         if _topology is None:
             return
@@ -146,6 +142,11 @@ def topology():
         logger.debug(data)
         _topology = Topology.from_json(data)
         logging.info('Topology read successfully')
+        _paths = {}
+        for s in _topology.nodes():
+            _paths[s] = {}
+            for t in _topology.nodes():
+                _paths[s][t] = list(generate_paths_ie(s, t, _topology, null_predicate, 100, 5))
         return ""
     else:
         abort(405)  # method not allowed
@@ -174,7 +175,6 @@ def swagger_json():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path-dir', required=False)
     parser.add_argument('--dev', action='store_true')
     parser.add_argument('--debug', action='store_true')
     options = parser.parse_args()
