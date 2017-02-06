@@ -359,7 +359,7 @@ cdef bool _in(ndarray mask, explored):
 
 cdef _replace(explored, mask, num_paths,
               mode=ReplaceMode.next_sorted, tree=None):
-    cdef int num_tries = 0, max_tries = 10, i = 0
+    cdef int num_tries = 0, max_tries = 100, i = 0
     # Number of paths that still need to be enabled
     replace_len = max(0, num_paths - ((mask == 0).sum()))
     if replace_len == 0:
