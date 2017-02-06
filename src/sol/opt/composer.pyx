@@ -15,13 +15,10 @@ from sol.path.paths cimport PPTC
 from sol.utils.exceptions import CompositionError
 from sol.utils.logger import logger
 
-#XXX: this entire module is currently tied to Gurobi
-
-
 logx = [0.01, 0.02, 0.03, 0.05, 0.08, 0.12, 0.18, 0.28, 0.43, 0.66, 1.]
 log_approx = log(logx)
 
-cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted', globalcaps=None):
+cpdef compose(list apps, Topology topo, epoch_mode='sum', obj_mode='weighted', globalcaps=None):
     """
     Compose multiple applications into a single optimization
     :param apps: a list of App objects
@@ -34,7 +31,6 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted', g
     """
     logger.debug("Starting composition")
 
-    # TODO: this merging should be a temporary workaround until better solution
     all_pptc = PPTC()
     for app in apps:
         all_pptc.update(app.pptc)
@@ -55,7 +51,7 @@ cpdef compose(list apps, Topology topo, epoch_mode='max', obj_mode='weighted', g
     elif obj_mode == 'variance':
         variance_obj(apps, topo, opt)
     else:
-        raise ValueError('Unknown objective composition mode')
+        raise ValueError('Unknown objective composition mode %s' % obj_mode)
     logger.debug("Adding named constraints")
     for app in apps:
         add_named_constraints(opt, app)
