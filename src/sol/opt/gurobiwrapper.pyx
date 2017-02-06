@@ -400,7 +400,7 @@ cdef class OptimizationGurobi:
                         latency_expr.addTerms(len(path),
                                               self._xps[tc.ID, pi, epoch])
 
-                self.opt.addConstr(latency >= latency_expr / norm_factor)
+                self.opt.addConstr(latency >= latency_expr / norm_factor )
         elif epoch_mode == u'sum':
             latency_expr = LinExpr()
             for epoch in range(self.num_epochs):
@@ -408,7 +408,7 @@ cdef class OptimizationGurobi:
                     for pi, path in enumerate(pptc[tc]):
                         latency_expr.addTerms(len(path),
                                               self._xps[tc.ID, pi, epoch])
-            self.opt.addConstr(latency >= latency_expr / norm_factor)
+            self.opt.addConstr(latency >= latency_expr / norm_factor/ self.num_epochs)
         else:
             raise ValueError(u'Unknown epoch_mode')
         self.opt.addConstr(notlatency == 1 - latency)
@@ -485,7 +485,7 @@ cdef class OptimizationGurobi:
             for e in range(self.num_epochs):
                 self.opt.addConstr(obj >= per_epoch_objs[e])
         elif epoch_mode == u'sum':
-            self.opt.addConstr(obj >= quicksum(per_epoch_objs))
+            self.opt.addConstr(obj >= quicksum(per_epoch_objs)/self.num_epochs)
         else:
             raise ValueError(u'Unkown epoch_mode objective mode composition')
 
@@ -513,15 +513,26 @@ cdef class OptimizationGurobi:
         return self._min_load(resource, tcs, u'LinkLoad', weight, epoch_mode,
                               name)
 
-    cpdef max_flow(self, pptc, weight=1.0, name=None):
-        self._varindex[OBJ_MAX_ALL_FLOW if name is None else name] = obj = \
-            self.opt.addVar(name=OBJ_MAX_ALL_FLOW if name is None else name,
+    cpdef max_flow(self, pptc, weight=1.0, name=None, epoch_mode=None):
+        name = OBJ_MAX_ALL_FLOW if name is None else name
+        self._varindex[name] = obj = \
+            self.opt.addVar(name=name,
                             obj=weight, lb=0, ub=1)
         self.opt.update()
+        per_epoch_objs = {}
         for e in range(self.num_epochs):
+            per_epoch_objs[e] = obje = self.opt.addVar(name='{}_{}'.format(name, e))
             self.opt.addConstr(
-                obj == quicksum(
+                obje == quicksum(
                     [self._als[tc.ID, e] for tc in pptc]) / pptc.num_tcs())
+
+        if epoch_mode == u'max':
+            for e in range(self.num_epochs):
+                self.opt.addConstr(obj >= per_epoch_objs[e])
+        elif epoch_mode == u'sum':
+            self.opt.addConstr(obj >= quicksum(per_epoch_objs)/self.num_epochs)
+        else:
+            raise ValueError(u'Unkown epoch_mode objective mode composition')
         self.opt.update()
         return obj
 
@@ -804,7 +815,7 @@ cpdef add_obj_var(app, opt, weight=0, epoch_mode=u'max'):
         return opt.min_node_load(res, app.objTC, weight, epoch_mode,
                                  name=app.name)
     elif aol == OBJ_MAX_ALL_FLOW:
-        return opt.max_flow(app.pptc, weight, name=app.name)
+        return opt.max_flow(app.pptc, weight, name=app.name, epoch_mode=epoch_mode)
     else:
         raise InvalidConfigException("Unknown objective %s" % ao)
 

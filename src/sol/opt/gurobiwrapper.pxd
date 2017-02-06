@@ -50,7 +50,7 @@ cdef class OptimizationGurobi:
     cpdef get_vars(self)
     cpdef node_budget(self, budgetFunc, int bound)
     cpdef min_latency(self, pptc, weight=*, bool norm=*, epoch_mode=*, name=*)
-    cpdef max_flow(self, pptc, weight=*, name=*)
+    cpdef max_flow(self, pptc, weight=*, name=*, epoch_mode=*)
     cpdef max_min_flow(self, pptc, weight=*, name=*)
     cdef _req_some(self, pptc, traffic_classes=*, req_type=*)
     cdef _req_all(self, pptc, traffic_classes=*, req_type=*)
