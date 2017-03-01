@@ -29,4 +29,5 @@ def parse_bool(s):
     return s.lower() in ['true', '1', 't', 'y', 'yes', 'yeah', 'yup', 'ok']
 
 def noop(x):
+    """ Do nothing and return value that was passed in"""
     return x
