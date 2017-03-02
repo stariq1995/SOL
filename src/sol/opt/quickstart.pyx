@@ -1,28 +1,26 @@
 # coding=utf-8
 
-__all__ = ['get_optimization', 'from_app']
+__all__ = ['from_app']
 
-from sol.utils.const import DEFAULT_OPTIMIZER, CPLEX, GUROBI
+from .app cimport App
 from gurobiwrapper cimport OptimizationGurobi, add_named_constraints, \
     add_obj_var
-from sol.utils.exceptions import InvalidConfigException
 
-def get_optimization(backend=DEFAULT_OPTIMIZER):
-    """
-    Return an optimization object that implements the interfce to a given backend.
-
-    :param backend: optimization backend. Currently 'CPLEX' are supported. Gurobi is planned
-    :return: the :py:class:`~Optimization` object
-    :raise InvalidConfigException: if the provided backend is not supported
-    """
-    if backend.lower() == CPLEX:
-        raise NotImplementedError('No longer supported')
-        # return OptimizationCPLEX()
-    elif backend.lower() == GUROBI:
-        from gurobiwrapper import OptimizationGurobi
-        return OptimizationGurobi()
-    else:
-        raise InvalidConfigException('Unsupported optimization backend')
+# def get_optimization(backend=DEFAULT_OPTIMIZER):
+#     """
+#     Return an optimization object that implements the interfce to a given backend.
+#
+#     :param backend: optimization backend. Currently 'CPLEX' is not supported. Gurobi is the default
+#     :return: the :py:class:`~Optimization` object
+#     :raise InvalidConfigException: if the provided backend is not supported
+#     """
+#     if backend.lower() == CPLEX:
+#         raise NotImplementedError('CPLEX is no longer supported')
+#     elif backend.lower() == GUROBI:
+#         from gurobiwrapper import OptimizationGurobi
+#         return OptimizationGurobi()
+#     else:
+#         raise InvalidConfigException('Unsupported optimization backend')
 
 
 # def initOptimization(topology, trafficClasses, predicate=null_predicate,
@@ -53,7 +51,15 @@ def get_optimization(backend=DEFAULT_OPTIMIZER):
 #     opt._add_decision_vars(pptc)
 #     return opt, pptc
 
-cpdef from_app(topo, app, backend=GUROBI, globalcaps=None):
+cpdef from_app(topo, App app, globalcaps=None):
+    """
+    Create an optimization from a single application
+
+    :param topo: the network topology
+    :param app: the application
+    :param globalcaps:
+    :return:
+    """
     opt = OptimizationGurobi(topo, app.pptc)
     node_caps = {node: topo.get_resources(node) for node in topo.nodes()}
     link_caps = {link: topo.get_resources(link) for link in topo.links()}

@@ -1,4 +1,5 @@
 # coding=utf-8
-from sol.opt.varnames import GUROBI
 
-cpdef from_app(topology, app, backend=*, globalcaps=*)
+from .app cimport App
+
+cpdef from_app(topo, App app, globalcaps=*)
