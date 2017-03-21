@@ -1,7 +1,18 @@
-Path generation
-===============
+.. _guide-paths:
 
-To understand path generation, we must first 
+Paths
+=====
+
+Path generation
+---------------
+
+To understand path generation, we must first
+
+Path predicates
+^^^^^^^^^^^^^^^
 
 Path selection
-==============
+--------------
+
+..Robust path selection
+..^^^^^^^^^^^^^^^^^^^^^

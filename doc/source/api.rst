@@ -2,13 +2,16 @@ SOL API
 =======
 
 This describes APIs for manipulating different types of objects that SOL
-implements and uses, such as :py:class:`sol.topology.topologynx.Topology`,
-:py:class:`sol.topology.traffic.TrafficClass`, etc.
+implements and uses, such as :py:class:`sol.Topology`,
+:py:class:`sol.TrafficClass`, etc.
+
+.. py:currentmodule:: sol
+
+.. _topoapi:
 
 Topology
 --------
 
-.. py:currentmodule:: sol.topology.topologynx
 .. autoclass:: Topology
     :special-members: __init__
     :members:
@@ -16,26 +19,53 @@ Topology
 TrafficClass
 ------------
 
-.. py:currentmodule:: sol.topology.traffic
+.. py:class:: TrafficClass
+    :attribute: ID
+      Positive integer that uniquely identifies the traffic class
+
+    :attribute: name
+      String name of this traffic class. Multiple traffic classes may share a
+      name for convenience (e.g., 'web', 'ssh')
+
+    :attribute: src
+      Integer id of the ingress node (in the topology) for this traffic class
+
+    :attribute: dst
+      Integer id of the egress node (in the topology) for this traffic class
+
+    :attribute: volFlows
+      A (masked) array containing volumes for this traffic class across different
+      time epochs
+
 .. autoclass:: TrafficClass
     :special-members: __init__
     :members:
-
-:attribute: ID
-  Positive integer that uniquely identifies the traffic class
-
-:attribute: name
-  String name of this traffic class. Multiple traffic classes may share a
-  name for convenience (e.g., 'web', 'ssh')
 
 
 
 Application
 -----------
 
-.. py:currentmodule:: sol.opt.app
+.. py:currentmodule:: sol
 .. autoclass:: App
     :special-members: __init__
+    :members:
+
+.. autoclass:: AppBuilder
+    :special-members: __init__
+    :members:
+
+
+Path objects
+------------
+
+.. autoclass:: sol.Path
+    :members:
+
+.. autoclass:: sol.PathWithMbox
+    :members:
+
+.. autoclass:: sol.PPTC
     :members:
 
 
@@ -70,8 +100,14 @@ Utils & Logging
 .. automodule:: sol.utils.logger
     :members:
 
-Provisioning
-------------
+Topology generators
+-------------------
+
+.. automodule:: sol.topology.generators
+    :members:
+
+Topology Provisioning
+---------------------
 
 .. automodule:: sol.topology.provisioning
     :members:
