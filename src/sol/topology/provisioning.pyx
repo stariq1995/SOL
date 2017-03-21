@@ -8,7 +8,7 @@ from __future__ import division
 import networkx
 from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
-from sol.utils.const import RES_BANDWIDTH
+from sol.utils.const import *
 from tmgen cimport TrafficMatrix
 from six import iteritems, iterkeys
 from six.moves import range, zip
@@ -17,8 +17,7 @@ import numpy as np
 cimport numpy as np
 
 
-cpdef traffic_classes(TrafficMatrix tm, dict fractions, dict class_bytes,
-                      as_dict=False):
+cpdef traffic_classes(TrafficMatrix tm, dict fractions, as_dict=False):
     """
     Generate traffic classes from a given traffic matrix
 
@@ -29,14 +28,6 @@ cpdef traffic_classes(TrafficMatrix tm, dict fractions, dict class_bytes,
 
             classFractionDict = {'web': .6, 'ssh': .2, 'voip': .2}
 
-    :param class_bytes: dictionary mapping the class name to an average flow
-        size in bytes.
-        That is::
-
-            classBytesDict = {'web': 100, 'ssh': 200, 'voip': 200}
-
-        means that each web flow is 100 bytes, each ssh flow is 200 bytes and
-        so on.
     :param as_dict: whether to return traffic classes as dictionary with keys
         being class names. If False, a flat list is returned
 
@@ -58,10 +49,8 @@ cpdef traffic_classes(TrafficMatrix tm, dict fractions, dict class_bytes,
             if i != j:
                 for classname, fraction in iteritems(fractions):
                     volflows = np.array([fraction * tm.between(i, j, 'mean')])
-                    volbytes = volflows * class_bytes[classname]
                     # XXX: this assumes that topology nodes are 0-indexed
-                    tc = TrafficClass(index, classname, i, j, volflows,
-                                      volbytes)
+                    tc = TrafficClass(index, classname, i, j, volflows)
                     if as_dict:
                         traffic_classes[classname].append(tc)
                     else:
@@ -122,7 +111,7 @@ cpdef provision_links(Topology topology, traffic_classes,
             mult = data[u'capacitymult']
         cap = overprovision * max_bg * mult
         if set_attr:
-            topology.set_resource(link, RES_BANDWIDTH, cap)
+            topology.set_resource(link, Resource.BANDWIDTH, cap)
         capacities[link] = cap
     return capacities
 
