@@ -5,9 +5,10 @@ Implements the topology for SOL optimization
 import networkx as nx
 from cpython cimport bool
 from networkx.readwrite import graphml, json_graph
-from sol.utils.const import FORMAT_AUTO, FORMAT_GRAPHML, FORMAT_GML, SERVICES, \
+
+from ..utils import parse_bool
+from ..utils.const import FORMAT_AUTO, FORMAT_GRAPHML, FORMAT_GML, SERVICES, \
     SWITCH, RESOURCES, HAS_MBOX, ERR_FMT, EDGE_LAYER
-from sol.utils.ph import parse_bool
 
 # noinspection PyClassicStyleClass
 cdef class Topology:
@@ -22,7 +23,7 @@ cdef class Topology:
         :param graph: Either a
 
             #. :py:mod:`networkx` graph that represents the topology
-            #. filename of a graphml file to load the graph from
+            #. filename of a .graphml or .gml  file to load the graph from
             #. None, in which case an empty directed graph is created
 
         """
@@ -52,15 +53,17 @@ cdef class Topology:
     cpdef num_nodes(self, unicode service=None):
         """ Returns the number of nodes in this topology
 
-        :param service: only count nodes that provide a particular service (
-            e.g., 'switch', 'ids', 'fw', etc.)
+        :param service: only count nodes that provide a particular service
+            (e.g., 'switch', 'ids', 'fw', etc.)
+            If set to None or an empty string, all nodes are returned
+
         """
-        if service is None:
+        if service is None or not service:
             return self._graph.number_of_nodes()
         else:
             return len([n for n in self._graph.nodes_iter()
                         if SERVICES in self._graph.node[n] and
-                        service in self._graph.node[n][SERVICES]])
+                        service in self._graph.node[n][SERVICES].split(';')])
 
     cpdef get_graph(self):
         """ Return the topology graph
@@ -122,19 +125,20 @@ cdef class Topology:
         """
         return self._graph.node[node][SERVICES].split(';')
 
-    cpdef set_service_types(self, int node, service_types):
-        """
-        Set the service types for this node
+    # cpdef set_service_types(self, int node, service_types):
+    #     """
+    #     Set the service types for this node
+    #
+    #     :param node: the node id of interest
+    #     :param service_types: a list of strings denoting the services
+    #     :type service_types: list
+    #     """
+    #     if isinstance(service_types, str):
+    #         self._graph.node[node][SERVICES] = service_types
+    #     else:
+    #         self._graph.node[node][SERVICES] = u';'.join(service_types)
 
-        :param node: the node id of interest
-        :param service_types: a list of strings denoting the services
-        :type service_types: list
-        """
-        if isinstance(service_types, str):
-            self._graph.node[node][SERVICES] = service_types
-        else:
-            self._graph.node[node][SERVICES] = u';'.join(service_types)
-
+    # TODO: build in checks that services and resources are valid Graphml/GML keys?
     cpdef add_service_type(self, int node, service_type):
         """
         Add a single service type to the given node
@@ -143,6 +147,9 @@ cdef class Topology:
         :param service_type: the service to add (e.g., 'switch', 'ids')
         :type service_type: str
         """
+        # TODO: this is not elegant or bug-proof. Find better way of storing services
+        if ';' in service_type:
+            raise ValueError("Services names cannot contain a semicolon")
         if SERVICES in self._graph.node[node]:
             types = set(self._graph.node[node][SERVICES].split(';'))
             types.add(service_type)
@@ -284,7 +291,6 @@ cdef class Topology:
         except KeyError:
             return False
 
-
     def paths(self, int source, int sink, int cutoff):
         """
         Return an iterator over all of the simple paths in this topology.
@@ -303,7 +309,7 @@ cdef class Topology:
         for p in nx.shortest_simple_paths(self._graph, source, sink):
             # We need the -1 here because len(p) will count nodes, not hops.
             # Hops is the expected length metric for Path objects
-            if len(p)-1 <= cutoff:
+            if len(p) - 1 <= cutoff:
                 yield p
             else:
                 return
@@ -325,7 +331,18 @@ cdef class Topology:
                                                          multigraph=False))
 
     def __reduce__(self):
-        return (_rebuild, (self.name, self._graph))
+        """
+        This will allow Topology objects to be serialized into binary formats.
+        Because this is an "extention" class (cdef) and not a pure-Python class,
+        presence of this function is required
+        """
+        return _rebuild, (self.name, self._graph)
+
+
+    # TODO: implement equality and hashing operations
 
 def _rebuild(name, graph):
+    """
+    This function allows deserialization from binary formats (e.g. pickle)
+    """
     return Topology(name, graph)

@@ -16,7 +16,7 @@ cdef class Topology:
     cpdef edges(self, data=*)
     cpdef links(self, data=*)
     cpdef get_service_types(self, int node)
-    cpdef set_service_types(self, int node, service_types)
+    # cpdef set_service_types(self, int node, service_types)
     cpdef add_service_type(self, int node, service_type)
     cpdef set_resource(self, node_or_link, unicode resource, double capacity)
     cpdef dict get_resources(self, node_or_link)
