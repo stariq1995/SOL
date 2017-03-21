@@ -1,33 +1,41 @@
-## What is SOL? [![Build Status](https://travis-ci.org/progwriter/SOL.svg?branch=master)](https://travis-ci.org/progwriter/SOL)
-SOL stands for SDN Optimization Layer and is a framework for developing
-networking applications. Many modern SDN applications rely on creating
-optimizations in order to compute the optimal way to route traffic. SOL makes
-this much simpler by abstracting away some of the low-level optimization details
-and interfacing with SDN controllers on your behalf.
+SOL: SDN Optimization Layer
+===========================
 
-## How do I try it?
-- Since code is still in development you have to clone the repo,
-there is no option to use PyPi yet:
+SOL is a library that lets you rapidly prototype *network management applications* that require constructing an **optimization**. It is designed to work well with Software Defined Networking (SDN) as it makes use of the global view of the network to compute a globally optimal (or near-optimal) solution.
 
-    `git clone https://bitbucket.org/progwriter/sol.git`
+Why optimizations?
+------------------
 
-- Install dependencies.
-    * First, you need CPLEX. We cannot distribute it, but you can get a free academic license from IBM [here](http://www-01.ibm.com/support/docview.wss?uid=swg21419058).
-    Install *both the binaries and the python library*.
-    * Install python dependencies. **We strongly recommend** the use of python
-    [virtualenv](https://virtualenv.pypa.io/en/latest/)
+Optimization is incredibly common in the networking domain. Classic problems such as shortest path routing and maxflow can all be expressed as [linear programs](https://en.wikipedia.org/wiki/Linear_programming) and solved efficiently.
 
-    `pip install -r requirements.txt`
-- Install SOL in *development* mode.
+Traffic engineering, middebox management, and other types of load balancing can also be expressed using optimizations.
 
-    `pip install -e .`
-- Tinker!
-    * Look at & run some examples from the *examples* folder
-    * Write your own applications with the supplied API
+Key features
+------------
 
-## How do I contribute?
+-   Fast prototyping of optimizations for network management
+-   Composition of multiple optimization applications using different fairness modes
+-   Flexible resource computation logic
+-   Integrations with [ONOS](http://onosproject.org/) SDN controller
+-   Novel optimization capabilities, reusable across different applications,
+    (e.g., reconfiguration minimization)
 
-Fork, code, submit pull request.
-File issues.
-You know the drill.
+Integrations
+------------
 
+SOL is desgined to be modular and could potentially integrate with multiple SDN controllers. This library contains the core optimization logic. It can be used on its own to quickly prototype applications, compose\_apps multiple optimizations and examine resulting solutions.
+
+A rough view of the SOL library and integrations is as follows:
+
+-   [SOL library](https://github.com/progwriter/SOL) (this repository)
+-   [ONOS integration](https://github.com/progwriter/sol-onos) Allows use of the SOL library from the
+    [ONOS](http://onosproject.org/) controller
+-   [SOL workflows](https://github.com/progwriter/SOL-workflows) A collection of examples and workflows to give users an idea of how SOL can be used.
+-   [TMgen library](https://github.com/progwriter/tmgen) A helper library for generating and manipulating traffic matrices.
+
+Python documentation
+--------------------
+
+Available at [Read the Docs].
+
+[Read the Docs]: http://sol.readthedocs.io/
