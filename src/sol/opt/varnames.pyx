@@ -1,31 +1,32 @@
 # coding=utf-8
 # cython: profile=False
+
 import cython
-from sol.utils.ph import tup2str
 from varnames cimport *
 
-
 @cython.profile(False)
-cpdef inline unicode xp(TrafficClass traffic_class, Path path, int epoch=0):
-    """ Convenience method for formatting a decision variable
+cpdef inline unicode xp(TrafficClass traffic_class, int path_index, int epoch):
+    """ Convenience method for formatting the name of a decision variable
 
     :param traffic_class: the traffic class object, needed for the ID
     :returns: variable name of the form *x_classid_pathindex*
     :rtype: str
     """
-    return u'x_{}_{}_{}'.format(traffic_class.ID, path.get_id(), epoch)
+    return u'x_{}_{}_{}'.format(traffic_class.ID, path_index, epoch)
 
 @cython.profile(False)
-cpdef unicode al(TrafficClass traffic_class, int epoch=0):
+cpdef inline unicode al(TrafficClass traffic_class, int epoch):
     """
     Format an allocation variable
 
     :param traffic_class: the traffic class object
+    :param epoch: epoch number
     :return: variable name of the form *a_classid*
     """
     return u'a_{}_{}'.format(traffic_class.ID, epoch)
 
-cpdef unicode bn(int node):
+@cython.profile(False)
+cpdef inline unicode bn(int node):
     """
     Format a binary node variable
 
@@ -34,7 +35,8 @@ cpdef unicode bn(int node):
     """
     return u'binnode_{}'.format(node)
 
-cpdef unicode be(int head, int tail):
+@cython.profile(False)
+cpdef inline unicode be(int head, int tail):
     """
     Format a binary edge variable
 
@@ -45,39 +47,12 @@ cpdef unicode be(int head, int tail):
     return u'binedge_{}_{}'.format(head, tail)
 
 @cython.profile(False)
-cpdef unicode bp(TrafficClass traffic_class, Path path):
+cpdef inline unicode bp(TrafficClass traffic_class, int path_index):
     """
     Format a binary path variable
 
-    :param traffic_class: traffic class (for ID)
-    :param pathIndex: path index in the list of paths per traffic class
+    :param traffic_class: traffic class
+    :param path_index: path index in the list of paths per traffic class
     :return: variable name of the form *binpath_classid_pathindex*
     """
-    return u'binpath_{}_{}'.format(traffic_class.ID, path.get_id())
-
-cpdef unicode nl(int node, unicode resource, int epoch=0):
-    """
-    Format a node load variable
-
-    :param node: node ID
-    :param resource: the resource
-    """
-    return u'Load_{}_{}_{}'.format(resource, node, epoch)
-
-cpdef unicode el(tuple link, unicode resource, int epoch=0):
-    """
-    Format a link load variable
-
-    :param link:
-    :param resource:
-    """
-    return u'Load_{}_{}_{}'.format(resource, tup2str(link), epoch)
-
-cpdef unicode nc(int node, unicode resource, int epoch=0):
-    """
-    Format a capacity variable
-
-    :param node:
-    :param resource:
-    """
-    return u'Cap_{}_{}_{}'.format(resource, node, epoch)
+    return u'binpath_{}_{}'.format(traffic_class.ID, path_index)
