@@ -4,49 +4,36 @@ Contains library-wide strings and constants
 """
 from enum import Enum, IntEnum
 
-# LINKLOAD_PREFIX = u'LinkLoad'
-# NODELOAD_PREFIX = u'NodeLoad'
-# LOAD_PREFIX = u'Load'
-MIN_LOAD_PREFIX = 'MINLOAD'
-
-# OBJ_MAX_LINK_SPARE_CAP = u'maxlinkspare'
-# OBJ_MAX_NODE_SPARE_CAP = u'maxnodespare'
-# OBJ_MAX_NOT_LATENCY = u'maxnotlatency'
-# OBJ_MAX_LINK_SPARE_CAP = u'maxlinkspare'
-# MIN_LINK_LOAD = u'minlinkload'
-# MIN_NODE_LOAD = u'minnodeload'
-# MAX_NODE_SPARE_CAP = u'maxnodespare'
-# OBJ_MIN_LATENCY = u'minlatency'
-# MAX_NOT_LATENCY = u'maxnotlatency'
-# OBJ_MAX_ALL_FLOW = u'maxallflow'
-# MAX_MIN_FLOW = u'maxminflow'
-# THE_OBJECTIVE = u'theobjective'
-
 
 class Objective(Enum):
-    # OBJ_MAX_LINK_SPARE_CAP = u'maxlinkspare'
-    # OBJ_MAX_NODE_SPARE_CAP = u'maxnodespare'
-    # OBJ_MAX_NOT_LATENCY = u'maxnotlatency'
-    # OBJ_MAX_LINK_SPARE_CAP = u'maxlinkspare'
+    """
+    Supported pre-defined objectives
+    """
     MIN_LINK_LOAD = u'minlinkload'
     MIN_NODE_LOAD = u'minnodeload'
-    # MAX_NODE_SPARE_CAP = u'maxnodespare'
     MIN_LATENCY = u'minlatency'
-    # MAX_NOT_LATENCY = u'maxnotlatency'
-    MAX_ALL_FLOW = u'maxallflow'
-    # MAX_MIN_FLOW = u'maxminflow'
-    THE_OBJECTIVE = u'theobjective'
+    MAX_FLOW = u'max_flow'
 
 
-class Resource(Enum):
+# Some useful objective constant
+THE_OBJECTIVE = u'theobjective'
+MIN_LOAD_PREFIX = 'MINLOAD'
+
+
+class Constraint(Enum):
     """
-    Pre-defined resource names
+    Supported pre-defined constraint templates
     """
-    BANDWIDTH = u'bw'
-    CPU = u'cpu'
-    MEM = u'mem'
-    TCAM = u'tcam'
-    LATENCY = u'Latency'
+    ROUTE_ALL = u'route_all'
+    REQ_ALL_LINKS = u'req_all_links'
+    REQ_ALL_NODES = u'req_all_nodes'
+    REQ_SOME_LINKS = u'req_some_links'
+    REQ_SOME_NODES = u'req_some_nodes'
+    CAP_LINKS = u'cap_links'
+    CAP_NODES = u'cap_nodes'
+    FIX_PATHS = u'fix_path'
+    MINDIFF = u'mindiff'
+
 
 
 class BinType(Enum):
@@ -60,6 +47,10 @@ class BinType(Enum):
 
 
 class ResConsumeMode(IntEnum):
+    """
+    Type of resource consumption. Currently supported modes are per flow or only once
+    per path (e.g., TCAM/rule space constraints)
+    """
     PER_FLOW = 1
     PER_PATH = 2
 
@@ -73,24 +64,28 @@ class NodeConsumeMode(IntEnum):
 
 
 class EpochComposition(Enum):
+    """
+    Modes for composing objective functions across epochs
+    """
     AVG = u'sum'
     WORST = u'worst'
 
 
-ALLOCATE_FLOW = u'allocate_flow'
-ROUTE_ALL = u'route_all'
-REQ_ALL_LINKS = u'req_all_links'
-REQ_ALL_NODES = u'req_all_nodes'
-REQ_SOME_LINKS = u'req_some_links'
-REQ_SOME_NODES = u'req_some_nodes'
-CAP_LINKS = u'caplinks'
-CAP_NODES = u'capnodes'
-
 class ComposeMode(Enum):
+    """
+    Fairness modes for composition of objectives across different applications
+    """
     WEIGHTED = u'weighted'
     UTILITARIAN = WEIGHTED
     PROPFAIR = u'propfair'
     MAXMIN = u'maxmin'
+
+
+MAXSTR = u'max'
+MEANSTR = u'mean'
+MINSTR = u'min'
+ALLSTR = u'all'
+VALIDSTR = u'valid'
 
 # CPLEX = u'cplex'
 # GUROBI = u'gurobi'
@@ -101,6 +96,15 @@ LINKS = 'links'
 SELECT_RANDOM = u'random'
 SELECT_SHORTEST = u'shortest'
 SELECT_ANNEALING = u'sa'
+
+# Pre-defined resource names
+BANDWIDTH = u'bw'
+CPU = u'cpu'
+MEM = u'mem'
+TCAM = u'tcam'
+LATENCY = u'Latency'
+
+
 
 # Topology fields
 HAS_MBOX = u'hasMbox'
@@ -124,10 +128,11 @@ ERR_NO_GUROBI = u'Cannot use Gurobi Python API. Please install Gurobi and ' \
 ERR_FMT = u'Given format is not supported'
 ERR_NO_PATH = u'No paths between nodes {} and {}'
 ERR_EPOCH_MISMATCH = u'Number of epochs insosistent across traffic classes'
-ERR_BAD_CAPVAL = u'Bad reousrce cap value. Must be between 0 and 1'
+ERR_BAD_CAPVAL = u'Bad resource cap value. Must be between 0 and 1'
+ERR_NO_RESOURCE = u'Node/link %s has no resource %s. Cannot add a cap to non-existing resource'
 ERR_UNKNOWN_MODE = u'Uknown %s mode: %s'
 ERR_UNKNOWN_TYPE = u'Uknonw %s type: %s'
 ERR_ODD_ARITY = u'-arity of a FatTree topology must be even'
 ERR_OP_NOT_SUPP = u'Operation not supported'
-WARN_NO_PATH_ID = u'No ID given to Path constructor, ' \
-                  u'generating a random path ID'
+# WARN_NO_PATH_ID = u'No ID given to Path constructor, ' \
+#                   u'generating a random path ID'

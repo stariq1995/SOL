@@ -6,7 +6,7 @@ from logging import NullHandler, StreamHandler
 
 logger = logging.getLogger('sol')
 logger.addHandler(NullHandler())
-__all__ = ['logger']
+__all__ = ['logger', 'init_logger']
 
 
 def init_logger(level=logging.DEBUG):
