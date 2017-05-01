@@ -37,7 +37,7 @@ paths:
         name: topology
         schema:
           $ref: "#/definitions/Topology"
-  /compose:
+  /compose_apps:
     post:
       summary: Submit a series of paths for composition
       responses:
@@ -163,7 +163,7 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/App"
-        description: List of applications to compose
+        description: List of applications to compose_apps
   ComposeResponse:
     type: array
     items:

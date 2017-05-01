@@ -6,7 +6,7 @@ from sol.path.generate import generate_paths_tc
 from sol.path.predicates import null_predicate
 from sol.topology.generators import complete_topology
 from sol.topology.traffic import TrafficClass
-from sol.utils.const import ALLOCATE_FLOW, ROUTE_ALL, OBJ_MIN_LATENCY, RES_BANDWIDTH
+from sol.utils.const import *
 
 if __name__ == '__main__':
 
@@ -19,7 +19,7 @@ if __name__ == '__main__':
         'constraints': [ALLOCATE_FLOW, ROUTE_ALL],
         'obj': OBJ_MIN_LATENCY,
         'predicate': null_predicate,
-        'resource_cost': {RES_BANDWIDTH: 100}
+        'resource_cost': {BANDWIDTH: 100}
     }
 
     # Generate a single traffic class:
