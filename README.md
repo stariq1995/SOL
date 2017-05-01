@@ -1,12 +1,15 @@
 SOL: SDN Optimization Layer
 ===========================
 
-SOL is a library that lets you rapidly prototype *network management applications* that require constructing an **optimization**. It is designed to work well with Software Defined Networking (SDN) as it makes use of the global view of the network to compute a globally optimal (or near-optimal) solution.
+SOL is a library that lets you rapidly prototype *network management applications* that require constructing an **optimization**. 
+It is designed to work well with Software Defined Networking (SDN) as it makes use of the global view of the network to 
+compute a globally optimal (or near-optimal) solution.
 
 Why optimizations?
 ------------------
 
-Optimization is incredibly common in the networking domain. Classic problems such as shortest path routing and maxflow can all be expressed as [linear programs](https://en.wikipedia.org/wiki/Linear_programming) and solved efficiently.
+Optimization is incredibly common in the networking domain. Classic problems such as shortest path routing and maxflow 
+can all be expressed as [linear programs](https://en.wikipedia.org/wiki/Linear_programming) and solved efficiently.
 
 Traffic engineering, middebox management, and other types of load balancing can also be expressed using optimizations.
 
@@ -23,7 +26,9 @@ Key features
 Integrations
 ------------
 
-SOL is desgined to be modular and could potentially integrate with multiple SDN controllers. This library contains the core optimization logic. It can be used on its own to quickly prototype applications, compose\_apps multiple optimizations and examine resulting solutions.
+SOL is desgined to be modular and could potentially integrate with multiple SDN controllers. 
+This library contains the core optimization logic. It can be used on its own to quickly prototype applications, 
+compose multiple optimizations and examine resulting solutions.
 
 A rough view of the SOL library and integrations is as follows:
 
@@ -32,6 +37,11 @@ A rough view of the SOL library and integrations is as follows:
     [ONOS](http://onosproject.org/) controller
 -   [SOL workflows](https://github.com/progwriter/SOL-workflows) A collection of examples and workflows to give users an idea of how SOL can be used.
 -   [TMgen library](https://github.com/progwriter/tmgen) A helper library for generating and manipulating traffic matrices.
+
+Disclaimer
+----------
+SOL is a research project under active development. Some APIs, integrations and documentation/links are subject to
+change.
 
 Python documentation
 --------------------
