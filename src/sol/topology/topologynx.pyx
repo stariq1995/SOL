@@ -32,7 +32,7 @@ cdef class Topology:
             if isinstance(graph, str) or isinstance(graph, unicode):
                 self.load_graph(graph)
             else:
-                self._graph = graph
+                self._graph = graph.to_directed()
         else:
             self._graph = nx.DiGraph()
         self._process_graph()
@@ -111,7 +111,7 @@ cdef class Topology:
         if fmt == FORMAT_GRAPHML:
             self._graph = graphml.read_graphml(fname, int).to_directed()
         elif fmt == FORMAT_GML:
-            self._graph = nx.read_gml(fname)
+            self._graph = nx.read_gml(fname).to_directed()
         else:
             raise ValueError(ERR_FMT)
 
