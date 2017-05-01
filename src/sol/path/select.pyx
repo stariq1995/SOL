@@ -1,6 +1,5 @@
 # coding=utf-8
 # cython: profile=True
-# distutils: define_macros=CYTHON_TRACE_NOGIL=1
 """
 Module that implements different path selection (a.k.a pruning) strategies
 """
@@ -10,20 +9,19 @@ from collections import defaultdict
 from itertools import combinations, cycle
 
 from cpython cimport bool
-from enum import IntEnum
 from numpy cimport ndarray
 from numpy import arange, power, inf, mean, ones, bitwise_xor, \
-    array, argsort
-from numpy import ma
+    array, argsort, ma
 from numpy.random import choice
 from six import iterkeys, iteritems
-from sol.opt.composer import compose
+from sol.opt.composer cimport compose_apps
 from sol.path.paths cimport PPTC
 from sol.path.paths import PathWithMbox, Path
 from sol.topology.topologynx cimport Topology
 from sol.topology.traffic cimport TrafficClass
 from sol.utils.ph import noop
 
+from sol.utils.const import *
 from sol.utils.exceptions import SOLException
 from sol.utils.logger import logger
 
@@ -42,7 +40,6 @@ cpdef choose_rand(PPTC pptc, int num_paths):
     :rtype: dict
 
     """
-    # newppk = {}
     logger.debug('Choosing paths randomly')
     cdef TrafficClass tc
     cdef int n
@@ -58,191 +55,63 @@ cpdef choose_rand(PPTC pptc, int num_paths):
         else:
             pptc.unmask(tc)
 
-# cpdef sort_paths(pptc, key=None, bool inplace=True):
-#     """
-#     Sort paths per commodity
-#
-#     :param pptc: paths per traffic class
-#     :param key: criteria to sort by. If None, path length is used
-#     :param bool inplace: boolean, whether to sort in place.
-#         If False, a new mapping is returned.
-#     :return: a dictionary if *inplace=False*, otherwise None
-#
-#     """
-#     if key is None:
-#         key = len  # default is to use path length
-#     if inplace:
-#         for tc in pptc:
-#             pptc[tc].sort(key=key)
-#     else:
-#         newppk = {}  # make a new objet
-#         for tc in pptc:
-#             newppk[tc] = sorted(pptc[tc], key=key)  # ensure that list is new
-#         return newppk
 
 cpdef k_shortest_paths(PPTC pptc, int num_paths, bool ret_mask=False):
     """ Chooses :math:`k` shortest paths per traffic class
 
     :param pptc: paths per traffic class
     :param int num_paths: number of paths to choose ($k$) per traffic class
+    :param ret_mask: return the mask after the paths have been masked. False by default
     """
-    # newpptc = None
-    # if needs_sorting:
-    #     newpptc = sort_paths(pptc, key=len, inplace=inplace)
-    # if newpptc is None:
-    #     newpptc = pptc
-    # result = {}
-    # for tc in newpptc:
-    #     result[tc] = newpptc[tc][:num_paths]
-    # return result
+
     masks = {}
     for tc in pptc:
+        # Get lengths of all paths, even the masked ones (thus the second .data access)
         lens = array([len(x) for x in pptc._data[tc].data])
+        # Sort lengths and only return indices
         ind = argsort(lens)
-        mask = ones(pptc.num_paths(tc), dtype=bool)
-        mask[ind[:num_paths]] = 0
+        # Create an array mask, with everything masked
+        mask = ones(pptc.num_paths(tc, all=True), dtype=bool)
+        # Unmask the shortest paths
+        mask[ind[:min(num_paths, mask.size)]] = 0
         pptc.mask(tc, mask)
+        # Store the mask in case we need to return it
         masks[tc] = mask
     if ret_mask:
         return masks
 
-# # TODO: check that this method is even used, might be obsolete
-# def filter_paths(pptc, func):
-#     """ Filter paths using a function.
-#
-#     :param pptc: paths per traffic class
-#     :param func: function to be applied to each path
-#     :return: new paths per commodity with paths for which *func* returned a
-#         true value
-#     """
-#     assert (hasattr(func, '__call__'))  # ensure this is a function
-#     result = defaultdict(lambda: [])
-#     for tc in pptc:
-#         for path in pptc[tc]:
-#             if func(path):
-#                 result[tc].append(path)
-#     return result
 
-# def get_select_function(name, kwargs=None):
-#     """
-#     Return the path selection function based on name.
-#     Allows passing of additional keyword arguments, so that the returned
-#     function can satisfy the following signature::
-#
-#         function(pptc, selectNumber)
-#
-#     :param name: the name of the function
-#     :param kwargs: a dictionary of keyword arguements to be passed to the function
-#     :return: the callable object with
-#     :raise: :py:class:`sol.utils.exceptions.InvalidConfigException`
-#         if the name passed in is not supported
-#
-#     Supported names so far: 'random' and 'shortest' For example::
-#
-#         f = get_select_function('random')
-#         pptc = f(pptc, 5)
-#
-#     will give you 5 paths per traffic class, randomly chosen
-#
-#     """
-#     if kwargs is None:
-#         kwargs = {}
-#     if name.lower() in _RANDOM:
-#         return functools.partial(choose_rand, **kwargs)
-#     elif name.lower() in _SHORTEST:
-#         return functools.partial(k_shortest_paths, **kwargs)
-#     else:
-#         raise InvalidConfigExceptef get_select_function(name, kwargs=None):
-#     """
-#     Return the path selection function based on name.
-#     Allows passing of additional keyword arguments, so that the returned
-#     function can satisfy the following signature::
-#
-#         function(pptc, selectNumber)
-#
-#     :param name: the name of the function
-#     :param kwargs: a dictionary of keyword arguements to be passed to the function
-#     :return: the callable object with
-#     :raise: :py:class:`sol.utils.exceptions.InvalidConfigException`
-#         if the name passed in is not supported
-#
-#     Supported names so far: 'random' and 'shortest' For example::
-#
-#         f = get_select_function('random')
-#         pptc = f(pptc, 5)
-#
-#     will give you 5 paths per traffic class, randomly chosen
-#
-#     """
-#     if kwargs is None:
-#         kwargs = {}
-#     if name.lower() in _RANDOM:
-#         return functools.partial(choose_rand, **kwargs)
-#     elif name.lower() in _SHORTEST:
-#         return functools.partial(k_shortest_paths, **kwargs)
-#     else:
-#         raise InvalidConfigException("Unknown select method")
+# TODO: find a way to select paths that preserves flow affinity (for mboxes)
 
-# cpdef merge_pptc(apps, sort=False, key=None):
-#     """
-#     Merge paths per traffic class (:py:attr:`sol.opt.app.App.pptc`)
-#     from different apps into a single dictionary.
-#
-#     ..warning:
-#         If applications share traffic classes, paths for shared traffic classes
-#         will be taken from the first encountered application.
-#
-#         This shouldn't cause problems since paths for the same traffic class
-#         *should* be identical, but beware in case they are not!
-#
-#     :param list apps: list of :py:class:`sol.opt.app.App` objects
-#     :param sort: whether to sort paths per traffic class after merging
-#     :return: paths per traffic class dictionary
-#     :rtype: dict
-#
-#     """
-#     result = {}
-#     for app in apps:
-#         for tc in app.pptc:
-#             if tc not in result:
-#                 result[tc] = app.pptc[tc]
-#     if sort:
-#         sort_paths(result, key, inplace=True)
-#     return result
-
-cdef _filter_pptc(apps, chosen_pptc):
-    # Given a set of chosen pptc (global across all apps) modify the app's
-    # internal pptc to reflect the chosen ones.
-    for app in apps:
-        for tc in app.pptc:
-            app.pptc[tc] = chosen_pptc[tc]
-
-cpdef select_ilp(apps, Topology topo, int num_paths=5, debug=False,
-                 mode='weighted', globalcaps=None):
+cpdef select_ilp(apps, Topology topo, network_config, int num_paths, debug=False,
+                 fairness=Fairness.WEIGHTED, epoch_mode=EpochComposition.WORST):
     """
     Global path selection function. This chooses paths across multiple applications
     for the given topology, under a global cap for total number of paths.
 
     :param apps: list of applications for which we are selecting paths
     :param topo: network topology
+    :param network_config: the network configuration (e.g., global network capacities)
     :param num_paths: number of paths per traffic class to choose.
         This is used as a guideline for computing total path cap!
         The actual **selected** number of paths might be more or less
         depending on the ILP solution
+    :param fairness: the type of fairness to use when composing applications
+    :param epoch_mode: type of cross-epoch composition. Leaving the default (which is optimizing for the worst case)
+        is usually acceptable.
     :param debug: if True, output additional debug information,
-        and write ILP/results
-        to disk.
+        and write ILP+results to disk.
 
-    :return: None, the applications' :py:attr:`sol.opt.App.pptc` attribute will
+    :return: None, the applications' :py:attr:`sol.App.pptc` attribute will
         be modified to reflect selected paths.
 
     """
     logger.info('Selection composition')
     start_time = time.time()
-    opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
-    # mpptc = PPTC.merge([a.pptc for a in apps])  # merged
+    opt = compose_apps(apps, topo, network_config, fairness=fairness,
+                       epoch_mode=epoch_mode)
     opt.cap_num_paths((topo.num_nodes() - 1) ** 2 * num_paths)
-    logger.info('Selection solving')
+    logger.info('Solving ILP selection problem')
     opt.solve()
     if debug:
         opt.write('debug/select_ilp_{}'.format(topo.name))
@@ -252,16 +121,26 @@ cpdef select_ilp(apps, Topology topo, int num_paths=5, debug=False,
     if debug:
         opt.write_solution('debug/select_ilp_solution_{}'.format(topo.name))
     # get the paths chosen by the optimization
-    # print (opt.get_var_values())
     # This will mask paths according to selection automatically:
-    chosen_pptc = opt.get_chosen_paths()
-    # print (chosen_pptc)
-    # return paths by modifying the pptc of the apps they are associated with
-    # _filter_pptc(apps, chosen_pptc)
-    return chosen_pptc, opt, time.time() - start_time, opt.get_time()
+    opt.get_chosen_paths()
+
+
+def _path_score(path):
+    pass
+
+def select_greedy(pptc, topo, resource_order, resource_weights=None):
+
+    pass
+
+
+def greedy_search(ndarray paths, topo, resource_order, resource_weights=None):
+    pass
 
 
 class PathTree(object):
+    """
+    Internal class to help track path replacements when using simulated annealing
+    """
     def __init__(self, ndarray paths):
         if isinstance(paths[0], PathWithMbox):
             self.buckets = defaultdict(lambda: [])
@@ -306,20 +185,37 @@ cdef _obj_state(opt):
 
 
 class ExpelMode(IntEnum):
-    no_flow = 1
-    inverse_flow = 2
-    random = 3
-    all = 4
+    """
+    Represents path expel modes when using 
+    simulated annealing path selection
+    """
+    no_flow = 1 # Kick out paths that do not carry any flow
+    inverse_flow = 2 # Kick out paths with probability inverse proportional to the flow fraction
+    random = 3 # Kick out random paths
+    all = 4 # Kick out all paths and sample fresh
 
 
 class ReplaceMode(IntEnum):
+    """
+    Represents the replacement strategies for paths 
+    when using simulated annealing
+    """
     next_sorted = 1
-    edge_disjoint = 2
+    # edge_disjoint = 2
     random = 3
     pathtree = 4
-
+    greedy = 5
 
 cdef _expel(tcid, existing_mask, xps, mode=ExpelMode.no_flow):
+    """
+    Kick out paths by masking them in the pptc 
+    :param tcid: traffic class for which this is performed
+    :param existing_mask: existing path mask (for the given traffic class).
+        This mask will be modified in-place (no copy)!
+    :param xps: all the x_* variables from the last available optimization
+    :param mode: expel mode, see :py:class:ExpelMode
+    :return: the updated mask, which is really a pointer to the existing_mask
+    """
     cdef int ii = 0, i
     if mode == ExpelMode.no_flow:
         for i, maskval in enumerate(existing_mask):
@@ -347,10 +243,21 @@ cdef _expel(tcid, existing_mask, xps, mode=ExpelMode.no_flow):
         existing_mask.fill(1)
     else:
         raise ValueError('Unsupported annealing expel mode: %s' % mode)
-    # print(goodpaths)
     return existing_mask
 
 cdef bool _in(ndarray mask, explored):
+    """
+    Check that the existing mask (i.e., path combination has been used before)
+    
+    .. warning::
+        This is dependent on mask arrays being of dtype bool
+        We XORing the arrays here (for speed) and bool arrays give us the results
+        we expect.
+    
+    :param mask: path mask (combination) to check
+    :param explored: previously explored combinations 
+    :return: True or False 
+    """
     cdef ndarray x
     for x in explored:
         if (bitwise_xor(mask, x) == 0).all():
@@ -359,10 +266,21 @@ cdef bool _in(ndarray mask, explored):
 
 cdef _replace(explored, mask, num_paths,
               mode=ReplaceMode.next_sorted, tree=None):
+    """
+    Replace paths by picking some and adding them to the mask.
+    For a single traffic class
+    
+    :param explored: Paths that have already been explored/used 
+    :param mask: the current path mask (after paths have been expelled)
+    :param num_paths: number of paths we want
+    :param mode: replacement mode
+    :param tree: if the replacement mode is pathtree, provide the tree here
+    :return: 
+    """
     cdef int num_tries = 0, max_tries = 100, i = 0
     # Number of paths that still need to be enabled
     replace_len = max(0, num_paths - ((mask == 0).sum()))
-    if replace_len == 0:
+    if replace_len <= 0:
         return
 
     # these are indices of our next possible choices
@@ -372,6 +290,8 @@ cdef _replace(explored, mask, num_paths,
         mask[:] = 0
         return
     if mode == ReplaceMode.next_sorted:
+        # Just keep going down the list of paths
+        # XXX: this assumes paths have been sorted by length in increasing order
         found_new = False
         for comb in combinations(unused, replace_len):
             # print comb
@@ -383,6 +303,8 @@ cdef _replace(explored, mask, num_paths,
             else:
                 mask[list(comb)] = 1
         if not found_new:
+            logger.debug("{} ran out of possibilites, falling back to {}".format(
+                mode.name, ReplaceMode.random.name))
             # we've run out of possibilities, fall back to random
             mask[choice(unused, replace_len, replace=False)] = 0
     elif mode == ReplaceMode.random:
@@ -409,20 +331,27 @@ cdef _replace(explored, mask, num_paths,
             num_tries += 1
             # if num_tries >= max_tries:
             #     logger.error('Pathtree method could not find new combo after %d tries' % max_tries)
-    elif mode == ReplaceMode.edge_disjoint:
-        raise NotImplementedError()
+    # elif mode == ReplaceMode.edge_disjoint:
+    #     raise NotImplementedError("")
     else:
         raise ValueError('Unsupported annealing replace mode: %s' % mode)
 
 cdef _get_mboxes(x):
     return x.mboxes()
 
-cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
-                double tstart=.72, double c=.88, logdb=None, mode='weighted',
+
+# cdef _compute_temp_schedule(int max_iter, )
+
+cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_iter=20,
+                double tstart=.72, double c=.88, logdb=None,
+                fairness=Fairness.WEIGHTED,
+                epoch_mode=EpochComposition.WORST,
                 expel_mode=ExpelMode.no_flow,
-                replace_mode=ReplaceMode.next_sorted, select_config=None,
-                globalcaps=None, debug=False):
-    """Select optimal paths using the simulated annealing search algorithm"""
+                replace_mode=ReplaceMode.next_sorted,
+                select_config=None, debug=False):
+    """
+    Select optimal paths using the simulated annealing search algorithm
+    """
 
     logger.info('Starting simulated annealing selection')
     logger.debug('Replace mode %s' % replace_mode)
@@ -474,7 +403,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
             pathtrees[tc] = None
 
     # Create and solve the initial problem
-    opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
+    opt = compose_apps(apps, topo, network_config, fairness=fairness, epoch_mode=epoch_mode)
     opt.solve()
     opt_time += opt.get_time()
 
@@ -495,7 +424,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
                      tree=pathtrees[tc])
             explored[tc].append(newmask)
         # Re-run opt
-        opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
+        opt = compose_apps(apps, topo, network_config, fairness=fairness, epoch_mode=epoch_mode)
         opt.solve()
         opt_time += opt.get_time()
         k += 1
@@ -551,7 +480,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
             all_pptc.mask(tc, newmask)
             explored[tc].append(newmask)
 
-        opt = compose(apps, topo, obj_mode=mode, globalcaps=globalcaps)
+        opt = compose_apps(apps, topo, network_config, fairness=fairness, epoch_mode=epoch_mode)
         opt.solve()
         opt_time += opt.get_time()
         if debug:
@@ -561,7 +490,7 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
             logger.debug('No solution k=%d' % k)
             if db is not None:
                 db.insert_one(dict(solvetime=opt.get_time(), time=time.time() - start_time,
-                               temperature=t, accepted=0, iteration=k, config_id=config_id))
+                                   temperature=t, accepted=0, iteration=k, config_id=config_id))
             continue
 
         prob = _saprob(_obj_state(bestopt), _obj_state(opt), t)
@@ -577,17 +506,6 @@ cpdef select_sa(apps, Topology topo, int num_paths=5, int max_iter=20,
             val = dict(obj=_obj_state(opt), solvetime=opt.get_time(), time=time.time() - start_time,
                        temperature=t, accepted=accepted, iteration=k, config_id=config_id)
             db.insert(val)
-            # solution = opt.get_solution()
-            # solution.update(config_id=config_id, iteration=k)
-            # solutions.insert(solution)
-            # db.upsert(dict(topology=topo.name, num_paths=num_paths,
-            #                iteration=k, fairness=mode, appcombo=appnames,
-            #                obj=_obj_state(opt), time=time.time() - start_time,
-            #                maxiter=max_iter, temperature=t, accepted=accepted,
-            #                prob=prob, expel_mode=expel_mode,
-            #                replace_mode=replace_mode),
-            #           ['topology', 'num_paths', 'iteration', 'fairness',
-            #            'appcombo', 'maxiter', 'expel_mode', 'replace_mode'])
 
     for tc in all_pptc:
         all_pptc.mask(tc, bestpaths[tc])
