@@ -3,23 +3,22 @@
 """
     Contains implementations of SOL Path objects
 """
-import random
 
 import numpy
 from cpython cimport bool
+from six import itervalues, iterkeys, iteritems
+from sol.topology.traffic cimport TrafficClass
+from sol.utils.ph import listeq
+
 from paths cimport Path
 from paths cimport PathWithMbox
-from six import itervalues, iterkeys, iteritems
-from sol.utils.const import WARN_NO_PATH_ID
-from sol.utils.ph import listeq
-from collections import defaultdict
-from sol.topology.traffic cimport TrafficClass
+from sol.utils.const import ERR_UNKNOWN_TYPE
 
 # noinspection PyClassicStyleClass
 cdef class Path:
     """ Represents a path in the network"""
 
-    def __init__(self, nodes, pid=-1, flow_fraction=0):
+    def __init__(self, nodes, flow_fraction=0):
         """Create a new path
 
         :param nodes: a list of node ids that belong to a path
@@ -27,10 +26,6 @@ cdef class Path:
         """
         self._nodes = numpy.array(nodes)
         self._flowFraction = flow_fraction
-        self._ID = pid
-        if self._ID < 0:
-            self._ID = random.randint(0, 1e6)
-            numpy.warnings.warn(WARN_NO_PATH_ID)
         self._links = self._compute_links()
 
     cpdef int ingress(self):
@@ -82,11 +77,11 @@ cdef class Path:
         # return zip(self._nodes, self._nodes[1:])
         return self._links
 
-    cpdef int get_id(self):
-        """
-        Returns path id as int
-        """
-        return self._ID
+    # cpdef int get_id(self):
+    #     """
+    #     Returns path id as int
+    #     """
+    #     return self._ID
 
     cpdef bool uses_box(self, node):
         """
@@ -106,7 +101,7 @@ cdef class Path:
 
         :return: dictionary representation of this path
         """
-        return {u'type': u'Path', u'id': self._ID,
+        return {u'type': u'Path',
                 u'nodes': self._nodes.tolist(),
                 u'flow_fraction': self._flowFraction}
 
@@ -117,7 +112,7 @@ cdef class Path:
         :param d: the dictionary
         :return: a new Path instance
         """
-        return Path(d[u'nodes'], d[u'id'], d[u'flow_fraction'])
+        return Path(d[u'nodes'], d[u'flow_fraction'])
 
     def __contains__(self, item):
         return item in self._nodes
@@ -148,9 +143,17 @@ cdef class Path:
         else:
             raise TypeError
 
-    def copy(self):
-        return Path(self._nodes, self._ID, self._flowFraction)
+    def __hash__(self):
+        return hash(self._nodes)
 
+    def copy(self):
+        """ Create a copy of this path
+
+        ..note::
+
+            The copy will be shallow, without a deep copy of the nodes array
+        """
+        return Path(self._nodes, self._flowFraction)
 
     def __copy__(self):
         return self.copy()
@@ -165,8 +168,8 @@ cdef class PathWithMbox(Path):
     :param flow_fraction: Fraction of flows along this path. Default is 0.
     """
 
-    def __init__(self, nodes, use_mboxes, int pid=-1, flow_fraction=0):
-        super(self.__class__, self).__init__(nodes, pid, flow_fraction)
+    def __init__(self, nodes, use_mboxes, flow_fraction=0):
+        super(self.__class__, self).__init__(nodes, flow_fraction)
         self.useMBoxes = list(use_mboxes)
 
     cpdef bool uses_box(self, node):
@@ -189,7 +192,7 @@ cdef class PathWithMbox(Path):
         """
         return {u'nodes': self._nodes.tolist(),
                 u'flow_fraction': self._flowFraction,
-                u'use_mboxes': self.useMBoxes, u'id': self._ID,
+                u'use_mboxes': self.useMBoxes,
                 u'type': u'PathWithMBox'}
 
     @staticmethod
@@ -198,8 +201,7 @@ cdef class PathWithMbox(Path):
         Create a new path from a dict
         :param d: dict type, must contain following keys:
         """
-        return PathWithMbox(d[u'nodes'], d[u'use_mboxes'], d[u'id'],
-                            d.get(u'flow_fraction', 0))
+        return PathWithMbox(d[u'nodes'], d[u'use_mboxes'], d.get(u'flow_fraction', 0))
 
     # noinspection PyProtectedMember
     def __richcmp__(PathWithMbox self, other not None, int op):
@@ -218,12 +220,16 @@ cdef class PathWithMbox(Path):
             format(str(self._nodes), self.useMBoxes, self._flowFraction)
 
     def copy(self):
-        return PathWithMbox(self._nodes, self.useMBoxes, self._ID,
-                            self._flowFraction)
+        """ Create a copy of this path
+
+        ..note::
+
+            The copy will be shallow, without a deep copy of the nodes array
+        """
+        return PathWithMbox(self._nodes, self.useMBoxes, self._flowFraction)
 
     def __copy__(self):
         return self.copy()
-
 
 cdef class PPTC:
     def __init__(self):
@@ -232,8 +238,18 @@ cdef class PPTC:
         self._tcowner = dict()
         self._name_to_tcs = dict()
 
+    # TODO: I think we can get rid of ownership???
     cpdef add(self, name, TrafficClass tc, paths):
+        """
+        Add a traffic class and the paths accosiated with it
+
+        :param name: name of the app that owns this traffic class
+        :param tc: the traffic class
+        :param paths: valid paths for this traffic class
+        """
+
         # Strange workaound instead of directly calling numpy.ma.array(paths)
+        # we are doing the if isinstace()
         # Because it was complaining about mismatched dimentions
         if isinstance(paths, numpy.ma.MaskedArray):
             self._data[tc] = paths
@@ -242,7 +258,10 @@ cdef class PPTC:
             for i in numpy.arange(len(paths)):
                 self._data[tc][i] = paths[i]
             self._data[tc] = numpy.ma.array(self._data[tc], mask=numpy.ma.nomask)
+        # Now proceed to set up all the other data structures
+        # tcindex so we can get a mapping of tcID -> traffic class
         self._tcindex[tc.ID] = tc
+        # All the traffic classes a particular name owns
         if name not in self._name_to_tcs:
             self._name_to_tcs[name] = set()
         self._name_to_tcs[name].add(tc)
@@ -252,6 +271,12 @@ cdef class PPTC:
             self._tcowner[tc].add(name)
 
     cpdef tcs(self, name=None):
+        """
+        Returns an iterator over all traffic classes
+
+        :param name: traffic class owner
+        :return:
+        """
         if name is None:
             return iterkeys(self._data)
         else:
@@ -266,6 +291,7 @@ cdef class PPTC:
     cpdef all_paths(self, TrafficClass tc):
         """
         Return all paths, even masked ones
+
         :param tc:
         :return:
         """
@@ -280,12 +306,11 @@ cdef class PPTC:
 
     cpdef mask(self, TrafficClass tc, mask):
         """
+        Update the path mask for a given traffic class.
 
-        :param tc:
-        :param mask:
-        :return:
+        :param tc: the traffic class
+        :param mask: the new mask, will override the old mask
         """
-        # self.unmask()
         self._data[tc].mask = mask
 
     cpdef unmask(self, TrafficClass tc):
@@ -303,13 +328,19 @@ cdef class PPTC:
     cpdef int num_tcs(self):
         return len(self._data)
 
-    cpdef int num_paths(self, tc):
+    cpdef int num_paths(self, TrafficClass tc, all=False):
         """
-        Number of paths that a given traffic class has
-        :param tc:
-        :return:
+        Return the number of paths that a given traffic class has.
+        By default, only unmasked paths are counted, unless *all* is set to True
+
+        :param tc: traffic class
+        :param all: count all paths, not just unmasked
+        :rtype: int
         """
-        return self.paths(tc).size
+        if all:
+            return self._data[tc].size
+        else:
+            return self._data[tc].count()
 
     cpdef int max_paths(self):
         """
@@ -339,14 +370,25 @@ cdef class PPTC:
             else:
                 self._name_to_tcs[name] = val.copy()
 
-
     cpdef copy(self, deep=False):
+        """
+        Create a copy of paths per traffic class
+
+        :param deep: indicates whether a copy should be deep and a copy of all
+            paths should be made as well. This can be an expensive operation.
+        """
         r = PPTC()
         r.update(self, deep)
         return r
 
     cpdef bool empty(self):
+        """
+        Check if empty, i.e., no traffic classes have been added.
+        """
         return len(self._data) == 0
+
+    def __repr__(self):
+        return repr(self._data)
 
     def __getitem__(self, item):
         return self.paths(item)
@@ -357,6 +399,17 @@ cdef class PPTC:
     def __len__(self):
         raise AttributeError('len() is abiguious use num_tcs() or total_paths()')
 
+    def json_list(self):
+        r = []
+        for tc in self._data:
+            r.append({
+                'tc': tc.encode(),
+                'paths': [p.encode() for p in self._data[tc]]
+            })
+        return r
+
+
+    # TODO: add freeze() funcitonality?
 
     @staticmethod
     def merge(alist):
@@ -374,12 +427,19 @@ cdef class PPTC:
             r.add(name, tc, d[tc])
         return r
 
-
-
 def path_decoder(o):
-    if o[u'type'] == u'Path':
+    """
+    Function for decoding paths from a dictionary (e.g., when deserializing from JSON)
+    :param o: dictionary
+    :return: a :py:class:`~Path` or :py:class:`~PathWithMBox` object
+    """
+    try:
+        t = o[u'type']
+    except KeyError:
+        raise KeyError("Unable to determine path type. Missing type information")
+    if t == u'Path':
         return Path.decode(o)
-    elif o[u'type'] == u'PathWithMBox':
+    elif t == u'PathWithMBox':
         return PathWithMbox.decode(o)
     else:
-        raise KeyError('Unknown path type')
+        raise ValueError(ERR_UNKNOWN_TYPE % (u'path', t))
