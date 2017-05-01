@@ -2,7 +2,7 @@
 from itertools import chain
 
 from sol.utils import Tree
-from sol.utils.const import ERR_NO_RESOURCE, ERR_BAD_CAPVAL, ComposeMode
+from sol.utils.const import ERR_NO_RESOURCE, ERR_BAD_CAPVAL, Fairness
 
 
 class NetworkCaps(object):
@@ -90,7 +90,7 @@ class NetworkConfig(object):
         backwards compatibility.
     """
 
-    def __init__(self, networkcaps=None, compose_mode=ComposeMode.WEIGHTED):
+    def __init__(self, networkcaps=None, compose_mode=Fairness.WEIGHTED):
         self.networkcaps = networkcaps
         self.compose_mode = compose_mode
 

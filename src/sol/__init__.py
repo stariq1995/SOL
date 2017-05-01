@@ -7,9 +7,10 @@ from .opt.app import App, AppBuilder
 from .opt.composer import compose_apps
 from .opt import funcs, NetworkCaps, NetworkConfig
 from .opt.quickstart import from_app
-from .utils.const import EpochComposition, ComposeMode, NodeConsumeMode, ResConsumeMode, Objective, Constraint
+from .utils.const import EpochComposition, Fairness, NodeConsumeMode, ResConsumeMode, Objective, Constraint
+from .opt.solution import Solution
 
 __version__ = 0.9
 __all__ = ['Topology', 'TrafficClass', 'make_tc', 'Path', 'PPTC', 'PathWithMbox', 'App', 'AppBuilder',
-           'compose_apps', 'funcs', 'from_app', 'NetworkCaps', 'NetworkConfig', 'EpochComposition', 'ComposeMode',
-           'NodeConsumeMode', 'ResConsumeMode', 'Objective', 'Constraint']
+           'compose_apps', 'funcs', 'from_app', 'NetworkCaps', 'NetworkConfig', 'EpochComposition', 'Fairness',
+           'NodeConsumeMode', 'ResConsumeMode', 'Objective', 'Constraint', 'Solution']
