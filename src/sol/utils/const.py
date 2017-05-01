@@ -71,7 +71,7 @@ class EpochComposition(Enum):
     WORST = u'worst'
 
 
-class ComposeMode(Enum):
+class Fairness(Enum):
     """
     Fairness modes for composition of objectives across different applications
     """
@@ -80,6 +80,8 @@ class ComposeMode(Enum):
     PROPFAIR = u'propfair'
     MAXMIN = u'maxmin'
 
+# A tolerance value for objective values
+EPSILON = 1e-5
 
 MAXSTR = u'max'
 MEANSTR = u'mean'
