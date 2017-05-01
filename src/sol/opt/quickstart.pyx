@@ -1,80 +1,59 @@
 # coding=utf-8
+from numpy import array
+
+from sol.utils.exceptions import InvalidConfigException
+from sol.utils.logger import logger
+from sol.utils.const import NODES, LINKS, EpochComposition, ERR_UNKNOWN_MODE, Fairness
 
 __all__ = ['from_app']
 
 from .app cimport App
-from gurobiwrapper cimport OptimizationGurobi, add_named_constraints, \
-    add_obj_var
+from gurobiwrapper cimport OptimizationGurobi
 
-# def get_optimization(backend=DEFAULT_OPTIMIZER):
-#     """
-#     Return an optimization object that implements the interfce to a given backend.
-#
-#     :param backend: optimization backend. Currently 'CPLEX' is not supported. Gurobi is the default
-#     :return: the :py:class:`~Optimization` object
-#     :raise InvalidConfigException: if the provided backend is not supported
-#     """
-#     if backend.lower() == CPLEX:
-#         raise NotImplementedError('CPLEX is no longer supported')
-#     elif backend.lower() == GUROBI:
-#         from gurobiwrapper import OptimizationGurobi
-#         return OptimizationGurobi()
-#     else:
-#         raise InvalidConfigException('Unsupported optimization backend')
-
-
-# def initOptimization(topology, trafficClasses, predicate=null_predicate,
-#                      selectStrategy='shortest', selectNumber=10,
-#                      modifyFunc=None, backend=DEFAULT_OPTIMIZER):
-#     """
-#     A kick start function for the optimization
-#
-#     Generates the paths for the traffic classes, automatically selects the paths based on given numbers and strategy,
-#     and by default adds the decision variables
-#
-#     :param topology: topology we are working with
-#     :param trafficClasses: a list of traffic classes
-#     :param predicate: the predicate to verify path validity
-#     :param selectStrategy: way to select paths ('random', 'shortest'...)
-#     :param selectNumber: number of paths per traffic class to choose
-#     :param modifyFunc: the path modifier function
-#     :param backend: the optimization backend
-#     :return: a tuple containing the :py:class:`~sol.optimization.optbase.Optimization` object and paths per traffic class
-#         (in the form of a dictionary)
-#     """
-#     opt = get_optimization(backend)
-#     pptc = generate_paths_tc(topology, trafficClasses, predicate,
-#                                         networkx.diameter(topology.get_graph()) * 1.5,
-#                                         modifyFunc=modifyFunc)
-#     selectFunc = get_select_function(selectStrategy)
-#     pptc = selectFunc(pptc, selectNumber)
-#     opt._add_decision_vars(pptc)
-#     return opt, pptc
-
-cpdef from_app(topo, App app, globalcaps=None):
+cpdef from_app(Topology topo, App app, network_config):
     """
-    Create an optimization from a single application
+    Create an optimization from a single application.
 
     :param topo: the network topology
     :param app: the application
-    :param globalcaps:
-    :return:
+    :param network_config: operator-specified network config. (see :py:class:`sol.NetworkConfig`)
+    :return: the optimization object
     """
+    # Start the optimization
     opt = OptimizationGurobi(topo, app.pptc)
+    # Extract the capacities from all links and nodes
     node_caps = {node: topo.get_resources(node) for node in topo.nodes()}
     link_caps = {link: topo.get_resources(link) for link in topo.links()}
-    for r in app.resourceCost:
-        opt.consume(app.pptc, r, app.resourceCost[r],
-                    {n: node_caps[n][r] for n in node_caps if
-                     r in node_caps[n]},
-                    {l: link_caps[l][r] for l in link_caps if
-                     r in link_caps[l]})
 
-    if globalcaps is not None:
-        for cap in globalcaps:
-            opt.cap(cap.resource, None, capval=cap.cap)
-    add_named_constraints(opt, app)
-    # for r in app.resourceCost.keys():
-    #     opt.cap(r, 1)
-    add_obj_var(app, opt, weight=1)
+    # "Consume" network resources. For each resource, generate resource constraints by considering the
+    # load imposed by all traffic classes
+    for r in app.resource_cost:
+        cost_func, mode = app.resource_cost[r]
+        if mode == NODES:
+            capacities = {n: node_caps[n][r] for n in node_caps if r in node_caps[n]}
+        elif mode == LINKS:
+            capacities = {n: link_caps[n][r] for n in link_caps if r in link_caps[n]}
+        else:
+            raise InvalidConfigException(ERR_UNKNOWN_MODE % ('resource owner', mode))
+        opt.consume(app.pptc.tcs(), r, [cost_func], capacities, mode)
+
+    # Cap the resources, if caps were given
+    if network_config is not None:
+        caps = network_config.get_caps()
+        if caps is not None:
+            logger.debug('Capping resources')
+            for r in caps.resources():
+                opt.cap(r, caps.caps(r), tcs=None)
+
+    # And add any other constraints the app might desire
+    opt.add_named_constraints(app)
+
+    # Add a single objective
+    kwargs = app.obj[2].copy()
+    kwargs.update(dict(varname=app.name, tcs=app.obj_tc))
+    epoch_objs = opt.add_single_objective(app.obj[0], *app.obj[1], **kwargs)
+    # For a single app the composition is not particularly important or sensitive,
+    # so we go with reasonable defaults of worst across epochs.
+    # Weight of 1 means no other apps, use full objective value as is.
+    opt.compose_objectives(array([epoch_objs]), EpochComposition.WORST, Fairness.WEIGHTED, array([1]))
     return opt
