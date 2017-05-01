@@ -43,10 +43,8 @@ def test_traffic_class_hash(t, t2, t3):
     """
     Checks the implementation of traffic class hashing
     """
-    d = {}
+    d = {t: 0, t3: 3}
     # two classes should hash to the same instance
-    d[t] = 0
-    d[t3] = 3
     assert len(d) == 1  # thus len == 1
     assert d[t] == 3  # later value is correct
 
@@ -68,6 +66,7 @@ def test_traffic_class_getters(t, t2, t3):
     assert t2.egress() == 2
 
 
+@pytest.mark.skip()
 def test_volume_masking():
     pass
 
