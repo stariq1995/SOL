@@ -14304,7 +14304,7 @@ var createWrapper = require('../internal/createWrapper'),
     replaceHolders = require('../internal/replaceHolders'),
     restParam = require('./restParam');
 
-/** Used to compose bitmasks for wrapper metadata. */
+/** Used to compose_apps bitmasks for wrapper metadata. */
 var BIND_FLAG = 1,
     PARTIAL_FLAG = 32;
 
@@ -15856,7 +15856,7 @@ var arrayCopy = require('./arrayCopy'),
     replaceHolders = require('./replaceHolders'),
     setData = require('./setData');
 
-/** Used to compose bitmasks for wrapper metadata. */
+/** Used to compose_apps bitmasks for wrapper metadata. */
 var BIND_FLAG = 1,
     BIND_KEY_FLAG = 2,
     CURRY_BOUND_FLAG = 4,
@@ -15965,7 +15965,7 @@ module.exports = createHybridWrapper;
 (function (global){
 var createCtorWrapper = require('./createCtorWrapper');
 
-/** Used to compose bitmasks for wrapper metadata. */
+/** Used to compose_apps bitmasks for wrapper metadata. */
 var BIND_FLAG = 1;
 
 /**
@@ -16018,7 +16018,7 @@ var baseSetData = require('./baseSetData'),
     mergeData = require('./mergeData'),
     setData = require('./setData');
 
-/** Used to compose bitmasks for wrapper metadata. */
+/** Used to compose_apps bitmasks for wrapper metadata. */
 var BIND_FLAG = 1,
     BIND_KEY_FLAG = 2,
     PARTIAL_FLAG = 32,
@@ -16743,7 +16743,7 @@ var arrayCopy = require('./arrayCopy'),
     composeArgsRight = require('./composeArgsRight'),
     replaceHolders = require('./replaceHolders');
 
-/** Used to compose bitmasks for wrapper metadata. */
+/** Used to compose_apps bitmasks for wrapper metadata. */
 var BIND_FLAG = 1,
     CURRY_BOUND_FLAG = 4,
     CURRY_FLAG = 8,
