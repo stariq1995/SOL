@@ -4,19 +4,19 @@ import itertools
 from cpython cimport bool
 from networkx import NetworkXNoPath
 from sol.path.paths import PathWithMbox
+from sol.path.predicates import null_predicate
 from sol.topology.topologynx cimport Topology
 
 from paths cimport Path, PPTC
 from sol.utils import exceptions
 from sol.utils.const import ERR_NO_PATH
 
-cpdef use_mbox_modifier(path, int offset, Topology topology, chain_length=1):
+cpdef use_mbox_modifier(path, Topology topology, chain_length=1):
     """
     Path modifier function. Expands one path into multiple paths, based on how many intermediate
     middleboxes are used.
 
     :param path: the path containing switch node IDs
-    :param offset: the numeric id of the original path
     :param topology: the topology we are working with
     :param chain_length: how many middleboxes are required
     :return: a list of paths, note the special
@@ -27,8 +27,7 @@ cpdef use_mbox_modifier(path, int offset, Topology topology, chain_length=1):
         paths where :math:`n` is
         the number of switches with middleboxes attached to them in the current path.
     """
-    return [PathWithMbox(path, chain, ind + offset) for ind, chain in
-            enumerate(itertools.combinations(path, chain_length))
+    return [PathWithMbox(path, chain) for chain in itertools.combinations(path, chain_length)
             if all([topology.has_middlebox(n) for n in chain])]
 
 def generate_paths_ie(int source, int sink, Topology topology, predicate,
@@ -57,6 +56,8 @@ def generate_paths_ie(int source, int sink, Topology topology, predicate,
     """
     # paths = []
     num = 0
+    if predicate is None:
+        predicate = null_predicate
 
     try:
         for p in topology.paths(source, sink, cutoff):
@@ -64,11 +65,11 @@ def generate_paths_ie(int source, int sink, Topology topology, predicate,
                 if predicate(p, topology):
                     # paths.append(Path(p, num))
                     num += 1
-                    yield Path(p, num)
+                    yield Path(p)
                 else:
                     continue
             else:
-                np = modify_func(p, num, topology)
+                np = modify_func(p, topology)
                 if isinstance(np, list):
                     for innerp in np:
                         if predicate(innerp, topology):
@@ -95,9 +96,8 @@ def generate_paths_ie(int source, int sink, Topology topology, predicate,
     if num == 0 and raise_on_empty:
         raise exceptions.NoPathsException(ERR_NO_PATH.format(source, sink))
 
-cpdef PPTC generate_paths_tc(Topology topology, traffic_classes, predicate,
-                             cutoff,
-                             max_paths=float('inf'), modify_func=None,
+cpdef PPTC generate_paths_tc(Topology topology, traffic_classes, predicate=None,
+                             cutoff=None, max_paths=float('inf'), modify_func=None,
                              raise_on_empty=True, name=None):
     """
     Generate all simple paths for each traffic class
@@ -121,6 +121,8 @@ cpdef PPTC generate_paths_tc(Topology topology, traffic_classes, predicate,
     """
     if name is None:
         name = 'noname'
+    if cutoff is None:
+        cutoff = topology.diameter()
     result = PPTC()
     for t in traffic_classes:
         result.add(name, t, list(generate_paths_ie(t.src, t.dst, topology,
