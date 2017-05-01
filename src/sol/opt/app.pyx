@@ -140,12 +140,12 @@ class AppBuilder(object):
         Add a constraint to the application
 
         :param name: name of the constraint (see list of supported constraints as defined
-        by :py:class:`sol.opt.OptimizationGurobi`)
+            by :py:class:`sol.opt.OptimizationGurobi`)
         :param args: positional arguments that will be passed to the constraint function
         :param kwargs: keyword arguments that will be passed to the constraint function
         :returns: the builder
         """
-        self.constraints.add_node(name, object=(args, kwargs))
+        self._constraints.add_node(name, object=(args, kwargs))
         return self
 
     def objective(self, name, *args, **kwargs):
@@ -196,6 +196,7 @@ class AppBuilder(object):
         # self.constraints.add_edges_from(
         #     self.constr_graph.subgraph(self.constraints.nodes()).edges())
         # c = networkx.topological_sort(self.constraints)
-        c = self._constraints.nodes()
+        c = [(c, self._constraints.node[c]['object'][0], self._constraints.node[c]['object'][1])
+             for c in self._constraints.nodes()]
 
         return App(self._pptc, c, self._resource_cost, self._obj, self._obj_tcs, self._name)
