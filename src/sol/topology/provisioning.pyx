@@ -8,7 +8,7 @@ from __future__ import division
 import networkx
 from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
-from sol.utils.const import *
+from sol.utils.const import BANDWIDTH
 from tmgen cimport TrafficMatrix
 from six import iteritems, iterkeys
 from six.moves import range, zip
@@ -111,7 +111,7 @@ cpdef provision_links(Topology topology, traffic_classes,
             mult = data[u'capacitymult']
         cap = overprovision * max_bg * mult
         if set_attr:
-            topology.set_resource(link, Resource.BANDWIDTH, cap)
+            topology.set_resource(link, BANDWIDTH, cap)
         capacities[link] = cap
     return capacities
 

@@ -147,7 +147,6 @@ cdef class TrafficClass(object):
         """
         d = {'type': 'TrafficClass', 'src': self.src, 'dst': self.dst,
              'name': self.name, 'id': self.ID}
-        print(_counter)
         return d
 
     @staticmethod
