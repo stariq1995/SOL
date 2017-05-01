@@ -1,124 +1,250 @@
 # coding=utf-8
-import pytest
-from numpy import array
-from sol.opt.gurobiwrapper import get_obj_var
-from sol.opt.quickstart import from_app
-from sol.path.generate import generate_paths_tc
-from sol.path.predicates import null_predicate
-from sol.path.select import k_shortest_paths, choose_rand
-from sol.topology.provisioning import provision_links
-from sol.topology.traffic import TrafficClass
+from itertools import product
 
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+from numpy import array
+
+from sol import NetworkCaps
+from sol import NetworkConfig
 from sol.opt.app import App
+from sol.opt.funcs import CostFuncFactory
+from sol.opt.quickstart import from_app
+from sol.path.generate import generate_paths_tc, use_mbox_modifier
+from sol.path.predicates import null_predicate, has_mbox_predicate
 from sol.topology.generators import complete_topology
-from sol.utils.const import ALLOCATE_FLOW, ROUTE_ALL, OBJ_MIN_LATENCY, \
-    RES_BANDWIDTH, OBJ_MAX_ALL_FLOW, CAP_LINKS, OBJ_MIN_LINK_LOAD
+from sol.topology.traffic import TrafficClass
+from sol.utils.const import *
+
+
+# When comparing objective functions, use this as the precision
 
 
 def test_shortest_path():
+    """ Check that we can correctly implement shortest path routing """
     # Generate a topology:
     topo = complete_topology(5)
 
+    # Generate a single traffic class:
+    # TrafficClass (id, name, source node, destination node)
+    tcs = [TrafficClass(0, u'classname', 0, 2)]
+    # Generate all paths for this traffic class
+    pptc = generate_paths_tc(topo, tcs, null_predicate, cutoff=100)
     # Application configuration
     appconfig = {
         'name': u'minLatencyApp',
-        'constraints': [ALLOCATE_FLOW, ROUTE_ALL],
-        'obj': OBJ_MIN_LATENCY,
-        'predicate': null_predicate,
+        'constraints': [(Constraint.ROUTE_ALL, (pptc,), {})],
+        'obj': (Objective.MIN_LATENCY, (), {}),
         'resource_cost': {}
     }
 
-    # Generate a single traffic class:
-    # TrafficClass (id, name, source node, destination node)
-    # For now don't worry about IP addresses.
-    tcs = [TrafficClass(0, u'classname', 0, 2)]
-    # Generate all paths for this traffic class
-    pptc = generate_paths_tc(topo, tcs, appconfig['predicate'],
-                             cutoff=100)
     # Create an application based on our config
     app = App(pptc, **appconfig)
 
     # Create and solve an optimization based on the app
     # No link capacities will just result in a single shortest path
-    opt = from_app(topo, app)
+    opt = from_app(topo, app, NetworkConfig(None))
     opt.solve()
+    assert opt.is_solved()
 
     paths = opt.get_paths()
-    for pi, p in enumerate(pptc.paths(pptc.tc_byid(0))):
+    for pi, p in enumerate(paths.paths(tcs[0])):
         if list(p.nodes()) == [0, 2]:
             assert p.flow_fraction() == 1
         else:
             assert p.flow_fraction() == 0
 
+    # norm factor for latency is diameter * n^2
+    norm = topo.diameter() * 25
+    # the objective is 1-normalized latency, and latency is 1.
+    # because 1 path with flow fraction of 1.
+    solution = opt.get_solved_objective(app)
+    assert solution == 1 - 1 / norm or abs(solution - 1 - 1 / norm) <= EPSILON
+    solution = opt.get_solved_objective()
+    assert solution == 1 - 1 / norm or abs(solution - 1 - 1 / norm) <= EPSILON
 
-def test_maxflow():
-    appconfig = {
-        'name': u'mf',
-        'constraints': [ALLOCATE_FLOW, (CAP_LINKS, RES_BANDWIDTH, 1)],
-        'obj': OBJ_MAX_ALL_FLOW,
-        'predicate': null_predicate,
-        'resource_cost': {RES_BANDWIDTH: 2}
-    }
+
+@given(st.floats(1e-3, 1))
+def test_maxflow(cap):
+    """ Check that maxflow works correctly, for a single traffic class """
+    # Generate a topology:
     topo = complete_topology(4)
     for link in topo.links():
-        topo.set_resource(link, RES_BANDWIDTH, 1)
+        topo.set_resource(link, BANDWIDTH, 1)
     tcs = [TrafficClass(0, u'classname', 0, 2, array([3]))]
+    # Generate all paths for this traffic class
     pptc = generate_paths_tc(topo, tcs, null_predicate, cutoff=100)
 
-    app = App(pptc, **appconfig)
-    opt = from_app(topo, app)
-    opt.solve()
-    assert get_obj_var(app, opt) == .5
-
-
-@pytest.mark.parametrize("selection,numpaths", [('all',0), ('shortest',5), ('random',5)])
-def test_uniform(selection, numpaths):
     appconfig = {
-        'name': u'uniformte',
-        'constraints': [ALLOCATE_FLOW, (CAP_LINKS, RES_BANDWIDTH, 1)],
-        'obj': (OBJ_MIN_LINK_LOAD, RES_BANDWIDTH),
-        'predicate': null_predicate,
-        'resource_cost': {RES_BANDWIDTH: 1}
+        'name': u'mf',
+        'constraints': [],
+        'obj': (Objective.MAX_FLOW, (), {}),
+        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
     }
-    topo = complete_topology(6)
-
-    tcs = []
-    ind = 0
-    for i in topo.nodes():
-        for j in topo.nodes():
-            tcs.append(TrafficClass(ind, u'all', i, j, array([1]), array([1])))
-            ind += 1
-    # print tcs
-    provision_links(topo, tcs, 1, set_attr=True)
-    pptc = generate_paths_tc(topo, tcs, null_predicate, cutoff=100)
-
     app = App(pptc, **appconfig)
-    opt = from_app(topo, app)
-    if selection == 'all':
-        pass
-    elif selection == 'shortest':
-        k_shortest_paths(app.pptc, numpaths)
-    elif selection == 'random':
-        choose_rand(app.pptc, numpaths)
+    caps = NetworkCaps(topo)
+    caps.add_cap(BANDWIDTH, cap=cap)
+    opt = from_app(topo, app, NetworkConfig(caps))
     opt.solve()
-    if opt.is_solved():
-        assert opt.get_solved_objective() == 1
-    else:
-        assert selection == 'random'
+    assert opt.is_solved()
+    # Ensure that both app objective and global objective are the same
+    # Also, use abs(actual - exprected) because floating point errors
+    solution = opt.get_solved_objective(app)
+    assert solution == cap or abs(solution - cap) <= EPSILON
+    solution = opt.get_solved_objective()
+    assert solution == cap or abs(solution - cap) <= EPSILON
 
-# TODO: bring back fixed paths
-# def test_fixed_paths():
-#     topo = mock_topo()
-#     app = mock_max_flow_app(topo)
-#     for tc in app.pptc:
-#         for p in app.pptc[tc]:
-#             p.set_flow_fraction(.008)
-#
-#     opt = from_app(topo, app)
-#     opt.fix_paths(app.pptc)
-#     opt.write(u'testfp')
-#     opt.solve()
-#     paths = opt.get_path_fractions(app.pptc)[0]
-#     for tc in paths:
-#         for p in app.pptc[tc]:
-#             assert p.flow_fraction() == .008
+
+@given(st.floats(0, 1))
+def test_maxflow_inapp_caps(cap):
+    """Text maxflow, but use the CAP constraint instead of global network caps"""
+    # Generate a topology:
+    topo = complete_topology(4)
+    for link in topo.links():
+        topo.set_resource(link, BANDWIDTH, 1)
+    tcs = [TrafficClass(0, u'classname', 0, 2, array([3]))]
+    # Generate all paths for this traffic class
+    pptc = generate_paths_tc(topo, tcs, null_predicate, cutoff=100)
+    caps = {link: cap for link in topo.links()}
+    appconfig = {
+        'name': u'mf',
+        'constraints': [(Constraint.CAP_LINKS, (BANDWIDTH, caps), {})],
+        'obj': (Objective.MAX_FLOW, (), {}),
+        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+    }
+    app = App(pptc, **appconfig)
+    opt = from_app(topo, app, NetworkConfig())
+    opt.solve()
+    assert opt.is_solved()
+    # Ensure that both app objective and global objective are the same
+    # Also, use abs(actual - exprected) because floating point errors
+    solution = opt.get_solved_objective(app)
+    assert solution == cap or abs(solution - cap) <= EPSILON
+    solution = opt.get_solved_objective()
+    assert solution == cap or abs(solution - cap) <= EPSILON
+
+
+def test_min_latency_app():
+    """Test a single min latency app"""
+    topo = complete_topology(4)
+    for link in topo.links():
+        topo.set_resource(link, BANDWIDTH, 1)
+    tcs = [TrafficClass(0, u'classname', 0, 2, array([1]))]
+    # Generate all paths for this traffic class
+    pptc = generate_paths_tc(topo, tcs, null_predicate, cutoff=100)
+    appconfig = {
+        'name': u'te',
+        'constraints': [(Constraint.ROUTE_ALL, (), {})],
+        'obj': (Objective.MIN_LATENCY, (), {}),
+        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+    }
+    app = App(pptc, **appconfig)
+    caps = NetworkCaps(topo)
+    caps.add_cap(BANDWIDTH, cap=1)
+    opt = from_app(topo, app, NetworkConfig(caps))
+    opt.solve()
+    assert opt.is_solved()
+
+    # norm factor for latency is diameter * n^2
+    norm = topo.diameter() * 16
+    # the objective is 1-normalized latency, and latency is 1.
+    # because 1 path with flow fraction of 1.
+    solution = opt.get_solved_objective(app)
+    assert solution == 1 - 1 / norm or abs(solution - (1 - 1 / norm)) <= EPSILON
+    solution = opt.get_solved_objective()
+    assert solution == 1 - 1 / norm or abs(solution - (1 - 1 / norm)) <= EPSILON
+
+
+def test_te_app():
+    """ Test a single traffic engineering app"""
+    topo = complete_topology(4)
+    for link in topo.links():
+        topo.set_resource(link, BANDWIDTH, 1)
+    tcs = [TrafficClass(0, u'classname', 0, 2, array([1]))]
+    # Generate all paths for this traffic class
+    pptc = generate_paths_tc(topo, tcs, null_predicate, cutoff=100)
+    appconfig = {
+        'name': u'te',
+        'constraints': [(Constraint.ROUTE_ALL, (), {})],
+        'obj': (Objective.MIN_LINK_LOAD, (BANDWIDTH,), {}),
+        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+    }
+    app = App(pptc, **appconfig)
+    caps = NetworkCaps(topo)
+    caps.add_cap(BANDWIDTH, cap=1)
+    opt = from_app(topo, app, NetworkConfig(caps))
+    opt.solve()
+    assert opt.is_solved()
+    # THE solution is 1-objective because of the maximization flip
+    solution = 1 - opt.get_solved_objective(app)
+    # Use abs(actual - exprected) because floating point errors
+    assert solution == .333333 or abs(solution - .33333) <= EPSILON
+    solution = 1 - opt.get_solved_objective()
+    assert solution == .333333 or abs(solution - .33333) <= EPSILON
+
+
+def test_mbox_load_balancing():
+    """Test the middlebox loadbalancing"""
+
+    topo = complete_topology(4)
+    for n in topo.nodes():
+        topo.set_resource(n, CPU, 1)
+        topo.set_mbox(n)
+    tcs = [TrafficClass(0, u'classname', 0, 2, array([1]))]
+    # Generate all paths for this traffic class
+    pptc = generate_paths_tc(topo, tcs, has_mbox_predicate, modify_func=use_mbox_modifier, cutoff=100)
+    appconfig = {
+        'name': u'mb_lb',
+        'constraints': [(Constraint.ROUTE_ALL, (), {})],
+        'obj': (Objective.MIN_NODE_LOAD, (CPU,), {}),
+        'resource_cost': {CPU: (CostFuncFactory.mbox_single_cost(1), NODES)}
+    }
+    app = App(pptc, **appconfig)
+    caps = NetworkCaps(topo)
+    caps.add_cap(CPU, cap=1)
+    opt = from_app(topo, app, NetworkConfig(caps))
+    opt.solve()
+    assert opt.is_solved()
+    # THE solution is 1-objective because of the maximization flip
+    solution = 1 - opt.get_solved_objective(app)
+    # Use abs(actual - exprected) because floating point errors
+    assert solution == .25 or abs(solution - .25) <= EPSILON
+    solution = 1 - opt.get_solved_objective()
+    assert solution == .25 or abs(solution - .25) <= EPSILON
+
+
+def test_mbox_load_balancing_all_tcs():
+    """Test the middlebox loadbalancing"""
+
+    topo = complete_topology(4)
+    for n in topo.nodes():
+        topo.set_resource(n, CPU, 1)
+        topo.set_mbox(n)
+    tcs = [TrafficClass(0, u'classname', s, t, array([1])) for (s, t) in product(topo.nodes(), repeat=2)]
+    # Generate all paths for this traffic class
+    pptc = generate_paths_tc(topo, tcs, has_mbox_predicate, modify_func=use_mbox_modifier, cutoff=100)
+    appconfig = {
+        'name': u'mb_lb',
+        'constraints': [(Constraint.ROUTE_ALL, (), {})],
+        'obj': (Objective.MIN_NODE_LOAD, (CPU,), {}),
+        'resource_cost': {CPU: (CostFuncFactory.mbox_single_cost(1), NODES)}
+    }
+    app = App(pptc, **appconfig)
+    caps = NetworkCaps(topo)
+    caps.add_cap(CPU, cap=1)
+    opt = from_app(topo, app, NetworkConfig(caps))
+    opt.solve()
+    assert opt.is_solved()
+    # THE solution is 1-objective because of the maximization flip
+    solution = 1 - opt.get_solved_objective(app)
+    # Use abs(actual - exprected) because floating point errors
+    assert solution == 1 or abs(solution - 1) <= EPSILON
+    solution = 1 - opt.get_solved_objective()
+    assert solution == 1 or abs(solution - 1) <= EPSILON
+
+
+@pytest.mark.skip()
+def test_fixed_paths():
+    pass
+    # TODO: bring back fixed paths test

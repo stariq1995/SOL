@@ -1,5 +1,4 @@
 # coding=utf-8
-import os
 
 import pytest
 from sol.path.paths import Path, PathWithMbox
@@ -8,7 +7,7 @@ from sol.utils.ph import listeq
 
 @pytest.fixture(scope='module')
 def apath():
-    return Path([1, 9, 7, 3], 0)
+    return Path([1, 9, 7, 3])
 
 
 def test_path_getters():
@@ -73,21 +72,6 @@ def test_path_equality():
         p >= p2
 
 
-# At this point paths are not hashable
-# def testPathHashing():
-#     d = {}
-#     p = Path([1, 2, 3, 4])
-#     p2 = PathWithMbox([1, 2, 3, 4], [2])
-#     p3 = PathWithMbox([1, 2, 3, 4], [2, 4])
-#     d[p] = 1
-#     d[p2] = 2
-#     assert len(d) == 2
-#     d[p3] = 2
-#     d[p] = 100
-#     assert len(d) == 3
-#     assert d[p] == 100
-
-
 def test_uses_box():
     p2 = PathWithMbox([1, 4, 6, -1], [4, 6])
     assert p2.uses_box(4)
@@ -100,16 +84,7 @@ def test_path_encoding(apath):
     assert u'nodes' in d
     assert d[u'type'] == u'Path'
     assert u'flow_fraction' in d
-    assert u'id' in d
     assert apath == Path.decode(apath.encode())
-
-
-@pytest.mark.skipif('TRAVIS' in os.environ,
-                    reason='Travis CI has old version of py.test with to '
-                           'warning tests')
-def test_path_warn():
-    with pytest.warns(UserWarning):
-        p = Path([1])
 
 
 def test_pathmbox_encoding():
@@ -118,7 +93,6 @@ def test_pathmbox_encoding():
     assert u'nodes' in d
     assert d[u'type'] == u'PathWithMBox'
     assert u'flow_fraction' in d
-    assert u'id' in d
     assert listeq(d[u'use_mboxes'], [2])
     l = p.decode(p.encode())
     assert p == l
