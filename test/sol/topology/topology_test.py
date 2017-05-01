@@ -2,6 +2,7 @@
 import os
 
 import networkx
+import pytest
 from hypothesis import assume
 from hypothesis import given, strategies as st
 from six import u
@@ -53,21 +54,26 @@ def test_graph_directed():
     assert isinstance(topo.get_graph(), networkx.DiGraph)
     # even if original graph is undirected
     topo = Topology('noname', networkx.star_graph(8))
+    assert topo.get_graph().is_directed()
 
 
+@pytest.mark.skip()
 def test_set_service_types():
     # todo: test code that deals with service types & middleboxes
     pass
 
 
 # TODO: finish other topology tests
+@pytest.mark.skip()
 def test_set_resources():
     pass
 
 
+@pytest.mark.skip()
 def test_json_encode_decode():
     pass
 
 
+@pytest.mark.skip()
 def test_from_json():
     pass
