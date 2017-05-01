@@ -9,10 +9,10 @@ Do I have to use Gurobi? Why not optimizer *X*?
 
 Yes. It is an actively maintained, cross-platfom, well-performing
 convex optimization solver. Additionally, academics can get a free license.
-No plans to support other solvers in the future.
+No plans to support other solvers soon.
 
-I had a network with size *X* and your code is too slow.
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+I had a network with size *X* and the code is too slow.
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 This is likely for one of two reasons:
 

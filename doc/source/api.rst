@@ -5,6 +5,10 @@ This describes APIs for manipulating different types of objects that SOL
 implements and uses, such as :py:class:`sol.Topology`,
 :py:class:`sol.TrafficClass`, etc.
 
+
+.. toctree::
+  :maxdepth: 1
+
 .. py:currentmodule:: sol
 
 .. _topoapi:
@@ -73,6 +77,9 @@ Path generation and selection
 -----------------------------
 
 .. automodule:: sol.path.generate
+    :members:
+
+.. automodule:: sol.path.predicates
     :members:
 
 .. automodule:: sol.path.select

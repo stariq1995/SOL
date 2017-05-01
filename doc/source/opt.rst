@@ -1,5 +1,5 @@
-Optimization
-============
+Applications & Optimizations
+============================
 
 Supported constraints and objectives
 ------------------------------------

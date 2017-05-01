@@ -1,3 +1,5 @@
+.. _gstarted:
+
 Getting started with SOL
 ========================
 
@@ -7,7 +9,8 @@ Installing SOL
 Supported python versions
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Both python 2.7 and 3.4 and above are supported, although most testing was performed with python version 3.5 only.
+Both python 2.7 and 3.5 are supported, although most testing was performed with python version 3.5 only.
+We encourage you to also embrace the python 3.x movement.
 
 Dependencies
 ^^^^^^^^^^^^
@@ -56,6 +59,10 @@ SOL requires the following things to correctly do its job:
 In this quickstart guide we describe the necessary inputs and show how to create a simple application.
 We will go over how to construct a very small network and create a simple
 `maxflow <https://en.wikipedia.org/wiki/Maximum_flow_problem>`_ optimization.
+
+Feel free to follow along using the
+`Jupyter notebook <https://github.com/progwriter/SOL-workflows/blob/master/getting_started.ipynb>`_
+that accomapnies this written guide.
 
 Topology
 ^^^^^^^^
@@ -171,19 +178,21 @@ Let's start with a very simple maxflow problem.
 
     from sol import AppBuilder
     from sol.opt.funcs import CostFuncFactory
+    from sol.utils.const import Objective
 
     builder = AppBuilder()
     # Create a cost function where each flow consumes 1 Mb/s regardless of traffic class
     cost_func = CostFuncFactory.from_number(1)
-    # cost_func
-    # builder.build()
-    app = builder.name('maxflowapp').pptc(pptc).objective('maxflow')\
-        .add_resource('bandwidth', cost_func).build()
+    app = builder.name('maxflowapp')\
+        .pptc(pptc)\
+        .objective(Objective.MAX_FLOW)\
+        .add_resource('bandwidth', cost_func, 'links')\
+        .build()
 
 The application builder allows us to set the *pptc* of the application, use a pre-defined
 maxflow objective function, as well as set the routing cost of traffic.
 In this example, each flow consumes a unit of bandwidth. SOL provides a convenitent way
-of specifying that using the :py:class:`sol.opt.funcs
+of specifying that using the :py:class:`sol.opt.funcs.CostFuncFactory`
 
 Optimization
 ------------
@@ -193,14 +202,20 @@ With a single app
 
 The optimization is constucted using the topology and the application:
 
->>> from sol import from_app
->>> opt = from_app(topology, app)
->>> opt.solve() # solve the optimization
+.. code-block:: python
+
+    from sol import from_app, NetworkConfig, NetworkCaps
+
+    caps = NetworkCaps(t) # Create network caps from the topology
+    caps.add_cap('bandwidth', cap=.5) # We can use 50% of link capacities
+    nconfig = NetworkConfig(networkcaps=caps)
+    opt = from_app(t, app, nconfig) # create the optimization
+    opt.solve() # solve the optimization
 
 With multiple apps
 ^^^^^^^^^^^^^^^^^^
 
-See the :ref:`composition` part of the User's Guide.
+Refer to the :ref:`composition` part of the User's Guide.
 
 Examining the solutions
 -----------------------
@@ -219,5 +234,14 @@ As expected, we can route 50% of the traffic, due to the link caps.
 
 2. To extract the paths
 
-  >>> p = opt.get_paths()
-  >>> p
+>>> pptc_solution = opt.get_paths()
+>>> print(pptc_solution.paths(tc1))
+[Path(nodes=[0 1 2 3 4], flowFraction=0.5)]
+
+This is exaclty what we expected, traffic goes from node 0 to node 4 and
+we can manage to carry only 50% of it.
+
+
+Congratulations! You are done with the tutorial. For more info head to :ref:`ug`
+for detailed instructions on how to construct more complex applications and utilize full potential
+of SOL.

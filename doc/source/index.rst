@@ -39,20 +39,19 @@ and examine resulting solutions.
 
 A rough view of the SOL library and integrations is as follows:
 
-
 * `SOL library <https://github.com/progwriter/SOL>`_ (this project/repository)
-* `ONOS integration <https://github.com/progwriter/sol-onos>`_ Allows use of the SOL library from the\
-  `ONOS <http://onosproject.org/>`_  controller
+* `ONOS integration <https://github.com/progwriter/sol-onos>`_ Allows use of the SOL library from the
+  applications running on top of `ONOS <http://onosproject.org/>`_ controller
 * `SOL workflows <https://github.com/progwriter/SOL-workflows>`_ A collection of examples and workflows to
-  give users an idea of how SOL can be used.
-* `TMgen library <https://github.com/progwriter/tmgen>`_ A helper library for generating and manipulating
-  traffic matrices.
+  give users an idea of how SOL can be used
+* `SOL-viz <http://github.com/progwriter/SOL-viz>`_ A nifty tool for interactive vizualization of SOL solutions
+
+.. * `TMgen library <https://github.com/progwriter/tmgen>`_ A helper library for generating and manipulating
+   traffic matrices.
 
 
 Python documentation
 --------------------
-
-.. Available at `Read the Docs <http://sol.readthedocs.io/>`_ (unless you're already here).
 
 .. toctree::
    :maxdepth: 2

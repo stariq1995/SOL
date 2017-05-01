@@ -1,7 +1,8 @@
 Network Topology
 ================
 
-Network topologies are represented as directed graphs using the `networkx<https://networkx.github.io/>`_ library
+Network topologies are represented as directed graphs using the `networkx <https://networkx.github.io/>`_ library.
+In addition to
 
 
 .. _guide-tc:
@@ -20,8 +21,6 @@ If using *make_tc*, specify only source and destination nodes, and volume in flo
 
 
 If using the contructor, specify the ID (must be unique and sequential), name, src/dst nodes and volumes.
-
-#
 
 
 .. warning::
