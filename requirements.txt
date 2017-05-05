@@ -4,5 +4,4 @@ netaddr
 numpy
 six
 cython
-gurobipy
 flask
