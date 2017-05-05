@@ -7,7 +7,7 @@ clean:
 	rm -rf ./build
 	find . -name '*.c' -exec rm {} \;
 	find . -name '*.so' -exec rm {} \;
-	find . -name '__pycache__' -exec rm -rf {} \;
+	find . \( -name '__pycache__' -type d \) -prune -exec rm -rf {} \;
 
 .PHONY: watch
 watch:
