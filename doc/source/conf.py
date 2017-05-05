@@ -297,5 +297,4 @@ texinfo_documents = [
 intersphinx_mapping = {'https://docs.python.org/': None}
 
 # autodoc options:
-autodoc_mock_imports = ['gurobi', 'gurobipy', 'networkx', 'netaddr', 'numpy',
-                        'six', 'cython', 'flask']
+autodoc_mock_imports = ['gurobi', 'gurobipy', 'netaddr', 'cython', 'flask']
