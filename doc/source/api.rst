@@ -23,23 +23,6 @@ Topology
 TrafficClass
 ------------
 
-.. py:class:: TrafficClass
-    :attribute: ID
-      Positive integer that uniquely identifies the traffic class
-
-    :attribute: name
-      String name of this traffic class. Multiple traffic classes may share a
-      name for convenience (e.g., 'web', 'ssh')
-
-    :attribute: src
-      Integer id of the ingress node (in the topology) for this traffic class
-
-    :attribute: dst
-      Integer id of the egress node (in the topology) for this traffic class
-
-    :attribute: volFlows
-      A (masked) array containing volumes for this traffic class across different
-      time epochs
 
 .. autoclass:: TrafficClass
     :special-members: __init__
