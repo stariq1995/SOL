@@ -8,9 +8,9 @@ $init = <<SCRIPT
   sudo apt-get install -y build-essential \
    libssl-dev \
    python-all python-twisted-conch git tmux vim python-pip python-paramiko \
-   python-sphinx openjdk-8-jdk maven curl
+   python-sphinx openjdk-8-jdk maven curl unzip
   sudo pip install alabaster numpy cython msgpack-python networkx requests \
-   netaddr six bitstring progressbar2 flask flask_compress
+   netaddr six bitstring progressbar2 flask flask_compress tmgen
   echo 'export JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"' >> ~/.profile
   source ~/.profile
 SCRIPT
@@ -38,9 +38,9 @@ $mininet = <<SCRIPT
 SCRIPT
 
 $onos = <<SCRIPT
-  wget --quiet http://downloads.onosproject.org/release/onos-1.6.0.tar.gz
-  tar xzf onos-1.6.0.tar.gz
-  rm onos-1.6.0.tar.gz
+  wget --quiet http://downloads.onosproject.org/release/onos-1.7.1.tar.gz
+  tar xzf onos-1.7.1.tar.gz
+  rm onos-1.7.1.tar.gz
 SCRIPT
 # $onos = <<SCRIPT
 #   git clone https://gerrit.onosproject.org/onos
@@ -64,15 +64,24 @@ $gurobi = <<SCRIPT
   source ~/.profile
 SCRIPT
 
+digtsrc = "D-ITG-2.8.1-r1023-src"
+$digt= <<SCRIPT
+  wget http://www.grid.unina.it/software/ITG/codice/#{digtsrc}.zip
+  unzip #{digtsrc}.zip
+  cd #{digtsrc}/src
+  make
+  sudo make install
+SCRIPT
+
 $sol = <<SCRIPT
 SCRIPT
 
-$tmgen = <<SCRIPT
-  git clone https://github.com/progwriter/TMgen
-  pushd TMgen
-  sudo pip install .
-  popd
-SCRIPT
+# $tmgen = <<SCRIPT
+#   git clone https://github.com/progwriter/TMgen
+#   pushd TMgen
+#   sudo pip install .
+#   popd
+# SCRIPT
 
 $cleanup = <<SCRIPT
   sudo apt-get clean
@@ -101,7 +110,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision :shell, privileged: false, :inline => $mininet
   # config.vm.provision :shell, privileged: false, run: 'always', :inline => $onosdev
   config.vm.provision :shell, privileged: false, :inline => $gurobi
-  config.vm.provision :shell, privileged: false, :inline => $tmgen
+  # config.vm.provision :shell, privileged: false, :inline => $tmgen
   config.vm.provision :shell, privileged: false, :inline => $sol
   config.vm.provision :shell, privileged: false, :inline => $cleanup
 
