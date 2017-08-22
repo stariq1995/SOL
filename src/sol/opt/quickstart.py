@@ -43,7 +43,7 @@ cpdef from_app(Topology topo, App app, network_config):
         if caps is not None:
             logger.debug('Capping resources')
             for r in caps.resources():
-                opt.cap(r, caps.caps(r), tcs=None)
+                opt.cap(r, caps.caps(r))
 
     # And add any other constraints the app might desire
     opt.add_named_constraints(app)
