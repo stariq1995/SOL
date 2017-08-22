@@ -96,3 +96,18 @@ def test_pathmbox_encoding():
     assert listeq(d[u'use_mboxes'], [2])
     l = p.decode(p.encode())
     assert p == l
+
+
+def test_path_links_mult_calls():
+    """
+    This is here because of a bug where path.links() used to return an iterator.
+    When resampling/selecting paths, multiple calls to path.links() would produce a wrong result
+    by returning a stale iterator
+    """
+    p = Path([1, 2, 3])
+    # We don't want iterators
+    isinstance(p.links(), list)
+    # Multiple calls should not affect the final result
+    p.links()
+    p.links()
+    assert len(p.links()) == 2

@@ -35,7 +35,7 @@ cdef class Path:
         return self._nodes[0]
 
     cdef _compute_links(self):
-        return zip(self._nodes, self._nodes[1:])
+        return list(zip(self._nodes, self._nodes[1:]))
 
     cpdef int egress(self):
         """
