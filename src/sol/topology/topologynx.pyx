@@ -315,18 +315,20 @@ cdef class Topology:
                 return
 
     def to_json(self):
-        return json_graph.node_link_data(self._graph.to_undirected())
+        return json_graph.node_link_data(self._graph)
 
     @staticmethod
-    def from_json(data):
+    def from_json(data, name=None):
         """
         Create a new topology from a JSON dictionary
 
         :param data: the JSON data
+        :param name: name of the topology. If None, we will attempt to get the name form a JSON field.
         :return: a new Topology object
 
         """
-        name = data.get(u'name', u'NoName')
+        if name is None:
+            name = data.get(u'name', u'NoName')
         return Topology(name, json_graph.node_link_graph(data, directed=True,
                                                          multigraph=False))
 
