@@ -1,6 +1,10 @@
 # coding=utf-8
+# cython: profile=True
+# cython: linetrace=True
+# cython: binding=True
+
 """
-Wrapper around Gurobi
+Wrapper around the Gurobi solver
 """
 
 from __future__ import division, print_function
@@ -9,14 +13,15 @@ import sys
 
 from sol.utils.const import ERR_NO_GUROBI
 
+# Deal with different package names based on the version
 try:
-    if sys.version_info >= (3, 5):
-        from gurobi import *
-    else:
+    from gurobi import *
+except (ImportError, ModuleNotFoundError) as e:
+    try:
         from gurobipy import *
-except ImportError as e:
-    print(ERR_NO_GUROBI)
-    raise e
+    except (ImportError, ModuleNotFoundError) as e:
+        print(ERR_NO_GUROBI)
+        raise e
 
 import warnings
 
@@ -30,7 +35,8 @@ warnings.filterwarnings('ignore', category=FutureWarning,
 
 import time
 
-from numpy import ma, zeros, arange, array, ndarray, ones, frompyfunc, log
+import cython
+from numpy import ma, zeros, arange, array, ndarray, frompyfunc, log, ones, full
 from six import iterkeys, next
 from six.moves import range
 from cpython cimport bool
@@ -40,16 +46,16 @@ from sol.topology.topologynx cimport Topology
 from sol.utils.logger import logger
 from sol.opt.varnames cimport xp, al, be, bn, bp
 from sol.utils.const import *
-from sol.path.paths cimport Path
+from sol.path.paths cimport Path, PPTC
 
 # This is used in the node_budget function.
 # Figured I'd make it private a cdef inline for speed
 cdef inline _one_func(x):
     return 1
 
-
 # Create a numpy ufunc for getting .x attributes of gurobi varibles
 _get_x = frompyfunc(lambda x: x.x if isinstance(x, Var) else 0, 1, 1)
+_is_var = frompyfunc(lambda x: isinstance(x, Var), 1, 1)
 
 # noinspection PyClassicStyleClass
 cdef class OptimizationGurobi:
@@ -93,8 +99,8 @@ cdef class OptimizationGurobi:
         # Create arrays for other variables as well
         self._als = zeros((all_pptc.num_tcs(), self.num_epochs), dtype=object)
         self._bps = zeros((all_pptc.num_tcs(), self._max_paths), dtype=object)
-        self._bns = zeros(topo.num_nodes())
-        self._bes = zeros((topo.num_nodes(), topo.num_nodes()))
+        self._bns = zeros(topo.num_nodes(), dtype=object)
+        self._bes = zeros((topo.num_nodes(), topo.num_nodes()), dtype=object)
         # Create the load dictionary -- stores linear expressions that compute load per resource
         self._load_dict = {}
         # Initialize the load dict. Maps resource->node->value
@@ -120,7 +126,7 @@ cdef class OptimizationGurobi:
         cdef int epoch, pi  # path index
         # for each traffic class, path, and epoch add a variable
         # use the loops so we get different objects & names. Do not use numpy fill
-        for tc in self._all_pptc:
+        for tc in self._all_pptc.tcs():
             for pi in arange(self._all_pptc.num_paths(tc)):
                 for epoch in arange(self.num_epochs):
                     self._xps[tc.ID, pi, epoch] = \
@@ -165,6 +171,7 @@ cdef class OptimizationGurobi:
         if mod:
             self.opt.update()
 
+    # @profile
     cpdef allocate_flow(self, tcs, allocation=None):
         """
         Allocate network flow for each traffic class by allocating flow on each
@@ -184,12 +191,15 @@ cdef class OptimizationGurobi:
             for epoch in range(self.num_epochs):
                 if not isinstance(self._als[tc.ID, epoch], Var):
                     self._als[tc.ID, epoch] = v = self.opt.addVar(lb=0, ub=1, name=al(tc, epoch))
-                self.opt.update()
                 # construct the expression: sum up all varibles per traffic class
-                self.opt.addConstr(quicksum(self._xps[tc.ID, :, epoch]) == v, name='al.{}'.format(tc.ID))
+                # self.opt.addConstr(quicksum(self._xps[tc.ID, :, epoch]) == v, name='al.{}'.format(tc.ID))
+                ind = _is_var(self._xps[tc.ID, :, epoch]).astype(bool, copy=False)
+                expr = LinExpr()
+                expr.addTerms(ones(self._max_paths)[ind], self._xps[tc.ID, :, epoch][ind])
+                self.opt.addConstr(expr, GRB.EQUAL, v)
                 # If we also have an allocation value, add that constraint as well
                 if allocation is not None:
-                    self.opt.addConstr(v == allocation, name='al.{}'.format(tc.ID))
+                    self.opt.addConstr(v == allocation)
         # Update the model
         self.opt.update()
 
@@ -223,13 +233,14 @@ cdef class OptimizationGurobi:
         :param mode: either 'links' or 'nodes' -- determines what to iterate over
         """
         logger.debug(u'Consuming resource %s' % resource)
-        cdef int pi  #path index
+        cdef int pi  # path index
         cdef TrafficClass tc
         cdef Path path
 
         for tc in tcs:
             # vols = tc.volFlows.compressed()
             for pi, path in enumerate(self._all_pptc.paths(tc)):
+                # print('%d %d' %(tc.ID, pi))
                 if mode == NODES:  # iterate over path nodes
                     # iterate over all nodes,
                     # the cost function is responsible for determining the cost (could be 0)
@@ -238,54 +249,65 @@ cdef class OptimizationGurobi:
                             # Make sure we don't get key error/non-existent array
                             if not isinstance(self._load_dict[resource][node], ndarray):
                                 self._load_dict[resource][node] = zeros((self._all_pptc.num_tcs(),
-                                                                         self._max_paths, self.num_epochs))
+                                                                         self._max_paths, self.num_epochs), dtype=float)
                             vals = array([func(tc, path, node) for func in cost_funcs]).max(axis=0)
-                            self._load_dict[resource][node][tc.ID, pi, :] = vals / capacities[node]
+                            self._load_dict[resource][node][tc.ID, pi, :] += vals / capacities[node]
 
-                elif mode == LINKS: # iterate over path links
+                elif mode == LINKS:  # iterate over path links
                     for link in path.links():
                         if link in capacities and capacities[link] > 0:
                             if not isinstance(self._load_dict[resource][link], ndarray):
                                 self._load_dict[resource][link] = zeros((self._all_pptc.num_tcs(),
-                                                                         self._max_paths, self.num_epochs))
+                                                                         self._max_paths, self.num_epochs), dtype=float)
                             vals = array([func(tc, path, link) for func in cost_funcs]).max(axis=0)
-                            self._load_dict[resource][link][tc.ID, pi, :] = vals / capacities[link]
+                            self._load_dict[resource][link][tc.ID, pi, :] += vals / capacities[link]
 
-    cpdef cap(self, unicode resource, caps, tcs=None):
-        """ Cap the usage of a given resource with a given value. By default, the cap is 1.
+
+    @profile
+    def cap(self, unicode resource, caps, path_dep=False, tcs=None):
+        """ Cap the usage of a given resource with a given value. 
 
         :param resource: the name of resource to cap
         :param tcs: traffic classes that consume the resource. If None, all traffic classes are used
         :param caps: the maximum utilization of a given resource
         """
+        logger.debug("Capping resource %s" % resource)
         # Sanity check on cap value
-        # if not 0 <= capval <= 1:
-        #     raise ValueError(ERR_BAD_CAPVAL)
-        cdef int u, v, e
-        cdef ndarray vars
+        cdef int e, i, c
+        cdef TrafficClass tc
+        cdef ndarray coeffs, vars
 
         # if no classes are given, take all of them
         if tcs is None:
-            tcs = self._all_pptc.tcs()
-        # get the integer indices for traffic classes. This is an indexing array
-        tcind = [tc.ID for tc in tcs]
-        # For each epoch
-        for e in arange(self.num_epochs):
-            # extract valid x_* variables
-            vars = self._xps[tcind, :, e]
-            # ind = not_equal(None, vars).nonzero()
-            for node_or_link in self._load_dict[resource]:
-                # if no load has been computed or node/link not capped, skip
-                if not isinstance(self._load_dict[resource][node_or_link], ndarray) or \
-                                node_or_link not in caps:
-                    continue
-                # generate coefficients for variables (i.e., the load across all paths)
-                coeffs = self._load_dict[resource][node_or_link][tcind, :, e]
-                ind = coeffs > 0  # get non-zero coefficients, and only add those variables
-                # Flatten the unnesecary 2-d shape of the resulting indexing by using reshape(-1)
-                expr = LinExpr(coeffs[ind].reshape(-1), vars[ind].reshape(-1))
-                self.opt.addConstr(expr <= caps[node_or_link],
-                                   name='Cap.{}.{}.{}'.format(resource, str(node_or_link), e))
+            tcs = list(self._all_pptc.tcs())
+        else:
+            tcs = list(tcs)
+        for node_or_link in self._load_dict[resource]:
+            # if no load has been computed or node/link not capped, skip
+            if not isinstance(self._load_dict[resource][node_or_link], ndarray) or \
+                            node_or_link not in caps:
+                continue
+
+            # For each epoch
+            for e in range(self.num_epochs):
+                expr = LinExpr()
+                coeffs = self._load_dict[resource][node_or_link][:,:,e]
+                vars = self._xps[:,:,e] if not path_dep else self._bps
+                ind = coeffs.nonzero()
+                # for c in range(coeffs.size):
+                #     if coeffs[c] > 0:
+                #         expr.add(vars[c], coeffs[c])
+                expr.addTerms(coeffs[ind].reshape(-1), vars[ind].reshape(-1))
+                # for tc in tcs:
+                #     # extract valid x_* variables or b_* variables if resource is counted per path
+                #     vars = self._xps[tc.ID, :num_paths[tc], e] if not path_dep else self._bps[tc.ID, :num_paths[tc]].reshape((1, self._max_paths, 1))
+                #     # generate coefficients for variables (i.e., the load across all paths)
+                #     coeffs = self._load_dict[resource][node_or_link][tc.ID, :num_paths[tc], e]
+                #     ind = coeffs > 0  # get non-zero coefficients, and only add those variables
+                #     expr.addTerms(coeffs[ind], vars[ind])
+                self.opt.addConstr(expr, GRB.LESS_EQUAL, caps[node_or_link],
+                                   # name='Cap.{}.{}.{}'.format(resource, str(node_or_link), e)
+                                   )
         self.opt.update()
 
     cdef _req_all(self, req_type, traffic_classes=None, node_mode=NodeConsumeMode.ALL):
@@ -373,18 +395,22 @@ cdef class OptimizationGurobi:
     cpdef req_some_nodes(self, traffic_classes=None, node_mode=NodeConsumeMode.ALL):
         """
         Require at least one node to be enabled for each path
+        
         :param traffic_classes: traffic classes for which to enable this constraint. If None, all are used
         :param node_mode: whether to count all nodes as enabled (:py:attr:NodeConsumeMode.ALL) or only middleboxes
             (:py:attr:`~sol.const.NodeConsumeMode.MBOXES`)
+        
         """
         return self._req_some(BinType.BIN_NODE, node_mode, traffic_classes)
 
     cpdef req_some_links(self, traffic_classes=None):
         """
         Require at least one link to be enabled for each path
+        
         :param traffic_classes: traffic classes for which to enable this constraint. If None, all are used
         :param node_mode: whether to count all nodes as enabled (:py:attr:NodeConsumeMode.ALL) or only middleboxes
             (:py:attr:`~sol.const.NodeConsumeMode.MBOXES`)
+        
         """
         return self._req_some(BinType.BIN_EDGE, traffic_classes)
 
@@ -401,7 +427,7 @@ cdef class OptimizationGurobi:
         cdef Path path
         cdef int epoch
         for tc in traffic_classes:
-            for pi, path in enumerate(self._all_pptc[tc]):
+            for pi, path in enumerate(self._all_pptc.tcs()):
                 for epoch in range(self.num_epochs):
                     # x_* <= b_*
                     self.opt.addConstr(self._xps[tc.ID, pi, epoch] <= self._bps[tc.ID, pi])
@@ -424,20 +450,27 @@ cdef class OptimizationGurobi:
             self.opt.addConstr(quicksum(self._bps[tc, :]) == 1)
         self.opt.update()
 
-    cpdef enforce_symmetric_paths(self, pptc):
-        # TODO: Implement enforce_symmetric_paths
-        raise NotImplemented
-
     cpdef flow_affinity(self, tc_pairs):
-        for c1, c2 in tc_pairs:
-            mboxes = set()
-            for p in self._all_pptc.paths(c1):
-                mboxes.update(p.mboxes())
-            for p in self._all_pptc.paths(c2):
-                mboxes.update(p.mboxes())
-            for mbox in mboxes:
-                print
+        """ 
+        Ensure that the traffic for each pair of traffic classes in tc_pairs
+        is processed at the same middleboxes, to ensure session-level view of the connection
+        
+        :param tc_pairs: list of traffic class pairs
+        """
 
+        for c1, c2 in tc_pairs:
+            m2p1 = defaultdict([])
+            m2p2 = defaultdict([])
+            mboxes = set()
+            for p, i in enumerate(self._all_pptc.paths(c1)):
+                for m in p.mboxes():
+                    m2p1[m].append(i)
+            for p, i in enumerate(self._all_pptc.paths(c2)):
+                for m in p.mboxes():
+                    m2p2[m].append(i)
+            for mbox in m2p1:
+                for e in self.num_epochs:
+                    self.opt.addConstr(quicksum(self._xps[c1.ID, m2p1[m], e]) == quicksum(self._xps[c2.ID, m2p2[m], e]))
 
     cpdef cap_num_paths(self, int max_paths, PPTC pptc=PPTC()):
         """
@@ -473,23 +506,43 @@ cdef class OptimizationGurobi:
         if varname is None:
             varname = Objective.MIN_LATENCY.name
         if tcs is None:
-            tcs = self._all_pptc.tcs()
+            tcs = list(self._all_pptc.tcs())
         if cost_func is None:
             cost_func = len
         cdef int epoch, pi  # epoch, path index
         cdef double norm_factor = 1.0
         if norm:
-            norm_factor = self.topo.diameter() * self.topo.num_nodes() * self.topo.num_nodes()
+            norm_factor = self.topo.diameter() * (self.topo.num_nodes() ** 2)
         per_epoch_obj = zeros(self.num_epochs, dtype=object)
 
         for epoch in range(self.num_epochs):
             per_epoch_obj[epoch] = latency = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
             latency_expr = LinExpr()
             for tc in tcs:
-                for pi, path in enumerate(self._all_pptc[tc]):
-                    latency_expr.addTerms(cost_func(path), self._xps[tc.ID, pi, epoch])
+                for pi, path in enumerate(self._all_pptc.paths(tc)):
+                    latency_expr.addTerms(cost_func(path)/norm_factor, self._xps[tc.ID, pi, epoch])
             # Since the global direction is maximize, and latency is minimize, we gotta do '1-' trick
-            self.opt.addConstr(latency == 1 - (latency_expr / norm_factor))
+            self.opt.addConstr(latency <= 1 - latency_expr)
+        self.opt.update()
+        return per_epoch_obj
+
+    cpdef min_enabled_nodes(self, cost_func=None, varname=None):
+        if varname is None:
+            varname = Objective.MIN_ENABLED_NODES.name
+        if cost_func is None:
+            cost_func = _one_func
+        cdef float total = 0
+        cdef ndarray coeffs
+        cdef int n = 0
+        # if not norm:
+        #     warnigns.warn(ERR_NO_NORM)
+        #     total = 1
+        # else:
+        coeffs = array([cost_func(n) for n in range(self._bns.size)])
+        total = sum(coeffs)
+        for epoch in range(self.num_epochs):
+            per_epoch_obj[epoch] = num_nodes = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
+            self.opt.addConstr(num_nodes == 1-quicksum(self._bns * coeffs))
         self.opt.update()
         return per_epoch_obj
 
@@ -513,7 +566,8 @@ cdef class OptimizationGurobi:
         self.opt.addConstr(expr <= bound)
         self.opt.update()
 
-    cdef _min_load(self, unicode resource, tcs, varname):
+    @profile
+    def _min_load(self, unicode resource, tcs, varname):
         """
         Minimize load imposed by given traffic classes on a given resource
 
@@ -523,11 +577,17 @@ cdef class OptimizationGurobi:
         :param varname: name of the varible. If none, one will be generated
         :return:
         """
+        logger.debug('Minimizing load for %s' % resource)
         cdef int e, i
         cdef unicode per_epoch_name
+        cdef int tcid, pathid
+        cdef TrafficClass tc
+
         # sanity check traffic classes
         if tcs is None:
-            tcs = self._all_pptc.tcs()
+            tcs = list(self._all_pptc.tcs())
+        else:
+            tcs = list(tcs)
         # deal with variable names and create variables for each epoch
         if varname is None:
             varname = u'{}_{}'.format(MIN_LOAD_PREFIX, resource)
@@ -536,28 +596,33 @@ cdef class OptimizationGurobi:
         for e in range(self.num_epochs):
             per_epoch_name = u'{}_{}'.format(varname, e)
             per_epoch_objs[e] = self.opt.addVar(lb=0, ub=1, name=per_epoch_name)
-        self.opt.update() # update model
+        self.opt.update()  # update model
 
-        cdef int tcid, pathid
-        # get ids (i.e., indices of traffic classes)
-        cdef ndarray tc_inds = array([tc.ID for tc in tcs])
+        # cdef ndarray[uint8_t, ndim=1] tcind
+        cdef ndarray tcind = array([tc.ID for tc in tcs], dtype=int)
         # Proceed to compute the load
         for e in range(self.num_epochs):
-            # Reshape so it's not a 2-d array
-            vars = self._xps[tc_inds, :, e].reshape(-1)
             for node_or_link in self._load_dict[resource]:
                 # Skip non-existent resource-node combos
                 if not isinstance(self._load_dict[resource][node_or_link], ndarray):
                     continue
-                # get the coefficients
-                coeffs = self._load_dict[resource][node_or_link][tc_inds, :, e].reshape(-1)
-                expr = quicksum(coeffs*vars)
-                self.opt.addConstr(per_epoch_objs[e] <= 1 - expr,
-                                   name='ml_{}_{}'.format(str(node_or_link), e))
-
+                expr = LinExpr()
+                coeffs = self._load_dict[resource][node_or_link][tcind, :, e]
+                ind = coeffs.nonzero()
+                expr.addTerms(coeffs[ind].reshape(-1), self._xps[tcind, :, e][ind].reshape(-1))
+                # for tc in tcs:
+                #     vars = self._xps[tc.ID, :, e]
+                #     # ind = _is_var(vars).astype(bool, copy=False)
+                #     # get the coefficients
+                #     coeffs = self._load_dict[resource][node_or_link][tc.ID, :, e]
+                #     ind = coeffs > 0
+                #     expr.addTerms(coeffs[ind], vars[ind])
+                expr.addTerms(1, per_epoch_objs[e])
+                self.opt.addConstr(expr, GRB.LESS_EQUAL, 1,
+                                   # name='ml_{}_{}'.format(str(node_or_link), e)
+                                   )
         self.opt.update()
         return per_epoch_objs
-
 
     cpdef min_node_load(self, unicode resource, tcs=None, varname=None):
         """
@@ -592,15 +657,16 @@ cdef class OptimizationGurobi:
         # Deal with None values
         varname = Objective.MAX_FLOW.name if varname is None else varname
         if not tcs:
-            tcs = self._all_pptc.tcs()
+            tcs = list(self._all_pptc.tcs())
         # generate a variable for each epoch
         per_epoch_objs = zeros(self.num_epochs, dtype=object)
         for e in range(self.num_epochs):
             per_epoch_objs[e] = obje = self.opt.addVar(lb=0, ub=1, name='{}_{}'.format(varname, e))
             # simply sum all allocations, normalize by the number of traffic classes, and that
             # is our objective
-            # use quicksum, gurobi says it's faster
-            self.opt.addConstr(obje == quicksum([self._als[tc.ID, e] for tc in tcs]) / len(tcs))
+            expr = LinExpr(full(len(tcs), 1.0/len(tcs), dtype=float), self._als[[tc.ID for tc in tcs], e])
+            self.opt.addConstr(expr, GRB.GREATER_EQUAL, obje)
+            # self.opt.addConstr(obje == quicksum([self._als[tc.ID, e] for tc in tcs]) / len(tcs))
         self.opt.update()
         return per_epoch_objs
 
@@ -613,6 +679,8 @@ cdef class OptimizationGurobi:
         :param weight_arr: the weights array. Only applicable if the fairness_mode is "weighted"
         :return: a single gurobi variable containing the composed objectives
         """
+        cdef int i
+        cdef float s
         epoch_obj = self.opt.addVar(name='{}_{}'.format(THE_OBJECTIVE, epoch))
         if fairness_mode == Fairness.WEIGHTED:
             self.opt.addConstr(epoch_obj == LinExpr(weight_arr, obj))
@@ -626,31 +694,33 @@ cdef class OptimizationGurobi:
             # y is the log value of x array
             y = log(x)
             # compute slopes between points
-            slope = [(log(j)-log(i))/(j-i) for i,j in zip(x,x[1:])]
+            slope = [(log(j) - log(i)) / (j - i) for i, j in zip(x, x[1:])]
             # and the y-intercepts so we can construct a line
-            yint = [y[i]-slope[i]*x[i] for i in range(len(x)-1)]
+            yint = [y[i] - slope[i] * x[i] for i in range(len(x) - 1)]
             # apply the log approximation to each objective variable individually:
             o_approx_all = []
             for o in obj:
                 # Set the lower bound of o to not be 0. Because log(0) makes no sense
-                o.lb = EPSILON
+                # o.lb = EPSILON
                 o_approx = self.opt.addVar(name='{}_{}'.format(o.VarName, 'approx'))
                 # For all pieces of the linear apporoximation
-                for a, b in zip(yint, slope):
-                    self.opt.addConstr(o_approx == a + b*o)
+                for i in range(len(x)-1):
+                    s = (y[i+1] - y[i])/(x[i+1]-x[i])
+                    self.opt.addConstr(o_approx <= y[i]+ o*s - s*x[i])
+                # for a, b in zip(yint, slope):
+                #     self.opt.addConstr(o_approx <= a + b * o)
                 o_approx_all.append(o_approx)
-            self.opt.addConstr(epoch_obj == quicksum(o_approx_all))
+            self.opt.addConstr(epoch_obj <= quicksum(o_approx_all))
         else:
             raise InvalidConfigException(ERR_UNKNOWN_MODE % ('fairness', fairness_mode))
         self.opt.update()
         return epoch_obj
 
-
     cpdef compose_objectives(self, ndarray obj_arr, epoch_mode, fairness_mode, weight_arr):
         """
         Compose multiple objectives, across different epochs, into a unified objective function.
 
-        :param obj_arr: a 2-d array of gurobi variables. First dimention should be different objectives (e.g., from
+        :param obj_arr: a 2-d array of gurobi variables. First dimention should be different objectives (i.e., from
             different applications). Second dimension should be objectives for a single app across epochs.
         :param weight_arr: An array containing weights of each objective function (length of this array should match
             the 1st dimension of *obj_arr*
@@ -668,26 +738,21 @@ cdef class OptimizationGurobi:
         # TODO: stack arrays if we only have one dimension
         # if weight_arr.ndim == 1:
 
-        # we've implemented this now
-        # if fairness_mode == ComposeMode.PROPFAIR and epoch_mode == EpochComposition.WORST:
-        #     raise InvalidConfigException("{} and {} cannot be combined".format(fairness_mode, epoch_mode))
         the_obj = self.opt.addVar(obj=1.0, name=THE_OBJECTIVE)
-
-        expr = LinExpr()
         if epoch_mode == EpochComposition.AVG:
+            expr = LinExpr()
             for e in range(self.num_epochs):
                 # Use addTerms, it's faster
-                # expr.addTerms(weight_arr, obj_arr[:, e])
-                expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:,e], fairness_mode, weight_arr))
-            self.opt.addConstr(the_obj == (1.0 / self.num_epochs) * expr)
+                expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:, e], fairness_mode, weight_arr))
+            self.opt.addConstr(the_obj <= expr / self.num_epochs)
         elif epoch_mode == EpochComposition.WORST:
             for e in range(self.num_epochs):
-                # Use addTerms, it's faster
-                # expr.addTerms(weight_arr, obj_arr[:, e])
-                expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:,e], fairness_mode, weight_arr))
+                expr = LinExpr()
+                expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:, e], fairness_mode, weight_arr))
                 self.opt.addConstr(the_obj <= expr)
         else:
-            return ValueError(ERR_UNKNOWN_MODE % (u'epoch composition', epoch_mode))
+            raise ValueError(ERR_UNKNOWN_MODE % (u'epoch composition', epoch_mode))
+        self.opt.update()
         return the_obj
 
     cpdef relax_to_lp(self):
@@ -722,6 +787,7 @@ cdef class OptimizationGurobi:
         ..note::
             Can be a time consuming operation
         """
+        logger.debug("Running Gurobi solver")
         start = time.time()
         self.opt.optimize()
         if self._do_time:
@@ -797,7 +863,7 @@ cdef class OptimizationGurobi:
         if app is None:
             return self.opt.getObjective().getValue()
         else:
-            return min([self.opt.getVarByName('{}_{}'.format(app.name, e)).x for e in range(self.num_epochs)])
+            return [self.opt.getVarByName('{}_{}'.format(app.name, e)).x for e in range(self.num_epochs)]
 
     cpdef is_solved(self):
         """
@@ -837,9 +903,9 @@ cdef class OptimizationGurobi:
                     continue
                 vals = _get_x(self._xps)
                 loads = self._load_dict[resource][node_or_link] * vals
-                d[resource][node_or_link] = loads.sum(axis=(1,2)).max()
+                # print (loads)
+                d[resource][node_or_link] = loads.sum(axis=(1, 2)).max()
         return d
-
 
     cpdef get_enabled_nodes(self):
         """
@@ -859,8 +925,8 @@ cdef class OptimizationGurobi:
         :return:
         """
         result = []
-        for u,v in self.topo.links():
-            var = self.opt.getVarByName(be(u,v))
+        for u, v in self.topo.links():
+            var = self.opt.getVarByName(be(u, v))
             if var is not None and var.x == 1:
                 result.append(n)
         return result
@@ -881,10 +947,11 @@ cdef class OptimizationGurobi:
                 p.set_flow_fraction(self._xps[tc.ID, pi, epoch].x)
         return c
 
-        # TODO: bring back mindiff functionality
-        # TODO: add MIP hints/starts
 
-    cpdef get_chosen_paths(self):
+    # TODO: bring back mindiff functionality
+    # TODO: add MIP hints/starts
+
+    cpdef get_chosen_paths(self, relaxed=False):
         """
         Return the paths that were deemed "enabled" by the optimization
         :rtype: :py:class:`sol.PPTC`
@@ -893,10 +960,19 @@ cdef class OptimizationGurobi:
         cdef TrafficClass tc
         cdef int pid
         for tc in self._all_pptc.tcs():
-            # Get the indices where b_p variable is 0, i.e., the path is unused.
-            ind = [x.x == 0 for x in self._bps[tc.ID, :self._all_pptc.num_paths(tc)]]
+            if relaxed:
+                # Get the indices where x_p variable is 0 for all epochs, i.e., the path is unused across all epochs
+                ind = [all(_get_x(x) == 0) for x in self._xps[tc.ID, :, :]]
+            else:
+                # Get the indices where b_p variable is 0, i.e., the path is unused.
+                ind = [x.x == 0 for x in self._bps[tc.ID, :]]
+            # logger.debug('-------- tc id: %d' % tc.ID)
+            # logger.debug(self._all_pptc.all_paths(tc))
+            # logger.debug(ind)
             # Mask the unused paths in the PPTC
             self._all_pptc.mask(tc, ind)
+            # logger.debug(self._all_pptc.paths(tc))
+        # print(self._xps.shape[1])
         return self._all_pptc
 
     cpdef fix_paths(self, PPTC pptc, fix_zero_paths=False):
@@ -923,7 +999,6 @@ cdef class OptimizationGurobi:
         """
         return self._time
 
-
     def add_single_objective(self, name, *args, **kwargs):
         """
         Add an objective to the optimization
@@ -941,6 +1016,8 @@ cdef class OptimizationGurobi:
             epoch_objs = self.min_latency(*args, **kwargs)
         elif name == Objective.MAX_FLOW:
             epoch_objs = self.max_flow(*args, **kwargs)
+        elif name == Objective.MIN_ENABLED_NODES:
+            epoch_objs = self.min_enabled_nodes(*args, **kwargs)
         else:
             raise InvalidConfigException("Unknown objective %s" % name)
         return epoch_objs
@@ -968,6 +1045,7 @@ cdef class OptimizationGurobi:
                 self.req_some_nodes(*args, **kwargs)
             elif c[0] == Constraint.FIX_PATHS:
                 self.fix_paths(*args, **kwargs)
+            elif c[0] == Constraint.NODE_BUDGET:
+                self.node_budget(*args, **kwargs)
             else:
                 raise InvalidConfigException("Unsupported constraint type %s" % c)
-

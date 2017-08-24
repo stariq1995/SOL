@@ -39,26 +39,27 @@ cdef class OptimizationGurobi:
     cpdef route_all(self, tcs=*)
     cpdef cap_num_paths(self, int max_paths, PPTC pptc=*)
     cpdef enforce_single_path(self, traffic_classes)
-    cpdef enforce_symmetric_paths(self, pptc)
+    cpdef flow_affinity(self, tc_pairs)
 
 
     # resource consumption functions
     # cpdef consume(self, tcs, unicode resource, double cost, node_caps,
     #               link_caps, node_consume_mode=*, res_consume_mode=*)
     cpdef consume(self, tcs, unicode resource, cost_funcs, caps, mode)
-    cpdef cap(self, unicode resource, caps, tcs=*)
+    # cpdef cap(self, unicode resource, caps, path_dep=*, tcs=*)
 
     # Objective computation functions
-    cdef _min_load(self, unicode resource, tcs, varname)
+    # cdef _min_load(self, unicode resource, tcs, varname)
     cpdef min_node_load(self, unicode resource, tcs=*, varname=*)
     cpdef min_link_load(self, unicode resource, tcs=*, varname=*)
     cpdef min_latency(self, tcs=*, bool norm=*, cost_func=*, varname=*)
     cpdef max_flow(self, tcs=*, varname=*)
+    cpdef min_enabled_nodes(self, cost_func=*, varname=*)
     cpdef compose_objectives(self, ndarray obj_arr, epoch_mode, fairness_mode, weight_arr)
     cdef _compose_obj_one_epoch(self, int epoch, ndarray obj, fairness_mode, weight_arr)
     # TODO: find a way to define a custom objective function
 
-   # Node/link toggle functions
+    # Node/link toggle functions
     cdef _req_some(self, req_type, traffic_classes=*, node_mode=*)
     cdef _req_all(self, req_type, traffic_classes=*, node_mode=*)
     cpdef req_all_nodes(self, traffic_classes=*, node_mode=*)
@@ -72,7 +73,7 @@ cdef class OptimizationGurobi:
     cpdef is_solved(self)
     cpdef get_paths(self, int epoch=*)
     cpdef get_solved_objective(self, app=*)
-    cpdef get_chosen_paths(self)
+    cpdef get_chosen_paths(self, relaxed=*)
     cpdef get_var_values(self)
     cpdef get_enabled_nodes(self)
     cpdef get_enabled_links(self)
