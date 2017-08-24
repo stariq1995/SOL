@@ -434,16 +434,15 @@ cdef class PPTC:
             r.add(name, tc, d[tc])
         return r
 
-def path_decoder(o):
+cpdef path_decoder(o):
     """
     Function for decoding paths from a dictionary (e.g., when deserializing from JSON)
     :param o: dictionary
     :return: a :py:class:`~Path` or :py:class:`~PathWithMBox` object
     """
-    try:
-        t = o[u'type']
-    except KeyError:
+    if u'type' not in o:
         raise KeyError("Unable to determine path type. Missing type information")
+    t = o[u'type']
     if t == u'Path':
         return Path.decode(o)
     elif t == u'PathWithMBox':
