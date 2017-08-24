@@ -79,6 +79,7 @@ class NetworkCaps(object):
         return "NetworkCaps: {}".format(self._caps)
 
 
+
 class NetworkConfig(object):
     """
     Represents the network configuration to be used when constructing the optimization.
@@ -90,9 +91,9 @@ class NetworkConfig(object):
         backwards compatibility.
     """
 
-    def __init__(self, networkcaps=None, compose_mode=Fairness.WEIGHTED):
+    def __init__(self, networkcaps=None):
         self.networkcaps = networkcaps
-        self.compose_mode = compose_mode
+        # self.compose_mode = compose_mode
 
     def get_caps(self):
         """
