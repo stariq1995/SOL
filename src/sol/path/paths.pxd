@@ -1,4 +1,5 @@
 # coding=utf-8
+
 cimport numpy
 import numpy
 from cpython cimport bool
