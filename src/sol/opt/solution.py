@@ -17,6 +17,7 @@ class Solution(object):
         self.objectives = {app.name: opt.get_solved_objective(app) for app in apps}
         self.objectives[ALLAPPS] = opt.get_solved_objective()
         self.paths = opt.get_paths()
+        # print(self.paths)
         self.binvars = {
             'nodes': opt.get_enabled_nodes(),
             'links': opt.get_enabled_links(),
