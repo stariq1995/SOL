@@ -43,13 +43,11 @@ cdef class OptimizationGurobi:
 
 
     # resource consumption functions
-    # cpdef consume(self, tcs, unicode resource, double cost, node_caps,
-    #               link_caps, node_consume_mode=*, res_consume_mode=*)
     cpdef consume(self, tcs, unicode resource, cost_funcs, caps, mode)
-    # cpdef cap(self, unicode resource, caps, path_dep=*, tcs=*)
+    cpdef cap(self, unicode resource, caps, path_dep=*, tcs=*)
 
     # Objective computation functions
-    # cdef _min_load(self, unicode resource, tcs, varname)
+    cdef _min_load(self, unicode resource, tcs, varname)
     cpdef min_node_load(self, unicode resource, tcs=*, varname=*)
     cpdef min_link_load(self, unicode resource, tcs=*, varname=*)
     cpdef min_latency(self, tcs=*, bool norm=*, cost_func=*, varname=*)

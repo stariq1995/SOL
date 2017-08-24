@@ -263,8 +263,8 @@ cdef class OptimizationGurobi:
                             self._load_dict[resource][link][tc.ID, pi, :] += vals / capacities[link]
 
 
-    @profile
-    def cap(self, unicode resource, caps, path_dep=False, tcs=None):
+    # @profile
+    cpdef cap(self, unicode resource, caps, path_dep=False, tcs=None):
         """ Cap the usage of a given resource with a given value. 
 
         :param resource: the name of resource to cap
@@ -566,8 +566,8 @@ cdef class OptimizationGurobi:
         self.opt.addConstr(expr <= bound)
         self.opt.update()
 
-    @profile
-    def _min_load(self, unicode resource, tcs, varname):
+    # @profile
+    cpdef _min_load(self, unicode resource, tcs, varname):
         """
         Minimize load imposed by given traffic classes on a given resource
 
