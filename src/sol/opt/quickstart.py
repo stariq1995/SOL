@@ -1,16 +1,15 @@
 # coding=utf-8
 from numpy import array
-
+from .gurobiwrapper import OptimizationGurobi
+from sol.utils.const import NODES, LINKS, EpochComposition, ERR_UNKNOWN_MODE, Fairness
 from sol.utils.exceptions import InvalidConfigException
 from sol.utils.logger import logger
-from sol.utils.const import NODES, LINKS, EpochComposition, ERR_UNKNOWN_MODE, Fairness
 
 __all__ = ['from_app']
 
-from .app cimport App
-from gurobiwrapper cimport OptimizationGurobi
 
-cpdef from_app(Topology topo, App app, network_config):
+
+def from_app(topo, app, network_config):
     """
     Create an optimization from a single application.
 
