@@ -92,7 +92,7 @@ cdef class OptimizationGurobi:
         # Store total number of epochs
         self.num_epochs = ma.compressed(next(all_pptc.tcs()).volFlows).size
         # Maximum number of paths for a single traffic class (to calculate the number of x_* variables)
-        self._max_paths = all_pptc.max_paths()
+        self._max_paths = all_pptc.max_paths(all=False)
         # The array that hold all of the x_* variables
         self._xps = zeros(shape=(all_pptc.num_tcs(), self._max_paths, self.num_epochs),
                           dtype=object)

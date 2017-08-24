@@ -48,7 +48,7 @@ cdef class PPTC:
     cpdef update(self, PPTC other, deep=*)
     cpdef copy(self, deep= *)
     cpdef TrafficClass tc_byid(self, int tcid)
-    cpdef int max_paths(self)
+    cpdef int max_paths(self, all=*)
     cpdef int num_tcs(self)
     cpdef int total_paths(self)
     cpdef int num_paths(self, TrafficClass tc, all=*)

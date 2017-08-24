@@ -349,12 +349,12 @@ cdef class PPTC:
         else:
             return self._data[tc].count()
 
-    cpdef int max_paths(self):
+    cpdef int max_paths(self, all=False):
         """
         Maximum number of paths in a traffic class
         :return:
         """
-        return max([self.num_paths(tc, all=True) for tc in self.tcs()])
+        return max([self.num_paths(tc, all=all) for tc in self.tcs()])
 
     cpdef int total_paths(self):
         """Total number of paths in all traffic classes"""
