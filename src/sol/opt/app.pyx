@@ -3,7 +3,6 @@ import uuid
 import networkx
 import numpy as np
 import six
-
 from sol.path.paths cimport PPTC
 
 from sol.utils.const import LINKS, ERR_UNKNOWN_MODE
@@ -68,7 +67,7 @@ cdef class App:
         :return: total application volume
         :rtype: float
         """
-        return np.sum([np.sum(tc.volume()) for tc in self.pptc])
+        return np.sum([np.sum(tc.volume()) for tc in self.pptc.tcs()])
 
     # def objstr(self):
     #     """
