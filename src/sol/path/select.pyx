@@ -3,23 +3,24 @@
 """
 Module that implements different path selection (a.k.a pruning) strategies
 """
+import functools
 import random
 import time
 from collections import defaultdict
-from itertools import combinations, cycle
+from itertools import combinations, cycle, chain
 
 from cpython cimport bool
 from numpy cimport ndarray
 from numpy import arange, power, inf, mean, ones, bitwise_xor, \
-    array, argsort, ma
+    array, argsort, ma, concatenate
 from numpy.random import choice
 from six import iterkeys, iteritems
+from sklearn.cluster import KMeans, AgglomerativeClustering
 from sol.opt.composer cimport compose_apps
-from sol.path.paths cimport PPTC
 from sol.path.paths import PathWithMbox, Path
+from sol.path.paths cimport Path, PPTC, PathWithMbox
 from sol.topology.topologynx cimport Topology
 from sol.topology.traffic cimport TrafficClass
-from sol.utils.ph import noop
 
 from sol.utils.const import *
 from sol.utils.exceptions import SOLException
@@ -65,9 +66,9 @@ cpdef k_shortest_paths(PPTC pptc, int num_paths, bool ret_mask=False):
     """
 
     masks = {}
-    for tc in pptc:
-        # Get lengths of all paths, even the masked ones (thus the second .data access)
-        lens = array([len(x) for x in pptc._data[tc].data])
+    for tc in pptc.tcs():
+        # Get lengths of all paths, even the masked ones
+        lens = array([len(x) for x in pptc.all_paths(tc)])
         # Sort lengths and only return indices
         ind = argsort(lens)
         # Create an array mask, with everything masked
@@ -80,8 +81,58 @@ cpdef k_shortest_paths(PPTC pptc, int num_paths, bool ret_mask=False):
     if ret_mask:
         return masks
 
+cdef _sort_by_func(arr, func=len):
+    assert arr.ndim == 1
+    vals = array(func(x) for x in array)
+    return argsort(vals)
 
-# TODO: find a way to select paths that preserves flow affinity (for mboxes)
+
+def cluster_apps(apps, num_clusters, method):
+    """
+    Cluster traffic classes based on their volumes
+
+    :param apps: list of applications whose traffic classes we need to cluster
+    :param num_clusters: number of resulting clusters.
+    :param method: method by which clustering is done. Currently supported are 'kmeans' and 'agg'
+    :return:
+    """
+    all_pptc = PPTC()
+    for app in apps:
+        all_pptc.update(app.pptc)
+    cluster_tcs(list(all_pptc.tcs()), num_clusters, method)
+
+
+def cluster_tcs(tcs, num_clusters, method):
+    """
+    Cluster traffic classes based on their volumes
+
+    :param tcs: list of all traffic classes. Number of epochs must match
+    :param num_clusters: number of resulting clusters.
+    :param method: method by which clustering is done. Currently supported are 'kmeans' and 'agg'
+    :return:
+    """
+    logger.info('Clustering traffic classes')
+    volumes = array([tc.volFlows for tc in tcs])
+    if method == 'kmeans':
+        km = KMeans(n_clusters=num_clusters)
+        km.fit(volumes.T)
+        centers = km.cluster_centers_.T
+        logger.debug('Cluster centers shape: (%d, %d)', centers.shape[0], centers.shape[1])
+        for i, tc in enumerate(tcs):
+            tc.volFlows = ma.array(centers[i])
+    elif method == 'agg':
+        raise NotImplemented()
+        ag = AgglomerativeClustering(n_clusters=num_clusters)
+        ag.fit(volumes.T)
+        averaged = []
+        for bucket in range(num_clusters):
+            av = concatenate([volumes.T[ag.labels_ == bucket,:]], axis=0).mean(axis=0, keepdims=True)
+            averaged.append(av)
+        avm = concatenate(averaged, axis=0)
+    else:
+        raise ValueError('Unsupported clustering method %s' % method)
+
+
 
 cpdef select_ilp(apps, Topology topo, network_config, int num_paths, debug=False,
                  fairness=Fairness.WEIGHTED, epoch_mode=EpochComposition.WORST):
@@ -113,6 +164,7 @@ cpdef select_ilp(apps, Topology topo, network_config, int num_paths, debug=False
     opt.cap_num_paths((topo.num_nodes() - 1) ** 2 * num_paths)
     logger.info('Solving ILP selection problem')
     opt.solve()
+    all_time = opt.get_time() - start_time
     if debug:
         opt.write('debug/select_ilp_{}'.format(topo.name))
     if not opt.is_solved():
@@ -122,19 +174,8 @@ cpdef select_ilp(apps, Topology topo, network_config, int num_paths, debug=False
         opt.write_solution('debug/select_ilp_solution_{}'.format(topo.name))
     # get the paths chosen by the optimization
     # This will mask paths according to selection automatically:
-    opt.get_chosen_paths()
-
-
-def _path_score(path):
-    pass
-
-def select_greedy(pptc, topo, resource_order, resource_weights=None):
-
-    pass
-
-
-def greedy_search(ndarray paths, topo, resource_order, resource_weights=None):
-    pass
+    # opt.get_chosen_paths()
+    return opt, opt.get_chosen_paths(), all_time, opt.get_time()
 
 
 class PathTree(object):
@@ -165,7 +206,7 @@ class PathTree(object):
             raise TypeError('Unknown path type submitted for indexing')
         self.bucket_iter = cycle(iterkeys(self.buckets))
 
-    def next(self):
+    def __next__(self):
         """
         Return the next path index.
         :return:
@@ -204,7 +245,8 @@ class ReplaceMode(IntEnum):
     # edge_disjoint = 2
     random = 3
     pathtree = 4
-    greedy = 5
+    # greedy = 5
+    pathscore = 6
 
 cdef _expel(tcid, existing_mask, xps, mode=ExpelMode.no_flow):
     """
@@ -263,6 +305,16 @@ cdef bool _in(ndarray mask, explored):
         if (bitwise_xor(mask, x) == 0).all():
             return True
     return False
+
+cdef double _path_score(Path path, Topology topo, resource_weights):
+    radd = defaultdict([])
+    for nl in chain(path.nodes(), path.links()):
+        res = topo.get_resources(nl)
+        for r in res:
+            radd[r].append(res[r])
+    radd['len'].append(len(path))
+    return sum(resource_weights[r] * min(radd[r]) for r in radd)
+
 
 cdef _replace(explored, mask, num_paths,
               mode=ReplaceMode.next_sorted, tree=None):
@@ -329,25 +381,20 @@ cdef _replace(explored, mask, num_paths,
             comb = list(comb)
             mask[comb] = 0
             num_tries += 1
-            # if num_tries >= max_tries:
-            #     logger.error('Pathtree method could not find new combo after %d tries' % max_tries)
-    # elif mode == ReplaceMode.edge_disjoint:
-    #     raise NotImplementedError("")
     else:
         raise ValueError('Unsupported annealing replace mode: %s' % mode)
 
 cdef _get_mboxes(x):
     return x.mboxes()
 
-
-# cdef _compute_temp_schedule(int max_iter, )
-
 cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_iter=20,
-                double tstart=.72, double c=.88, logdb=None,
+                double tstart=.72, double c=.88,
                 fairness=Fairness.WEIGHTED,
                 epoch_mode=EpochComposition.WORST,
                 expel_mode=ExpelMode.no_flow,
                 replace_mode=ReplaceMode.next_sorted,
+                resource_weights=None,
+                cb=None,
                 select_config=None, debug=False):
     """
     Select optimal paths using the simulated annealing search algorithm
@@ -366,25 +413,11 @@ cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_it
     explored = {}  # all explored combos per traffic class
     bestopt = None  # best available optimization
     opt = None  # current optimization
-    bestpaths = {tc: None for tc in all_pptc.tcs()}  # indices of best paths
+    bestpaths = {tc: None for tc in all_pptc.tcs()}  # indices of best paths, initialized to empty
     cdef unsigned int accepted = 1  # whether the new state was accepted or not
-    cdef int k = 0
+    cdef int k = 0 # iteration number
 
-    # Log our progress, for eval/debug purposes
-    db = None
-    config_id = None
-    if logdb is not None:
-        import pymongo
-        client = pymongo.MongoClient(logdb.host, logdb.port)
-        cl = client['solier']
-        db = cl['annealing']
-        # solutions = cl['solutions']
-        select_configs = cl['select_configs']
-        config_id = select_configs.find_one(select_config)['_id']
-        # Cleanup old state
-        db.delete_many({'config_id': config_id})
-        # solutions.delete_many({'config_id': config_id})
-
+    # Helper vars to measure time elapsed
     cdef double start_time = time.time()
     cdef double opt_time = 0
 
@@ -393,11 +426,17 @@ cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_it
     for tc in initial_masks:
         explored[tc] = [initial_masks[tc]]
 
+    # TODO: build resource scores for different paths
+
+
     # build the pathtrees for each traffic class
     pathtrees = {}
     if replace_mode == ReplaceMode.pathtree:
         for tc in all_pptc.tcs():
             pathtrees[tc] = PathTree(all_pptc.all_paths(tc))
+    elif replace_mode == ReplaceMode.pathscore:
+        for tc in all_pptc.tcs():
+            _sort_by_func(all_pptc[tc], functools.partial(_path_score, topo=topo, resource_weights=resource_weights))
     else:
         for tc in all_pptc.tcs():
             pathtrees[tc] = None
@@ -410,12 +449,9 @@ cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_it
     if debug:
         opt.write('debug/annealing_{}_{}'.format(topo.name, k))
 
+    logger.debug('Shortest paths produced a solution: {}'.format(opt.is_solved()))
+
     # We need to find at least one acceptable state
-    try:
-        from progressbar import ProgressBar, UnknownLength
-        bar = ProgressBar(max_value=UnknownLength)
-    except ImportError:
-        bar = None
     while not opt.is_solved() and k <= max_iter:
         # resample paths:
         for tc in all_pptc.tcs():
@@ -428,8 +464,6 @@ cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_it
         opt.solve()
         opt_time += opt.get_time()
         k += 1
-        if bar is not None:
-            bar.update(k)
     if k > max_iter:
         raise SOLException("Could not solve the base simulated annealing problem after %d iterations" % max_iter)
 
@@ -438,30 +472,9 @@ cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_it
     for tc in all_pptc.tcs():
         bestpaths[tc] = explored[tc][-1]
 
-    # Log our initial state
-    if db is not None:
-        val = dict(obj=_obj_state(opt), solvetime=opt.get_time(), time=time.time() - start_time,
-                   temperature=t, accepted=accepted, iteration=0, config_id=config_id)
-        db.insert(val)
-        # solution = opt.get_solution()
-        # solution.update(config_id=config_id, iteration=0)
-        # solutions.insert(solution)
-
-        # db.upsert(dict(topology=topo.name, num_paths=num_paths,
-        #                iteration=0, fairness=mode, appcombo=appnames,
-        #                obj=_obj_state(opt), time=time.time() - start_time,
-        #                maxiter=max_iter, temperature=t, accepted=accepted,
-        #                prob=1, expel_mode=expel_mode, replace_mode=replace_mode),
-        #           ['topology', 'num_paths', 'iteration', 'fairness', 'appcombo',
-        #            'maxiter', 'expel_mode', 'replace_mode'])
-
     logger.info('Starting SA simulation')
-    try:
-        from progressbar import ProgressBar
-        bar = ProgressBar()
-    except ImportError:
-        bar = noop
-    for k in bar(arange(1, max_iter)):
+
+    for k in arange(1, max_iter):
         # Lower the temperature
         t = tstart * power(c, k)
 
@@ -488,10 +501,10 @@ cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_it
 
         if not opt.is_solved():
             logger.debug('No solution k=%d' % k)
-            if db is not None:
-                db.insert_one(dict(solvetime=opt.get_time(), time=time.time() - start_time,
-                                   temperature=t, accepted=0, iteration=k, config_id=config_id))
-            continue
+            # if db is not None:
+            #     db.insert_one(dict(solvetime=opt.get_time(), time=time.time() - start_time,
+            #                        temperature=t, accepted=0, iteration=k, config_id=config_id))
+            # continue
 
         prob = _saprob(_obj_state(bestopt), _obj_state(opt), t)
         if random.random() <= prob:
@@ -502,12 +515,45 @@ cpdef select_sa(apps, Topology topo, network_config, int num_paths=5, int max_it
         else:
             accepted = 0
 
-        if db is not None:
-            val = dict(obj=_obj_state(opt), solvetime=opt.get_time(), time=time.time() - start_time,
-                       temperature=t, accepted=accepted, iteration=k, config_id=config_id)
-            db.insert(val)
+        # if db is not None:
+        #     val = dict(obj=_obj_state(opt), solvetime=opt.get_time(), time=time.time() - start_time,
+        #                temperature=t, accepted=accepted, iteration=k, config_id=config_id)
+        #     db.insert(val)
 
     for tc in all_pptc:
         all_pptc.mask(tc, bestpaths[tc])
 
-    return bestopt, time.time() - start_time, opt_time
+    return bestopt, all_pptc, time.time() - start_time, opt_time
+
+
+cpdef select_iterative(apps, topo, network_config, max_iter, epsilon, fairness, epoch_mode, debug=False):
+    logger.debug('Selecting paths using iterative method')
+    start_time = time.time()
+    all_pptc = PPTC.merge([a.pptc for a in apps])
+    cdef int i = 0
+    cdef float diff = 1 << 10;
+    old_val = 0
+    k = 5
+    all_time = 0
+    opt_time = 0
+    while i < max_iter and diff > epsilon:
+        logger.debug('Selection iteration %d, num_paths=%d, diff=%f' % (i, k, diff))
+        k_shortest_paths(all_pptc, k)
+        opt = compose_apps(apps, topo, network_config, fairness=fairness, epoch_mode=epoch_mode)
+        if debug:
+            opt.write('debug/select_iterative_{}'.format(i))
+        opt.solve()
+        if opt.is_solved():
+            obj = opt.get_solved_objective()
+            diff = obj - old_val
+            old_val = obj
+            opt_time += opt.get_time()
+            if debug:
+                opt.write_solution('debug/select_iterative_{}'.format(i))
+        k *= 2
+        i += 1
+    all_time = time.time() - start_time
+    if not opt.is_solved():
+        raise SOLException('No solution exists')
+    return opt, opt.get_chosen_paths(relaxed=True), all_time, opt_time
+
