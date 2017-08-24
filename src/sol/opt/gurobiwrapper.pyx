@@ -567,7 +567,7 @@ cdef class OptimizationGurobi:
         self.opt.update()
 
     # @profile
-    cpdef _min_load(self, unicode resource, tcs, varname):
+    cdef _min_load(self, unicode resource, tcs, varname):
         """
         Minimize load imposed by given traffic classes on a given resource
 
