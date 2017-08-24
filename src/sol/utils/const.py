@@ -13,6 +13,7 @@ class Objective(Enum):
     MIN_NODE_LOAD = u'minnodeload'
     MIN_LATENCY = u'minlatency'
     MAX_FLOW = u'max_flow'
+    MIN_ENABLED_NODES = u'min_enabled_nodes'
 
 
 # Some useful objective constant
@@ -33,6 +34,7 @@ class Constraint(Enum):
     CAP_NODES = u'cap_nodes'
     FIX_PATHS = u'fix_path'
     MINDIFF = u'mindiff'
+    NODE_BUDGET = u'node_budget'
 
 
 
@@ -94,6 +96,8 @@ VALIDSTR = u'valid'
 # DEFAULT_OPTIMIZER = GUROBI
 NODES = 'nodes'
 LINKS = 'links'
+PATHS = 'paths'
+MBOXES = 'mboxes'
 
 SELECT_RANDOM = u'random'
 SELECT_SHORTEST = u'shortest'
@@ -136,5 +140,7 @@ ERR_UNKNOWN_MODE = u'Uknown %s mode: %s'
 ERR_UNKNOWN_TYPE = u'Uknonw %s type: %s'
 ERR_ODD_ARITY = u'-arity of a FatTree topology must be even'
 ERR_OP_NOT_SUPP = u'Operation not supported'
+ERR_NO_NORM = "Not normalizing objective functions can produce invalid results, "\
+              "especially when composing applications"
 # WARN_NO_PATH_ID = u'No ID given to Path constructor, ' \
 #                   u'generating a random path ID'
