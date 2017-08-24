@@ -39,4 +39,4 @@ cpdef waypoint_mbox_predicate(path, Topology topology, order):
     """
     return any([s == order
                 for s in itertools.product(*[topology.get_service_types(node)
-                                             for node in path.useMBoxes])])
+                                             for node in path.mboxes()])])
