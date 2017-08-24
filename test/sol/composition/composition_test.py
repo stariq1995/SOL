@@ -4,6 +4,9 @@ from __future__ import print_function
 import itertools
 import pytest
 import tmgen
+from hypothesis import given
+from hypothesis import strategies as st
+from numpy import linspace
 
 from sol import AppBuilder
 from sol import NetworkCaps
@@ -21,16 +24,16 @@ from sol.utils.const import BANDWIDTH, Objective, Constraint, Fairness, EpochCom
 EPSILON = 1e-5
 
 
-@pytest.fixture(params=[3, 4, 5], scope='module')
+@pytest.fixture(params=[3, 4, 5])
 def topo(request):
-    n = 5
-    t = complete_topology(request.param)
+    n = request.param
+    t = complete_topology(n)
     for l in t.links():
         t.set_resource(l, BANDWIDTH, n * (n - 1))
     return t
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def pptc(topo):
     # generate a dummy TM and traffic classes
     tm = tmgen.exact_tm(topo.num_nodes(), 1)
@@ -40,7 +43,7 @@ def pptc(topo):
     return res
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def netconf(topo):
     caps = NetworkCaps(topo)
     caps.add_cap(BANDWIDTH, cap=1)
@@ -48,6 +51,7 @@ def netconf(topo):
 
 
 @pytest.mark.parametrize("fairness,epochmode", itertools.product(list(Fairness), list(EpochComposition)))
+# @pytest.mark.parametrize("fairness,epochmode", itertools.product([Fairness.WEIGHTED], list(EpochComposition)))
 def test_compose_latency_maxflow(topo, pptc, netconf, fairness, epochmode):
     """
     Test the composition of a maxflow and minlatency app on a complete topology
@@ -62,7 +66,7 @@ def test_compose_latency_maxflow(topo, pptc, netconf, fairness, epochmode):
 
     latency_app = AppBuilder().name('minlatency') \
         .pptc(pptc) \
-        .add_constr(Constraint.ROUTE_ALL)\
+        .add_constr(Constraint.ROUTE_ALL) \
         .objective(Objective.MIN_LATENCY) \
         .add_resource(BANDWIDTH, cost_func, 'links') \
         .build()
@@ -70,14 +74,14 @@ def test_compose_latency_maxflow(topo, pptc, netconf, fairness, epochmode):
     opt = compose_apps([mf_app, latency_app], topo, netconf, fairness=fairness,
                        epoch_mode=epochmode)
     opt.solve()
-    opt.write('debug')
+    if fairness == Fairness.PROPFAIR:
+        opt.write('debug')
     assert opt.is_solved()
-    opt.write_solution('debug')
 
     # max flow objective
-    mfo = opt.get_solved_objective(mf_app)
+    mfo = opt.get_solved_objective(mf_app)[0]
     # latency objective, 1- because max/min flip
-    lato = 1 - opt.get_solved_objective(latency_app)
+    lato = 1 - opt.get_solved_objective(latency_app)[0]
     assert mfo == 1 or abs(mfo - 1) < EPSILON
     # We should be able to get all traffic routed on shortest paths
     # Which means the latency should be
@@ -86,10 +90,10 @@ def test_compose_latency_maxflow(topo, pptc, netconf, fairness, epochmode):
     assert lato == expected or abs(lato - expected) < EPSILON
 
 
-@pytest.mark.skip()
-@pytest.mark.parametrize("fairness", [Fairness.WEIGHTED, Fairness.MAXMIN, Fairness.PROPFAIR])
-def test_compose_te_latency(topo, pptc, netconf, fairness):
-    cost_func = CostFuncFactory.from_number(.5)
+@pytest.mark.parametrize("fairness,epochmode,cost", itertools.product([Fairness.WEIGHTED], list(EpochComposition),
+                                                                      linspace(.01, 1, 5)))
+def test_compose_te_latency(topo, pptc, netconf, fairness, epochmode, cost):
+    cost_func = CostFuncFactory.from_number(cost)
     te_app = AppBuilder().name('te') \
         .pptc(pptc) \
         .add_constr(Constraint.ROUTE_ALL) \
@@ -103,15 +107,21 @@ def test_compose_te_latency(topo, pptc, netconf, fairness):
         .add_resource(BANDWIDTH, cost_func, 'links') \
         .build()
 
-    opt = compose_apps([te_app, latency_app], topo, netconf, fairness=fairness)
+    opt = compose_apps([te_app, latency_app], topo, netconf, fairness=fairness,
+                       epoch_mode=epochmode)
     opt.solve()
     assert opt.is_solved()
+    # opt.write_solution('debug_te_lat')
+
+    # compute expected values
+    n = topo.num_nodes()
+    cap = n * (n-1)
 
     # te objective
-    teo = opt.get_solved_objective(te_app)
-    assert teo == .5 or abs(teo - .5) < EPSILON
+    teo = opt.get_solved_objective(te_app)[0]
+    assert 1-teo == cost/cap or abs(1-teo - cost/cap) < EPSILON
     # latency objective
-    lato = opt.get_solved_objective(latency_app)
+    lato = opt.get_solved_objective(latency_app)[0]
     assert lato == 1.0 / topo.num_nodes() or abs(lato - 1.0 / topo.num_nodes()) < EPSILON
 
 
@@ -137,8 +147,8 @@ def test_annealing_selection(topo, pptc, netconf):
     # the latency should be a 1/n
 
     # max flow objective
-    mfo = opt.get_solved_objective(mf_app)
+    mfo = opt.get_solved_objective(mf_app)[0]
     assert mfo == 1 or abs(mfo - 1) < EPSILON
     # latency objective
-    lato = opt.get_solved_objective(latency_app)
+    lato = opt.get_solved_objective(latency_app)[0]
     assert lato == 1.0 / topo.num_nodes() or abs(lato - 1.0 / topo.num_nodes()) < EPSILON
