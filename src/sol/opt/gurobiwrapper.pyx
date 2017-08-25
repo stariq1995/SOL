@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore', category=FutureWarning,
 import time
 
 import cython
-from numpy import ma, zeros, arange, array, ndarray, frompyfunc, log, ones, full
+from numpy import ma, zeros, arange, array, ndarray, frompyfunc, log, ones, full, uint8
 from six import iterkeys, next
 from six.moves import range
 from cpython cimport bool
@@ -184,18 +184,18 @@ cdef class OptimizationGurobi:
             be set to this value. Allocation must be between 0 and 1
         :raises: ValueError if the given allocation is not between 0 and 1
         """
-        cdef int pi, epoch
+        cdef int pi, epoch, np
         cdef TrafficClass tc
+        cdef ndarray on
         logger.debug('Allocating flow')
         for tc in tcs:
+            np = self._all_pptc.num_paths(tc)
+            on = ones(np, dtype=uint8)
             for epoch in range(self.num_epochs):
                 if not isinstance(self._als[tc.ID, epoch], Var):
                     self._als[tc.ID, epoch] = v = self.opt.addVar(lb=0, ub=1, name=al(tc, epoch))
                 # construct the expression: sum up all varibles per traffic class
-                # self.opt.addConstr(quicksum(self._xps[tc.ID, :, epoch]) == v, name='al.{}'.format(tc.ID))
-                ind = _is_var(self._xps[tc.ID, :, epoch]).astype(bool, copy=False)
-                expr = LinExpr()
-                expr.addTerms(ones(self._max_paths)[ind], self._xps[tc.ID, :, epoch][ind])
+                expr = LinExpr(on, self._xps[tc.ID, :np, epoch])
                 self.opt.addConstr(expr, GRB.EQUAL, v)
                 # If we also have an allocation value, add that constraint as well
                 if allocation is not None:
