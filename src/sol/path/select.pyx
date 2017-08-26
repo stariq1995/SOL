@@ -121,7 +121,6 @@ def cluster_tcs(tcs, num_clusters, method):
         for i, tc in enumerate(tcs):
             tc.volFlows = ma.array(centers[i])
     elif method == 'agg':
-        raise NotImplemented()
         ag = AgglomerativeClustering(n_clusters=num_clusters)
         ag.fit(volumes.T)
         averaged = []
