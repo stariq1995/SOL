@@ -195,7 +195,7 @@ cdef class OptimizationGurobi:
                 if not isinstance(self._als[tc.ID, epoch], Var):
                     self._als[tc.ID, epoch] = v = self.opt.addVar(lb=0, ub=1, name=al(tc, epoch))
                 # construct the expression: sum up all varibles per traffic class
-                expr = LinExpr(on, self._xps[tc.ID, :np, epoch])
+                expr = LinExpr(on.tolist(), self._xps[tc.ID, :np, epoch].tolist())
                 self.opt.addConstr(expr, GRB.EQUAL, v)
                 # If we also have an allocation value, add that constraint as well
                 if allocation is not None:
@@ -664,7 +664,8 @@ cdef class OptimizationGurobi:
             per_epoch_objs[e] = obje = self.opt.addVar(lb=0, ub=1, name='{}_{}'.format(varname, e))
             # simply sum all allocations, normalize by the number of traffic classes, and that
             # is our objective
-            expr = LinExpr(full(len(tcs), 1.0/len(tcs), dtype=float), self._als[[tc.ID for tc in tcs], e])
+            expr = LinExpr(full(len(tcs), 1.0/len(tcs), dtype=float).tolist(),
+                           self._als[[tc.ID for tc in tcs], e].tolist())
             self.opt.addConstr(expr, GRB.GREATER_EQUAL, obje)
             # self.opt.addConstr(obje == quicksum([self._als[tc.ID, e] for tc in tcs]) / len(tcs))
         self.opt.update()
@@ -683,7 +684,7 @@ cdef class OptimizationGurobi:
         cdef float s
         epoch_obj = self.opt.addVar(name='{}_{}'.format(THE_OBJECTIVE, epoch))
         if fairness_mode == Fairness.WEIGHTED:
-            self.opt.addConstr(epoch_obj == LinExpr(weight_arr, obj))
+            self.opt.addConstr(epoch_obj == LinExpr(weight_arr.tolist(), obj.tolist()))
         elif fairness_mode == Fairness.MAXMIN:
             for o in obj:
                 self.opt.addConstr(epoch_obj <= o)
