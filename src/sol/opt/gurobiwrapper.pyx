@@ -1053,7 +1053,7 @@ cdef class OptimizationGurobi:
             #     self.allocate_flow(*args, **kwargs)
             if c[0] == Constraint.ROUTE_ALL:
                 self.route_all(*args, **kwargs)
-            elif c[0] == Constraint.CAP_LINKS or cl == Constraint.CAP_NODES:
+            elif c[0] == Constraint.CAP_LINKS or c[0] == Constraint.CAP_NODES:
                 self.cap(*args, **kwargs)
             elif c[0] == Constraint.REQ_ALL_LINKS:
                 self.req_all_links(*args, **kwargs)
