@@ -305,6 +305,17 @@ cdef class OptimizationGurobi:
             tcs = list(self._all_pptc.tcs())
         else:
             tcs = list(tcs)
+
+        # if caps is just an integer, expand into uniform capacities across the topology
+        if not isinstance(caps, Iterable):
+            v = caps
+            caps = NetworkCaps(self.topo)
+            caps.add_cap(resource, cap=v)
+            caps = caps.caps(resource)
+
+        if path_dep:
+            self._disable_paths(tcs)
+
         for node_or_link in self._load_dict[resource]:
             # if no load has been computed or node/link not capped, skip
             if self._load_dict[resource][node_or_link] is None or node_or_link not in caps:
@@ -444,12 +455,13 @@ cdef class OptimizationGurobi:
         """
         self._add_binary_vars(self._all_pptc, [BinType.BIN_PATH])
         if traffic_classes is None:
-            traffic_classes = pptc.tcs()
+            traffic_classes = self._all_pptc.tcs()
         cdef TrafficClass tc
         cdef Path path
         cdef int epoch
+
         for tc in traffic_classes:
-            for pi, path in enumerate(self._all_pptc.tcs()):
+            for pi, path in enumerate(self._all_pptc.paths(tc)):
                 for epoch in range(self.num_epochs):
                     # x_* <= b_*
                     self.opt.addConstr(self._xps[tc.ID, pi, epoch] <= self._bps[tc.ID, pi])
