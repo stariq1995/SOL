@@ -42,6 +42,7 @@ cdef class PPTC:
     cpdef all_paths(self, TrafficClass tc)
     cpdef PPTC pptc(self, name)
     cpdef mask(self, TrafficClass tc, mask)
+    cpdef get_mask(self, TrafficClass tc)
     cpdef unmask(self, TrafficClass tc)
     cpdef unmaskall(self)
     cpdef clear_masks(self)

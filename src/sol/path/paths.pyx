@@ -10,8 +10,7 @@ from six import itervalues, iterkeys, iteritems
 from sol.topology.traffic cimport TrafficClass
 from sol.utils.ph import listeq
 
-from paths cimport Path
-from paths cimport PathWithMbox
+from paths cimport Path, PathWithMbox
 from sol.utils.const import ERR_UNKNOWN_TYPE
 
 # noinspection PyClassicStyleClass
@@ -312,6 +311,9 @@ cdef class PPTC:
         """
         self._data[tc].mask = mask
 
+    cpdef get_mask(self, TrafficClass tc):
+        return self._data[tc].mask
+
     cpdef unmask(self, TrafficClass tc):
         self._data[tc].mask = numpy.ma.nomask
 
@@ -414,7 +416,6 @@ cdef class PPTC:
                 'paths': [p.encode() for p in self.paths(tc)]
             })
         return r
-
 
     # TODO: add freeze() functionality?
 
