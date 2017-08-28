@@ -45,15 +45,16 @@ from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
 from sol.utils.logger import logger
 from sol.opt.varnames cimport xp, al, be, bn, bp
+from sol.opt import NetworkCaps
 from sol.utils.const import *
 from sol.path.paths cimport Path, PPTC
 
 # This is used in the node_budget function.
 # Figured I'd make it private a cdef inline for speed
-cdef inline _one_func(x):
+cdef _one_func(x):
     return 1
 
-cdef inline __get_x(x):
+cdef __get_x(x):
     return x.x if isinstance(x, Var) else 0
 
 # Create a numpy ufunc for getting .x attributes of gurobi varibles

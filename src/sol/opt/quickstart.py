@@ -44,6 +44,7 @@ def from_app(topo, app, network_config):
             for r in caps.resources():
                 opt.cap(r, caps.caps(r))
 
+
     # And add any other constraints the app might desire
     opt.add_named_constraints(app)
 
