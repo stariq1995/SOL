@@ -2,6 +2,8 @@
 """
 Implements the topology for SOL optimization
 """
+from itertools import chain
+
 import networkx as nx
 from cpython cimport bool
 from networkx.readwrite import graphml, json_graph
@@ -219,6 +221,17 @@ cdef class Topology:
                 return self._graph.node[node_or_link][RESOURCES]
             else:
                 return {}
+
+    cpdef double total_resource(self, unicode resource):
+        """
+        Return the total available resource capacity for given resource
+        :param resource: resource name
+        :return: the sum of all resource capacities for all links/nodes in the topology
+        """
+        cdef double total = 0
+        for x in chain(self.nodes(), self.links()):
+            total += self.get_resources(x).get(resource, 0)
+        return total
 
     def __repr__(self):
         return u"{}(name={})".format(self.__class__, self.name)

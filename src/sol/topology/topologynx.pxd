@@ -20,6 +20,7 @@ cdef class Topology:
     cpdef add_service_type(self, int node, service_type)
     cpdef set_resource(self, node_or_link, unicode resource, double capacity)
     cpdef dict get_resources(self, node_or_link)
+    cpdef double total_resource(self, unicode resource)
     cpdef bool has_middlebox(self, int node)
     cpdef bool has_mbox(self, int node)
     cpdef set_middlebox(self, int node, val=*)
