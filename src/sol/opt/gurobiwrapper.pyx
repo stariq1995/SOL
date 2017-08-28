@@ -53,9 +53,12 @@ from sol.path.paths cimport Path, PPTC
 cdef inline _one_func(x):
     return 1
 
+cdef inline __get_x(x):
+    return x.x if isinstance(x, Var) else 0
+
 # Create a numpy ufunc for getting .x attributes of gurobi varibles
-_get_x = frompyfunc(lambda x: x.x if isinstance(x, Var) else 0, 1, 1)
-_is_var = frompyfunc(lambda x: isinstance(x, Var), 1, 1)
+_get_x = frompyfunc(__get_x, 1, 1)
+# _is_var = frompyfunc(lambda x: isinstance(x, Var), 1, 1)
 
 # noinspection PyClassicStyleClass
 cdef class OptimizationGurobi:
@@ -982,13 +985,10 @@ cdef class OptimizationGurobi:
         for tc in self._all_pptc.tcs():
             if relaxed:
                 # Get the indices where x_p variable is 0 for all epochs, i.e., the path is unused across all epochs
-                ind = [all(_get_x(x) == 0) for x in self._xps[tc.ID, :, :]]
+                ind = [all(_get_x(x) == 0) for x in self._xps[tc.ID, :self._all_pptc.num_paths(tc), :]]
             else:
                 # Get the indices where b_p variable is 0, i.e., the path is unused.
                 ind = [x.x == 0 for x in self._bps[tc.ID, :]]
-            # logger.debug('-------- tc id: %d' % tc.ID)
-            # logger.debug(self._all_pptc.all_paths(tc))
-            # logger.debug(ind)
             # Mask the unused paths in the PPTC
             self._all_pptc.mask(tc, ind)
             # logger.debug(self._all_pptc.paths(tc))
