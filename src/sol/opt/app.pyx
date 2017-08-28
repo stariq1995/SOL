@@ -5,7 +5,7 @@ import numpy as np
 import six
 from sol.path.paths cimport PPTC
 
-from sol.utils.const import LINKS, ERR_UNKNOWN_MODE
+from sol.utils.const import LINKS, ERR_UNKNOWN_MODE, MBOXES
 from sol.utils.const import NODES
 
 cdef class App:
@@ -171,18 +171,19 @@ class AppBuilder(object):
         self._obj_tcs = tcs
         return self
 
-    def add_resource(self, name, cost_func, applyto):
+    def add_resource(self, name, applyto, cost_val, cost_func=None):
         """
         Indicate that this application uses a given resource,
         :param name: resource name
+        :param cost_val: cost
         :param cost_func: cost function that computes how much a
         :param applyto: either 'nodes' or 'links' to indicate whether the resource is owned by nodes
         or links in the network
         :return:
         """
-        if applyto not in [NODES, LINKS]:
+        if applyto not in [NODES, LINKS, MBOXES]:
             raise ValueError(ERR_UNKNOWN_MODE % ('resource owner', applyto))
-        self._resource_cost[name] = (cost_func, applyto)
+        self._resource_cost[name] = (applyto, cost_val, cost_func)
         return self
 
     def build(self):

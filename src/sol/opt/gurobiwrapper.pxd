@@ -43,7 +43,7 @@ cdef class OptimizationGurobi:
 
 
     # resource consumption functions
-    cpdef consume(self, tcs, unicode resource, cost_funcs, caps, mode)
+    cpdef consume(self, tcs, unicode resource, caps, mode, double cost_val, cost_funcs=*)
     cpdef cap(self, unicode resource, caps, path_dep=*, tcs=*)
 
     # Objective computation functions

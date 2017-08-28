@@ -222,7 +222,8 @@ cdef class OptimizationGurobi:
         # Update the model
         self.opt.update()
 
-    cpdef consume(self, tcs, unicode resource, cost_funcs, capacities, mode):
+    # @profile
+    cpdef consume(self, tcs, unicode resource, capacities, mode, double cost_val, cost_funcs=None):
         """
         Compute the loads on a given resource by given traffic classes
 
@@ -238,28 +239,47 @@ cdef class OptimizationGurobi:
         cdef Path path
 
         for tc in tcs:
-            # vols = tc.volFlows.compressed()
+            vols = tc.volFlows.compressed()
             for pi, path in enumerate(self._all_pptc.paths(tc)):
-                # print('%d %d' %(tc.ID, pi))
                 if mode == NODES:  # iterate over path nodes
                     # iterate over all nodes,
                     # the cost function is responsible for determining the cost (could be 0)
                     for node in path.nodes():
                         if node in capacities and capacities[node] > 0:
                             # Make sure we don't get key error/non-existent array
-                            if not isinstance(self._load_dict[resource][node], ndarray):
+                            if self._load_dict[resource][node] is None:
                                 self._load_dict[resource][node] = zeros((self._all_pptc.num_tcs(),
                                                                          self._max_paths, self.num_epochs), dtype=float)
-                            vals = array([func(tc, path, node) for func in cost_funcs]).max(axis=0)
+                            if cost_funcs is not None:
+                                vals = array([func(tc, path, node) for func in cost_funcs]).max(axis=0)
+                            else:
+                                vals = vols * cost_val
                             self._load_dict[resource][node][tc.ID, pi, :] += vals / capacities[node]
+
+                elif mode == MBOXES:
+                   for node in path.mboxes(): # iterate over middbleboxes only
+                        if node in capacities and capacities[node] > 0:
+                            # Make sure we don't get key error/non-existent array
+                            if self._load_dict[resource][node] is None:
+                                self._load_dict[resource][node] = zeros((self._all_pptc.num_tcs(),
+                                                                         self._max_paths, self.num_epochs), dtype=float)
+                            if cost_funcs is not None:
+                                vals = array([func(tc, path, node) for func in cost_funcs]).max(axis=0)
+                            else:
+                                vals = vols
+                            self._load_dict[resource][node][tc.ID, pi, :] += vals / capacities[node]
+
 
                 elif mode == LINKS:  # iterate over path links
                     for link in path.links():
                         if link in capacities and capacities[link] > 0:
-                            if not isinstance(self._load_dict[resource][link], ndarray):
+                            if self._load_dict[resource][link] is None:
                                 self._load_dict[resource][link] = zeros((self._all_pptc.num_tcs(),
                                                                          self._max_paths, self.num_epochs), dtype=float)
-                            vals = array([func(tc, path, link) for func in cost_funcs]).max(axis=0)
+                            if cost_funcs is not None:
+                                vals = array([func(tc, path, link) for func in cost_funcs]).max(axis=0)
+                            else:
+                                vals = vols
                             self._load_dict[resource][link][tc.ID, pi, :] += vals / capacities[link]
 
 
@@ -284,8 +304,7 @@ cdef class OptimizationGurobi:
             tcs = list(tcs)
         for node_or_link in self._load_dict[resource]:
             # if no load has been computed or node/link not capped, skip
-            if not isinstance(self._load_dict[resource][node_or_link], ndarray) or \
-                            node_or_link not in caps:
+            if self._load_dict[resource][node_or_link] is None or node_or_link not in caps:
                 continue
 
             # For each epoch

@@ -8,7 +8,7 @@ from sol.opt.gurobiwrapper cimport OptimizationGurobi
 from sol.topology.topologynx cimport Topology
 from sol.path.paths cimport PPTC
 
-from sol.utils.const import EpochComposition, Fairness, NODES, LINKS, ERR_UNKNOWN_MODE
+from sol.utils.const import EpochComposition, Fairness, NODES, LINKS, ERR_UNKNOWN_MODE, MBOXES
 from sol.utils.exceptions import InvalidConfigException
 from sol.utils.logger import logger
 
@@ -51,17 +51,19 @@ cpdef compose_apps(apps, Topology topo, network_config, epoch_mode=EpochComposit
         rset.update(app.resource_cost.keys())
     # print (rset)
     for r in rset:
-        cost_funcs, modes = zip(*[app.resource_cost[r] for app in apps if r in app.resource_cost])
+        modes, cost_vals, cost_funcs = zip(*[app.resource_cost[r] for app in apps if r in app.resource_cost])
         # Make sure all the modes agree for a given resource
         assert len(set(modes)) == 1
         mode = modes[0]
-        if mode == NODES:
+        if mode == NODES or mode== MBOXES:
             capacities = {n: node_caps[n][r] for n in node_caps if r in node_caps[n]}
         elif mode == LINKS:
             capacities = {l: link_caps[l][r] for l in link_caps if r in link_caps[l]}
         else:
             raise InvalidConfigException(ERR_UNKNOWN_MODE % ('resource owner', mode))
-        opt.consume(all_pptc.tcs(), r, cost_funcs, capacities, mode)
+        # Avoid using cost funcs for now
+        # TODO: figure out efficient way of evaluating cost funcs
+        opt.consume(all_pptc.tcs(), r, capacities, mode, max(cost_vals), None)
 
     # Cap the resources, if caps were given
     if network_config is not None:
