@@ -148,7 +148,7 @@ def cluster_tcs(tcs, num_clusters, method):
         ag.fit(volumes.T)
         averaged = []
         for bucket in range(num_clusters):
-            av = concatenate([volumes.T[ag.labels_ == bucket, :]], axis=0).mean(axis=0, keepdims=True)
+            av = concatenate([volumes.T[ag.labels_ == bucket, :]], axis=0).max(axis=0, keepdims=True)
             averaged.append(av)
         avm = concatenate(averaged, axis=0)
     else:
@@ -225,7 +225,7 @@ cpdef select_iterative(apps, topo, network_config, max_iter, epsilon, fairness, 
         raise InvalidConfigException(ERR_UNKNOWN_MODE % ('path sorting', sort_mode))
 
     while i < max_iter and diff > epsilon:
-        logger.debug('Selection iteration %d, num_paths=%d, diff=%f' % (i, k, diff))
+        logger.info('Selection iteration %d, num_paths=%d, diff=%f' % (i, k, diff))
         for tc in all_pptc.tcs():
             ind = indices[tc]
             mask = all_pptc.get_mask(tc)
