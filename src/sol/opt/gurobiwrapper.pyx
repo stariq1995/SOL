@@ -1017,8 +1017,8 @@ cdef class OptimizationGurobi:
             (this is the default, as this function is usually used to fix a solution from a previous epoch)
         """
         cdef int pi
-        for tc in pptc:
-            for pi, p in enumerate(pptc[tc]):
+        for tc in pptc.tcs():
+            for pi, p in enumerate(pptc.paths(tc)):
                 for e in range(self.num_epochs):
                     # Only fix non-zero paths
                     if p.flow_fraction() > 0 or not fix_zero_paths:
