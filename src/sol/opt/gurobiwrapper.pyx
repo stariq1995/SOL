@@ -119,7 +119,7 @@ cdef class OptimizationGurobi:
         self._add_decision_vars()
         self.allocate_flow(self._all_pptc.tcs())
 
-        logger.debug("Initialized Gurobi wrapper")
+        logger.info("Initialized Gurobi wrapper")
 
     cdef _add_decision_vars(self):
         """
@@ -823,7 +823,7 @@ cdef class OptimizationGurobi:
         ..note::
             Can be a time consuming operation
         """
-        logger.debug("Running Gurobi solver")
+        logger.info("Running Gurobi solver")
         start = time.time()
         self.opt.optimize()
         if self._do_time:
