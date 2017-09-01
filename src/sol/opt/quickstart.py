@@ -34,6 +34,8 @@ def from_app(topo, app, network_config):
             capacities = {n: link_caps[n][r] for n in link_caps if r in link_caps[n]}
         else:
             raise InvalidConfigException(ERR_UNKNOWN_MODE % ('resource owner', mode))
+        # Avoid using cost funcs for now
+        # TODO: figure out efficient way of evaluating cost funcs
         opt.consume(app.pptc.tcs(), r, capacities, mode, cost_val, None)
 
     # Cap the resources, if caps were given
