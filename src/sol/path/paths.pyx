@@ -417,8 +417,6 @@ cdef class PPTC:
             })
         return r
 
-    # TODO: add freeze() functionality?
-
     @staticmethod
     def merge(alist):
         if not all([isinstance(o, PPTC) for o in alist]):
@@ -441,9 +439,10 @@ cpdef path_decoder(o):
     :param o: dictionary
     :return: a :py:class:`~Path` or :py:class:`~PathWithMBox` object
     """
-    if u'type' not in o:
+    try:
+        t = o[u'type']
+    except KeyError:
         raise KeyError("Unable to determine path type. Missing type information")
-    t = o[u'type']
     if t == u'Path':
         return Path.decode(o)
     elif t == u'PathWithMBox':

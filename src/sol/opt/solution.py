@@ -41,7 +41,7 @@ class Solution(object):
         #         'resource': resource,
         #         'elements': [{
         #             'element': element,
-        #             'load': self.loads[resource][element]
+        #             'loads': self.loads[resource][element].tolist()
         #         } for element in self.loads[resource]]
         #     })
         d = {
