@@ -80,7 +80,7 @@ def test_maxflow(cap):
         'name': u'mf',
         'constraints': [],
         'obj': (Objective.MAX_FLOW, (), {}),
-        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+        'resource_cost': {BANDWIDTH: (LINKS, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -111,7 +111,7 @@ def test_maxflow_inapp_caps(cap):
         'name': u'mf',
         'constraints': [(Constraint.CAP_LINKS, (BANDWIDTH, caps), {})],
         'obj': (Objective.MAX_FLOW, (), {}),
-        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+        'resource_cost': {BANDWIDTH: (LINKS, 1, None)}
     }
     app = App(pptc, **appconfig)
     opt = from_app(topo, app, NetworkConfig())
@@ -137,7 +137,7 @@ def test_min_latency_app():
         'name': u'te',
         'constraints': [(Constraint.ROUTE_ALL, (), {})],
         'obj': (Objective.MIN_LATENCY, (), {}),
-        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+        'resource_cost': {BANDWIDTH: (LINKS, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -168,7 +168,7 @@ def test_te_app():
         'name': u'te',
         'constraints': [(Constraint.ROUTE_ALL, (), {})],
         'obj': (Objective.MIN_LINK_LOAD, (BANDWIDTH,), {}),
-        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+        'resource_cost': {BANDWIDTH: (LINKS, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -198,7 +198,7 @@ def test_mbox_load_balancing():
         'name': u'mb_lb',
         'constraints': [(Constraint.ROUTE_ALL, (), {})],
         'obj': (Objective.MIN_NODE_LOAD, (CPU,), {}),
-        'resource_cost': {CPU: (CostFuncFactory.mbox_single_cost(1), NODES)}
+        'resource_cost': {CPU: (MBOXES, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -228,7 +228,7 @@ def test_mbox_load_balancing_all_tcs():
         'name': u'mb_lb',
         'constraints': [(Constraint.ROUTE_ALL, (), {})],
         'obj': (Objective.MIN_NODE_LOAD, (CPU,), {}),
-        'resource_cost': {CPU: (CostFuncFactory.mbox_single_cost(1), NODES)}
+        'resource_cost': {CPU: (MBOXES, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
