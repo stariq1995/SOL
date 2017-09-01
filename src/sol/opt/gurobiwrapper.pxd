@@ -67,7 +67,7 @@ cdef class OptimizationGurobi:
     cpdef node_budget(self, int bound, budget_func=*)
 
     # Solution parsing functions and general helper funcs
-    cpdef solve(self)
+    # def solve(self)
     cpdef is_solved(self)
     cpdef get_paths(self, int epoch=*)
     cpdef get_solved_objective(self, app=*)
@@ -92,7 +92,7 @@ cdef class OptimizationGurobi:
     # TODO: MIP starts?
 
     cpdef get_xps(self)
-    cpdef get_load_dict(self)
+    # cpdef get_load_dict(self)
 
 # cpdef add_obj_var(app, opt, double weight=*, epoch_mode=*)
 # cpdef get_obj_var(app, opt)
