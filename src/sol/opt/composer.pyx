@@ -4,8 +4,10 @@ from __future__ import division
 from __future__ import print_function
 
 from numpy import array
+from sol.opt.gurobiwrapper import OptimizationGurobi
 from sol.opt.gurobiwrapper cimport OptimizationGurobi
 from sol.topology.topologynx cimport Topology
+from sol.path.paths import PPTC
 from sol.path.paths cimport PPTC
 
 from sol.utils.const import EpochComposition, Fairness, NODES, LINKS, ERR_UNKNOWN_MODE, MBOXES
@@ -33,9 +35,6 @@ cpdef compose_apps(apps, Topology topo, network_config, epoch_mode=EpochComposit
     logger.debug("Starting composition")
 
     # Merge all paths per traffic class into a single object so we can start the optimization
-    # all_pptc = PPTC()
-    # for app in apps:
-    #     all_pptc.update(app.pptc)
     all_pptc = PPTC.merge([a.pptc for a in apps])
 
     # Start the optimization
@@ -79,9 +78,9 @@ cpdef compose_apps(apps, Topology topo, network_config, epoch_mode=EpochComposit
     # Compute app weights
     if weights is None:
         volumes = array([app.volume() for app in apps])
-        weights = 1 - volumes/volumes.sum()
+        weights = volumes/volumes.sum()
     else:
-        assert 0 <= weights <= 1
+        assert 0 < weights <= 1
 
     # Add objectives
     objs = []
