@@ -52,3 +52,4 @@ class Solution(object):
         }
         if self.paths is not None:
             d['paths'] = self.paths.json_list()
+        return d
