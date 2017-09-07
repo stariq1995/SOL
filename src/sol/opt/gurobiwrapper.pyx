@@ -1015,15 +1015,17 @@ cdef class OptimizationGurobi:
         Fix flow allocation of for given paths to a precise value.
 
         :param pptc: path per traffic class, with flow fractions set
-        :param fix_zero_paths: only fix the allocation of paths where the fraction is >= 0
-            (this is the default, as this function is usually used to fix a solution from a previous epoch)
+        :param fix_zero_paths: fix the allocation of paths where the fraction == 0. 
+            (The default if False, as this function is commonly used to fix flow-carrying paths 
+            from a previous epoch or other type of solution)
         """
         cdef int pi
+        cdef TrafficClass tc
         for tc in pptc.tcs():
             for pi, p in enumerate(pptc.paths(tc)):
                 for e in range(self.num_epochs):
                     # Only fix non-zero paths
-                    if p.flow_fraction() > 0 or not fix_zero_paths:
+                    if p.flow_fraction() > 0 or fix_zero_paths:
                         self.opt.addConstr(self._xps[tc.ID, pi, e] == \
                                            p.flow_fraction())
         self.opt.update()
