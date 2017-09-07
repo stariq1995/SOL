@@ -5,6 +5,7 @@ import numpy as np
 import six
 from sol.path.paths cimport PPTC
 
+from sol.utils.logger import logger
 from sol.utils.const import LINKS, ERR_UNKNOWN_MODE, MBOXES
 from sol.utils.const import NODES
 
@@ -67,7 +68,16 @@ cdef class App:
         :return: total application volume
         :rtype: float
         """
-        return np.sum([np.sum(tc.volume()) for tc in self.pptc.tcs()])
+        return np.sum([np.sum(tc.volFlows.compressed()) for tc in self.pptc.tcs()])
+
+    cpdef epoch_volumes(self):
+        """
+        Compute the app volume at each epoch
+        :return: 
+        """
+        v = np.stack([tc.volFlows.compressed() for tc in self.pptc.tcs()], axis=0).sum(axis=0)
+        logger.debug('App volume: %s' % v)
+        return v
 
     # def objstr(self):
     #     """
