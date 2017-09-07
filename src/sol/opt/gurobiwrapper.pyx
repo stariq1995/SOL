@@ -764,21 +764,21 @@ cdef class OptimizationGurobi:
         :param weight_arr: the weights array. Only applicable if the fairness_mode is "weighted"
         :return: A gurobi variable refering to the overall objective
         """
-        # TODO: Allow weight array to vary across epochs
-        # TODO: stack arrays if we only have one dimension
-        # if weight_arr.ndim == 1:
+        # repeat the weight array across ecpochs if only a single set of weights has been specified
+        if weight_arr.ndim == 1:
+            weight_arr = tile(weight_arr, (1, self.num_epochs))
 
         the_obj = self.opt.addVar(obj=1.0, name=THE_OBJECTIVE)
         if epoch_mode == EpochComposition.AVG:
             expr = LinExpr()
             for e in range(self.num_epochs):
                 # Use addTerms, it's faster
-                expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:, e], fairness_mode, weight_arr))
+                expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:, e], fairness_mode, weight_arr[:, e]))
             self.opt.addConstr(the_obj <= expr / self.num_epochs)
         elif epoch_mode == EpochComposition.WORST:
             for e in range(self.num_epochs):
                 expr = LinExpr()
-                expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:, e], fairness_mode, weight_arr))
+                expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:, e], fairness_mode, weight_arr[:, e]))
                 self.opt.addConstr(the_obj <= expr)
         else:
             raise ValueError(ERR_UNKNOWN_MODE % (u'epoch composition', epoch_mode))
