@@ -739,6 +739,8 @@ cdef class OptimizationGurobi:
                 #     self.opt.addConstr(o_approx <= a + b * o)
                 o_approx_all.append(o_approx)
             self.opt.addConstr(epoch_obj <= quicksum(o_approx_all))
+        elif fairness_mode == Fairness.NONE:
+            self.opt.addConstr(epoch_obj == LinExpr(ones(obj.size), obj.tolist()))
         else:
             raise InvalidConfigException(ERR_UNKNOWN_MODE % ('fairness', fairness_mode))
         self.opt.update()

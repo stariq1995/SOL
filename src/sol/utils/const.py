@@ -81,6 +81,7 @@ class Fairness(Enum):
     UTILITARIAN = WEIGHTED
     PROPFAIR = u'propfair'
     MAXMIN = u'maxmin'
+    NONE = u'none'
 
 # A tolerance value for objective values
 EPSILON = 1e-5
