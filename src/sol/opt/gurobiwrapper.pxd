@@ -32,7 +32,7 @@ cdef class OptimizationGurobi:
     # internal variables and routing constraints
     cdef _add_decision_vars(self)
     cdef _add_binary_vars(self, PPTC pptc, vtypes)
-    cdef _disable_paths(self, traffic_classes=*)
+    cdef _disable_paths(self, tcs=*)
     cpdef allocate_flow(self, tcs, allocation=*)
 
     # Routing and path constraints

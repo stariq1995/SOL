@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore', category=FutureWarning,
 import time
 
 import cython
-from numpy import ma, zeros, arange, array, ndarray, frompyfunc, log, ones, full, uint8
+from numpy import ma, zeros, arange, array, ndarray, frompyfunc, log, ones, full, tile, uint8
 from numpy cimport ndarray
 from six import iterkeys, next
 from six.moves import range
@@ -227,7 +227,7 @@ cdef class OptimizationGurobi:
         # Update the model
         self.opt.update()
 
-    
+
     cpdef consume(self, tcs, unicode resource, capacities, mode, double cost_val, cost_funcs=None):
         """
         Compute the loads on a given resource by given traffic classes
@@ -448,20 +448,20 @@ cdef class OptimizationGurobi:
         """
         return self._req_some(BinType.BIN_EDGE, traffic_classes)
 
-    cdef _disable_paths(self, traffic_classes=None):
+    cdef _disable_paths(self, tcs=None):
         """
         Add constraints which force paths where binpath_* variable is 0 to not carry any flow
 
-        :param traffic_classes: traffic classes for which to enable this constraint. If None, all are used
+        :param tcs: traffic classes for which to enable this constraint. If None, all are used
         """
         self._add_binary_vars(self._all_pptc, [BinType.BIN_PATH])
-        if traffic_classes is None:
-            traffic_classes = self._all_pptc.tcs()
+        if tcs is None:
+            tcs = self._all_pptc.tcs()
         cdef TrafficClass tc
         cdef Path path
         cdef int epoch
 
-        for tc in traffic_classes:
+        for tc in tcs:
             for pi, path in enumerate(self._all_pptc.paths(tc)):
                 for epoch in range(self.num_epochs):
                     # x_* <= b_*
@@ -519,7 +519,7 @@ cdef class OptimizationGurobi:
         if pptc.empty():
             pptc = self._all_pptc
         # ensure x_* <= b_*
-        self._disable_paths(pptc)
+        self._disable_paths(pptc.tcs())
         # reshapte all into a 1-d array and sum all binary path variables
         self.opt.addConstr(quicksum(self._bps.reshape(-1)) <= max_paths, name='path_cap')
         self.opt.update()  # model update
@@ -601,7 +601,7 @@ cdef class OptimizationGurobi:
         self.opt.addConstr(expr <= bound)
         self.opt.update()
 
-    
+
     cdef _min_load(self, unicode resource, tcs, varname):
         """
         Minimize load imposed by given traffic classes on a given resource
@@ -1001,7 +1001,7 @@ cdef class OptimizationGurobi:
                 # logger.debug(ind)
             else:
                 # Get the indices where b_p variable is 0, i.e., the path is unused.
-                ind = [i for i in range(np) if x.x != 0 for x in self._bps[tc.ID, i]]
+                ind = [i for i in range(np) if self._bps[tc.ID, i].x != 0]
             # Mask the unused paths in the PPTC
             m = ones(anp, dtype=bool)
             m[ind] = 0
