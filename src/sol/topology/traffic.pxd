@@ -9,7 +9,7 @@ cdef class TrafficClass:
     cdef public int ID, priority, src, dst
     cdef public unicode name
     cdef public np.ndarray volFlows#, volBytes
-    # cdef public srcIPPrefix, dstIPPrefix, srcAppPorts, dstAppPorts
+    cdef public srcIPPrefix, dstIPPrefix
 
 
     cpdef tuple iepair(self)
