@@ -3,7 +3,7 @@
 from __future__ import division
 from __future__ import print_function
 
-from numpy import array
+from numpy import array, stack
 from sol.opt.gurobiwrapper import OptimizationGurobi
 from sol.opt.gurobiwrapper cimport OptimizationGurobi
 from sol.topology.topologynx cimport Topology
@@ -76,11 +76,13 @@ cpdef compose_apps(apps, Topology topo, network_config, epoch_mode=EpochComposit
         opt.add_named_constraints(app)
 
     # Compute app weights
-    if weights is None:
-        volumes = array([app.volume() for app in apps])
-        weights = volumes/volumes.sum()
+    if weights is None and fairness == Fairness.WEIGHTED:
+        volumes = stack([app.epoch_volumes() for app in apps], axis=0)
+        weights = volumes / volumes.sum(axis=0)
     else:
         assert 0 < weights <= 1
+
+    logger.debug('App weights %s' % weights)
 
     # Add objectives
     objs = []
