@@ -1026,6 +1026,7 @@ cdef class OptimizationGurobi:
                 for e in range(self.num_epochs):
                     # Only fix non-zero paths
                     if p.flow_fraction() > 0 or fix_zero_paths:
+                        # logger.debug("%d, %d, %f" % (tc.ID, pi, p.flow_fraction()))
                         self.opt.addConstr(self._xps[tc.ID, pi, e] == \
                                            p.flow_fraction())
         self.opt.update()

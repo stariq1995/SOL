@@ -76,7 +76,7 @@ cpdef compose_apps(apps, Topology topo, network_config, epoch_mode=EpochComposit
         opt.add_named_constraints(app)
 
     # Compute app weights
-    if weights is None and fairness == Fairness.WEIGHTED:
+    if weights is None:
         volumes = stack([app.epoch_volumes() for app in apps], axis=0)
         weights = volumes / volumes.sum(axis=0)
     else:
