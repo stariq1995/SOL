@@ -995,6 +995,8 @@ cdef class OptimizationGurobi:
         for tc in self._all_pptc.tcs():
             np = self._all_pptc.num_paths(tc)
             anp = self._all_pptc.num_paths(tc, all=True)
+            for i, p in enumerate(self._all_pptc.paths(tc)):
+                p.set_flow_fraction(max([x.x for x in self._xps[tc.ID, i, :]]))
             if relaxed:
                 # Get the indices where x_p variable is 0 for all epochs, i.e., the path is unused across all epochs
                 ind = [i for i in range(np) if any([x.x != 0 for x in self._xps[tc.ID, i, :]]) ]
