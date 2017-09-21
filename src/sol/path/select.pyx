@@ -223,8 +223,9 @@ cpdef select_iterative(apps, topo, network_config, max_iter, epsilon, fairness, 
         indices = k_resource_paths(all_pptc, k, res_weights, topo)
     else:
         raise InvalidConfigException(ERR_UNKNOWN_MODE % ('path sorting', sort_mode))
+    cdef int mp = all_pptc.max_paths(all=True)
 
-    while i < max_iter and diff > epsilon:
+    while i < max_iter and diff > epsilon and k < mp:
         logger.info('Selection iteration %d, num_paths=%d, diff=%f' % (i, k, diff))
         for tc in all_pptc.tcs():
             ind = indices[tc]
