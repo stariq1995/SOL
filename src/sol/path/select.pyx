@@ -151,6 +151,8 @@ def cluster_tcs(tcs, num_clusters, method):
             av = concatenate([volumes.T[ag.labels_ == bucket, :]], axis=0).max(axis=0, keepdims=True)
             averaged.append(av)
         avm = concatenate(averaged, axis=0)
+        for i, tc in enumerate(tcs):
+            tc.volFlows = ma.array(avm[:,i])
     else:
         raise ValueError('Unsupported clustering method %s' % method)
 
