@@ -133,7 +133,7 @@ cdef class TrafficClass(object):
 
     def __copy__(self):
         return TrafficClass(self.ID, self.name, self.src, self.dst,
-                            self.volFlows.copy())
+                            self.volFlows.copy(), self.srcIPPrefix, self.dstIPPrefix)
         # self.volBytes)
         # self.priority,
         # self.srcIPPrefix, self.dstIPPrefix,
@@ -147,6 +147,10 @@ cdef class TrafficClass(object):
         """
         d = {'type': 'TrafficClass', 'src': self.src, 'dst': self.dst,
              'name': self.name, 'id': self.ID}
+        if self.srcIPPrefix is not None:
+            d['srcIPPrefix'] = self.srcIPPrefix
+        if self.dstIPPrefix is not None:
+            d['dstIPPrefix'] = self.dstIPPrefix
         return d
 
     @staticmethod
@@ -158,7 +162,8 @@ cdef class TrafficClass(object):
         :param d: the dictionary
         :return:
         """
-        return TrafficClass(d['id'], d['name'], d['src'], d['dst'])
+        return TrafficClass(d['id'], d['name'], d['src'], d['dst'], src_ip_prefix=d.get('srcIPPrefix'),
+                            dst_ip_prefix=d.get('dstIPPrefix'))
 
 _counter = 0
 cpdef make_tc(int src, int dst, volume, name=u''):
