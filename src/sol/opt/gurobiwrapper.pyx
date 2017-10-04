@@ -12,16 +12,17 @@ from __future__ import division, print_function
 import sys
 
 from sol.utils.const import ERR_NO_GUROBI
+from sol.utils.logger import logger
 
 # Deal with different package names based on the version
 try:
     from gurobi import *
-except (ImportError, ModuleNotFoundError) as e:
+except ImportError as e:
     try:
         from gurobipy import *
-    except (ImportError, ModuleNotFoundError) as e:
-        print(ERR_NO_GUROBI)
-        raise e
+    except ImportError as e:
+        logger.error(ERR_NO_GUROBI)
+        logger.error('Optimization capabilities will not be available!')
 
 import warnings
 
@@ -44,7 +45,6 @@ from cpython cimport bool
 from sol.utils.exceptions import SOLException, InvalidConfigException
 from sol.topology.traffic cimport TrafficClass
 from sol.topology.topologynx cimport Topology
-from sol.utils.logger import logger
 from sol.opt.varnames cimport xp, al, be, bn, bp
 from sol.opt import NetworkCaps
 from sol.utils.const import *
