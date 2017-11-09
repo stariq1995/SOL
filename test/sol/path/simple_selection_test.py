@@ -38,16 +38,15 @@ def test_shortest(pptc, num):
     """Check shortest path selection"""
     k_shortest_paths(pptc, num)
     # ensure correct number of paths, for different ways of checking the size
-    for tc in pptc:
+    for tc in pptc.tcs():
         expected = min(num, pptc.num_paths(tc, all=True))
         assert len(pptc.paths(tc)) == expected
-        assert len(pptc[tc]) == expected
-        assert pptc[tc].size == expected
+        assert pptc.paths(tc).size == expected
         assert pptc.num_paths(tc) == expected
         assert pptc.num_paths(tc, False) == expected
     # ensure that the paths are actually shortest for explicit examples
     if num == 4:
-        for tc in pptc:
+        for tc in pptc.tcs():
             assert listeq(list(map(len, pptc.paths(tc))), [1, 2, 2, 2])
 
 
@@ -56,6 +55,6 @@ def random_test(pptc):
     # Check number or chosen paths only
     # No good way to check their "randomness"
     choose_rand(pptc, 5)
-    for tc in pptc:
+    for tc in pptc.tcs():
         assert len(pptc.paths(tc)) == 5
 

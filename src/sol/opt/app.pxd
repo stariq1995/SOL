@@ -11,3 +11,4 @@ cdef class App:
     cdef public predicate
 
     cpdef double volume(self)
+    cpdef epoch_volumes(self)

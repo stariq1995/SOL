@@ -5,6 +5,7 @@ from cpython cimport bool
 from networkx import NetworkXNoPath
 from sol.path.paths import PathWithMbox
 from sol.path.predicates import null_predicate
+from sol.topology.topologynx import Topology
 from sol.topology.topologynx cimport Topology
 
 from paths cimport Path, PPTC

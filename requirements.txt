@@ -1,7 +1,12 @@
 networkx
 requests
-netaddr
 numpy
 six
 cython
 flask
+netaddr
+hypothesis
+pytest
+scikit-learn
+
+

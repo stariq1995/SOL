@@ -2,6 +2,8 @@
 """
 Implements the topology for SOL optimization
 """
+from itertools import chain
+
 import networkx as nx
 from cpython cimport bool
 from networkx.readwrite import graphml, json_graph
@@ -220,6 +222,17 @@ cdef class Topology:
             else:
                 return {}
 
+    cpdef double total_resource(self, unicode resource):
+        """
+        Return the total available resource capacity for given resource
+        :param resource: resource name
+        :return: the sum of all resource capacities for all links/nodes in the topology
+        """
+        cdef double total = 0
+        for x in chain(self.nodes(), self.links()):
+            total += self.get_resources(x).get(resource, 0)
+        return total
+
     def __repr__(self):
         return u"{}(name={})".format(self.__class__, self.name)
 
@@ -315,18 +328,20 @@ cdef class Topology:
                 return
 
     def to_json(self):
-        return json_graph.node_link_data(self._graph.to_undirected())
+        return json_graph.node_link_data(self._graph)
 
     @staticmethod
-    def from_json(data):
+    def from_json(data, name=None):
         """
         Create a new topology from a JSON dictionary
 
         :param data: the JSON data
+        :param name: name of the topology. If None, we will attempt to get the name form a JSON field.
         :return: a new Topology object
 
         """
-        name = data.get(u'name', u'NoName')
+        if name is None:
+            name = data.get(u'name', u'NoName')
         return Topology(name, json_graph.node_link_graph(data, directed=True,
                                                          multigraph=False))
 

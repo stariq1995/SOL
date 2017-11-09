@@ -34,7 +34,7 @@ def test_shortest_path():
     # Application configuration
     appconfig = {
         'name': u'minLatencyApp',
-        'constraints': [(Constraint.ROUTE_ALL, (pptc,), {})],
+        'constraints': [(Constraint.ROUTE_ALL, (pptc.tcs(),), {})],
         'obj': (Objective.MIN_LATENCY, (), {}),
         'resource_cost': {}
     }
@@ -59,7 +59,7 @@ def test_shortest_path():
     norm = topo.diameter() * 25
     # the objective is 1-normalized latency, and latency is 1.
     # because 1 path with flow fraction of 1.
-    solution = opt.get_solved_objective(app)
+    solution = opt.get_solved_objective(app)[0]
     assert solution == 1 - 1 / norm or abs(solution - 1 - 1 / norm) <= EPSILON
     solution = opt.get_solved_objective()
     assert solution == 1 - 1 / norm or abs(solution - 1 - 1 / norm) <= EPSILON
@@ -80,7 +80,7 @@ def test_maxflow(cap):
         'name': u'mf',
         'constraints': [],
         'obj': (Objective.MAX_FLOW, (), {}),
-        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+        'resource_cost': {BANDWIDTH: (LINKS, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -90,7 +90,7 @@ def test_maxflow(cap):
     assert opt.is_solved()
     # Ensure that both app objective and global objective are the same
     # Also, use abs(actual - exprected) because floating point errors
-    solution = opt.get_solved_objective(app)
+    solution = opt.get_solved_objective(app)[0]
     assert solution == cap or abs(solution - cap) <= EPSILON
     solution = opt.get_solved_objective()
     assert solution == cap or abs(solution - cap) <= EPSILON
@@ -111,7 +111,7 @@ def test_maxflow_inapp_caps(cap):
         'name': u'mf',
         'constraints': [(Constraint.CAP_LINKS, (BANDWIDTH, caps), {})],
         'obj': (Objective.MAX_FLOW, (), {}),
-        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+        'resource_cost': {BANDWIDTH: (LINKS, 1, None)}
     }
     app = App(pptc, **appconfig)
     opt = from_app(topo, app, NetworkConfig())
@@ -119,7 +119,7 @@ def test_maxflow_inapp_caps(cap):
     assert opt.is_solved()
     # Ensure that both app objective and global objective are the same
     # Also, use abs(actual - exprected) because floating point errors
-    solution = opt.get_solved_objective(app)
+    solution = opt.get_solved_objective(app)[0]
     assert solution == cap or abs(solution - cap) <= EPSILON
     solution = opt.get_solved_objective()
     assert solution == cap or abs(solution - cap) <= EPSILON
@@ -137,7 +137,7 @@ def test_min_latency_app():
         'name': u'te',
         'constraints': [(Constraint.ROUTE_ALL, (), {})],
         'obj': (Objective.MIN_LATENCY, (), {}),
-        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+        'resource_cost': {BANDWIDTH: (LINKS, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -150,7 +150,7 @@ def test_min_latency_app():
     norm = topo.diameter() * 16
     # the objective is 1-normalized latency, and latency is 1.
     # because 1 path with flow fraction of 1.
-    solution = opt.get_solved_objective(app)
+    solution = opt.get_solved_objective(app)[0]
     assert solution == 1 - 1 / norm or abs(solution - (1 - 1 / norm)) <= EPSILON
     solution = opt.get_solved_objective()
     assert solution == 1 - 1 / norm or abs(solution - (1 - 1 / norm)) <= EPSILON
@@ -168,7 +168,7 @@ def test_te_app():
         'name': u'te',
         'constraints': [(Constraint.ROUTE_ALL, (), {})],
         'obj': (Objective.MIN_LINK_LOAD, (BANDWIDTH,), {}),
-        'resource_cost': {BANDWIDTH: (CostFuncFactory.from_number(1), LINKS)}
+        'resource_cost': {BANDWIDTH: (LINKS, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -177,7 +177,7 @@ def test_te_app():
     opt.solve()
     assert opt.is_solved()
     # THE solution is 1-objective because of the maximization flip
-    solution = 1 - opt.get_solved_objective(app)
+    solution = 1 - opt.get_solved_objective(app)[0]
     # Use abs(actual - exprected) because floating point errors
     assert solution == .333333 or abs(solution - .33333) <= EPSILON
     solution = 1 - opt.get_solved_objective()
@@ -198,7 +198,7 @@ def test_mbox_load_balancing():
         'name': u'mb_lb',
         'constraints': [(Constraint.ROUTE_ALL, (), {})],
         'obj': (Objective.MIN_NODE_LOAD, (CPU,), {}),
-        'resource_cost': {CPU: (CostFuncFactory.mbox_single_cost(1), NODES)}
+        'resource_cost': {CPU: (MBOXES, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -207,7 +207,7 @@ def test_mbox_load_balancing():
     opt.solve()
     assert opt.is_solved()
     # THE solution is 1-objective because of the maximization flip
-    solution = 1 - opt.get_solved_objective(app)
+    solution = 1 - opt.get_solved_objective(app)[0]
     # Use abs(actual - exprected) because floating point errors
     assert solution == .25 or abs(solution - .25) <= EPSILON
     solution = 1 - opt.get_solved_objective()
@@ -228,7 +228,7 @@ def test_mbox_load_balancing_all_tcs():
         'name': u'mb_lb',
         'constraints': [(Constraint.ROUTE_ALL, (), {})],
         'obj': (Objective.MIN_NODE_LOAD, (CPU,), {}),
-        'resource_cost': {CPU: (CostFuncFactory.mbox_single_cost(1), NODES)}
+        'resource_cost': {CPU: (MBOXES, 1, None)}
     }
     app = App(pptc, **appconfig)
     caps = NetworkCaps(topo)
@@ -237,7 +237,7 @@ def test_mbox_load_balancing_all_tcs():
     opt.solve()
     assert opt.is_solved()
     # THE solution is 1-objective because of the maximization flip
-    solution = 1 - opt.get_solved_objective(app)
+    solution = 1 - opt.get_solved_objective(app)[0]
     # Use abs(actual - exprected) because floating point errors
     assert solution == 1 or abs(solution - 1) <= EPSILON
     solution = 1 - opt.get_solved_objective()

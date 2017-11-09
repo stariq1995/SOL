@@ -1,16 +1,15 @@
 # coding=utf-8
 from numpy import array
 
+from sol.utils.const import NODES, LINKS, EpochComposition, ERR_UNKNOWN_MODE, Fairness, MBOXES
 from sol.utils.exceptions import InvalidConfigException
 from sol.utils.logger import logger
-from sol.utils.const import NODES, LINKS, EpochComposition, ERR_UNKNOWN_MODE, Fairness
+from .gurobiwrapper import OptimizationGurobi
 
 __all__ = ['from_app']
 
-from .app cimport App
-from gurobiwrapper cimport OptimizationGurobi
 
-cpdef from_app(Topology topo, App app, network_config):
+def from_app(topo, app, network_config):
     """
     Create an optimization from a single application.
 
@@ -28,14 +27,16 @@ cpdef from_app(Topology topo, App app, network_config):
     # "Consume" network resources. For each resource, generate resource constraints by considering the
     # load imposed by all traffic classes
     for r in app.resource_cost:
-        cost_func, mode = app.resource_cost[r]
-        if mode == NODES:
+        mode, cost_val, cost_func = app.resource_cost[r]
+        if mode == NODES or mode == MBOXES:
             capacities = {n: node_caps[n][r] for n in node_caps if r in node_caps[n]}
         elif mode == LINKS:
             capacities = {n: link_caps[n][r] for n in link_caps if r in link_caps[n]}
         else:
             raise InvalidConfigException(ERR_UNKNOWN_MODE % ('resource owner', mode))
-        opt.consume(app.pptc.tcs(), r, [cost_func], capacities, mode)
+        # Avoid using cost funcs for now
+        # TODO: figure out efficient way of evaluating cost funcs
+        opt.consume(app.pptc.tcs(), r, capacities, mode, cost_val, None)
 
     # Cap the resources, if caps were given
     if network_config is not None:
@@ -43,7 +44,7 @@ cpdef from_app(Topology topo, App app, network_config):
         if caps is not None:
             logger.debug('Capping resources')
             for r in caps.resources():
-                opt.cap(r, caps.caps(r), tcs=None)
+                opt.cap(r, caps.caps(r))
 
     # And add any other constraints the app might desire
     opt.add_named_constraints(app)

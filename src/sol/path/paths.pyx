@@ -10,8 +10,7 @@ from six import itervalues, iterkeys, iteritems
 from sol.topology.traffic cimport TrafficClass
 from sol.utils.ph import listeq
 
-from paths cimport Path
-from paths cimport PathWithMbox
+from paths cimport Path, PathWithMbox
 from sol.utils.const import ERR_UNKNOWN_TYPE
 
 # noinspection PyClassicStyleClass
@@ -35,7 +34,7 @@ cdef class Path:
         return self._nodes[0]
 
     cdef _compute_links(self):
-        return zip(self._nodes, self._nodes[1:])
+        return list(zip(self._nodes, self._nodes[1:]))
 
     cpdef int egress(self):
         """
@@ -238,7 +237,6 @@ cdef class PPTC:
         self._tcowner = dict()
         self._name_to_tcs = dict()
 
-    # TODO: I think we can get rid of ownership???
     cpdef add(self, name, TrafficClass tc, paths):
         """
         Add a traffic class and the paths accosiated with it
@@ -313,6 +311,9 @@ cdef class PPTC:
         """
         self._data[tc].mask = mask
 
+    cpdef get_mask(self, TrafficClass tc):
+        return self._data[tc].mask
+
     cpdef unmask(self, TrafficClass tc):
         self._data[tc].mask = numpy.ma.nomask
 
@@ -322,10 +323,18 @@ cdef class PPTC:
             self._data[tc].mask = numpy.ma.nomask
 
     cpdef clear_masks(self):
+        """
+        Clear any remaining path masks across all traffic classes
+        :return: 
+        """
         for a in itervalues(self._data):
             a.mask = numpy.ma.nomask
 
     cpdef int num_tcs(self):
+        """
+        Return the number of traffic classes
+        :return: 
+        """
         return len(self._data)
 
     cpdef int num_paths(self, TrafficClass tc, all=False):
@@ -342,19 +351,19 @@ cdef class PPTC:
         else:
             return self._data[tc].count()
 
-    cpdef int max_paths(self):
+    cpdef int max_paths(self, all=False):
         """
         Maximum number of paths in a traffic class
         :return:
         """
-        return max([self.num_paths(tc) for tc in self.tcs()])
+        return max([self.num_paths(tc, all=all) for tc in self.tcs()])
 
     cpdef int total_paths(self):
-        """Total number of paths"""
+        """Total number of paths in all traffic classes"""
         return sum(map(len, itervalues(self._data)))
 
     cpdef update(self, PPTC other, deep=False):
-        for tc in other:
+        for tc in other.tcs():
             if deep:
                 self._data[tc] = numpy.ma.copy(other._data[tc])
             else:
@@ -390,11 +399,11 @@ cdef class PPTC:
     def __repr__(self):
         return repr(self._data)
 
-    def __getitem__(self, item):
-        return self.paths(item)
+    # def __getitem__(self, item):
+    #     return self.paths(item)
 
-    def __iter__(self):
-        return iterkeys(self._data)
+    # def __iter__(self):
+    #     return iterkeys(self._data)
 
     def __len__(self):
         raise AttributeError('len() is abiguious use num_tcs() or total_paths()')
@@ -404,12 +413,9 @@ cdef class PPTC:
         for tc in self._data:
             r.append({
                 'tc': tc.encode(),
-                'paths': [p.encode() for p in self._data[tc]]
+                'paths': [p.encode() for p in self.paths(tc)]
             })
         return r
-
-
-    # TODO: add freeze() funcitonality?
 
     @staticmethod
     def merge(alist):
@@ -427,7 +433,7 @@ cdef class PPTC:
             r.add(name, tc, d[tc])
         return r
 
-def path_decoder(o):
+cpdef path_decoder(o):
     """
     Function for decoding paths from a dictionary (e.g., when deserializing from JSON)
     :param o: dictionary
