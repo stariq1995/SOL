@@ -5,11 +5,6 @@ from Cython.Build import cythonize
 from setuptools import setup
 from setuptools.extension import Extension
 
-# ext = [Extension('*', sources=["src/sol/**/*.pyx"],
-#                  include_dirs=[numpy.get_include()],
-#                  define_macros=[('CYTHON_TRACE', 1),
-#                                 ('CYTHON_TRACE_NOGIL', 1)]
-#                  )]
 
 ext = [
     Extension(
@@ -94,7 +89,7 @@ setup(
     packages=['sol'],
     url='https://github.com/progwriter/SOL',
     requires=['networkx', 'requests', 'netaddr', 'numpy', 'cython', 'six'],
-    tests_require=['pytest', 'hypothesis'],
+    tests_require=['pytest', 'hypothesis', "flake8"],
 
     ext_modules=cythonize(ext, compiler_directives={
         'cdivision': True,
@@ -115,6 +110,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
 
         'Topic :: System :: Networking',
         'Topic :: Software Development :: Libraries :: Python Modules'

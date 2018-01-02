@@ -1,6 +1,7 @@
 networkx
 requests
 numpy
+scipy
 six
 cython
 flask
@@ -8,5 +9,3 @@ netaddr
 hypothesis
 pytest
 scikit-learn
-
-
