@@ -1,8 +1,6 @@
 # coding=utf-8
-import hypothesis
 import numpy
 import pytest
-import sys
 import tmgen
 from hypothesis import example
 from hypothesis import given
@@ -24,7 +22,7 @@ def pptc():
     # get a complete topology
     topo = complete_topology(5)
     # generate a dummy TM and traffic classes
-    tm = tmgen.uniform_tm(5, 20, 50, 1)
+    tm = tmgen.models.uniform_tm(5, 20, 50, 1)
     tc = traffic_classes(tm, {u'all': 1}, as_dict=False)
     # generate all possibe paths
     res = generate_paths_tc(topo, tc, null_predicate, 10, numpy.inf)

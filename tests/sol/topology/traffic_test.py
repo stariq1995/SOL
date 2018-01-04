@@ -49,7 +49,7 @@ def test_traffic_class_hash(t, t2, t3):
     assert d[t] == 3  # later value is correct
 
     # and finally check that the ID is what gets hashed
-    t.name = 'abcdef'
+    t.name = u'abcdef'
     t.src = -900
     t.dst = 0
     t.volFlows = array([2000])
