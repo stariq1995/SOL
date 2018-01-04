@@ -1,11 +1,14 @@
 language: python
 python:
   - "2.7"
-  - "3.4"
   - "3.5"
   - "3.6"
 install:
-  - pip install -r requirements.txt
-  - pip install -e .
+  - .travis/install.sh
 script:
-  py.test test/
+  # Disabling flake8 for now, because there are so many thing to fix
+#  - flake8
+#  - flake8 --config .flake8.cython
+  # Ignoring tests that rely on Gurobi, for now
+  - py.test tests/ --ignore tests/sol/opt --ignore tests/sol/composition
+cache: pip

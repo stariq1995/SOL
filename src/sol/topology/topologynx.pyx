@@ -46,11 +46,11 @@ cdef class Topology:
         for n in self.nodes():
             self.add_service_type(n, SWITCH)
         for n in self.nodes():
-            if RESOURCES not in self._graph.node[n]:
-                self._graph.node[n][RESOURCES] = {}
-        for u, v in self.links():
-            if RESOURCES not in self._graph.edge[u][v]:
-                self._graph.edge[u][v][RESOURCES] = {}
+            if RESOURCES not in self._graph.nodes[n]:
+                self._graph.nodes[n][RESOURCES] = {}
+        for link in self.links():
+            if RESOURCES not in self._graph.edges[link]:
+                self._graph.edges[link][RESOURCES] = {}
 
     cpdef num_nodes(self, unicode service=None):
         """ Returns the number of nodes in this topology
@@ -63,9 +63,9 @@ cdef class Topology:
         if service is None or not service:
             return self._graph.number_of_nodes()
         else:
-            return len([n for n in self._graph.nodes_iter()
-                        if SERVICES in self._graph.node[n] and
-                        service in self._graph.node[n][SERVICES].split(';')])
+            return len([n for n in self._graph.nodes()
+                        if SERVICES in self._graph.nodes[n] and
+                        service in self._graph.nodes[n][SERVICES].split(';')])
 
     cpdef get_graph(self):
         """ Return the topology graph
@@ -113,7 +113,7 @@ cdef class Topology:
         if fmt == FORMAT_GRAPHML:
             self._graph = graphml.read_graphml(fname, int).to_directed()
         elif fmt == FORMAT_GML:
-            self._graph = nx.read_gml(fname).to_directed()
+            self._graph = nx.read_gml(fname, destringizer=int).to_directed()
         else:
             raise ValueError(ERR_FMT)
 
@@ -125,7 +125,7 @@ cdef class Topology:
         :return: a list of available services at this node (e.g., 'switch',
             'ids')
         """
-        return self._graph.node[node][SERVICES].split(';')
+        return self._graph.nodes[node][SERVICES].split(';')
 
     # cpdef set_service_types(self, int node, service_types):
     #     """
@@ -136,9 +136,9 @@ cdef class Topology:
     #     :type service_types: list
     #     """
     #     if isinstance(service_types, str):
-    #         self._graph.node[node][SERVICES] = service_types
+    #         self._graph.nodes[node][SERVICES] = service_types
     #     else:
-    #         self._graph.node[node][SERVICES] = u';'.join(service_types)
+    #         self._graph.nodes[node][SERVICES] = u';'.join(service_types)
 
     # TODO: build in checks that services and resources are valid Graphml/GML keys?
     cpdef add_service_type(self, int node, service_type):
@@ -152,12 +152,12 @@ cdef class Topology:
         # TODO: this is not elegant or bug-proof. Find better way of storing services
         if ';' in service_type:
             raise ValueError("Services names cannot contain a semicolon")
-        if SERVICES in self._graph.node[node]:
-            types = set(self._graph.node[node][SERVICES].split(';'))
+        if SERVICES in self._graph.nodes[node]:
+            types = set(self._graph.nodes[node][SERVICES].split(';'))
             types.add(service_type)
         else:
             types = [service_type]
-        self._graph.node[node][SERVICES] = u';'.join(types)
+        self._graph.nodes[node][SERVICES] = u';'.join(types)
 
     cpdef nodes(self, data=False):
         """
@@ -167,7 +167,7 @@ cdef class Topology:
             If True, iterator will return elements of type (nodeID, attr_dict).
             If False, only nodeID will be returned
         """
-        return self._graph.nodes_iter(data=data)
+        return self._graph.nodes(data=data)
 
     cpdef edges(self, data=False):
         """
@@ -176,13 +176,13 @@ cdef class Topology:
         :param data: whether to return the attributes associated with the edge
         :return: Iterator over topology edge tuples (nodeID1, nodeID2, edgeData)
         """
-        return self._graph.edges_iter(data=data)
+        return self._graph.edges(data=data)
 
     cpdef links(self, data=False):
         """
         Alias for :py:meth:`edges`
         """
-        return self.edges(data)
+        return self.edges(data=data)
 
     cpdef set_resource(self, node_or_link, unicode resource, double capacity):
         """
@@ -195,10 +195,9 @@ cdef class Topology:
         """
         if isinstance(node_or_link, tuple):
             assert len(node_or_link) == 2
-            self._graph.edge[node_or_link[0]][node_or_link[1]][RESOURCES][
-                resource] = capacity
+            self._graph.edges[node_or_link][RESOURCES][resource] = capacity
         else:
-            self._graph.node[node_or_link][RESOURCES][resource] = capacity
+            self._graph.nodes[node_or_link][RESOURCES][resource] = capacity
 
     cpdef dict get_resources(self, node_or_link):
         """
@@ -211,14 +210,13 @@ cdef class Topology:
         """
         if isinstance(node_or_link, tuple):
             assert len(node_or_link) == 2
-            if RESOURCES in self._graph.edge[node_or_link[0]][node_or_link[1]]:
-                return self._graph.edge[node_or_link[0]][node_or_link[1]][
-                    RESOURCES]
+            if RESOURCES in self._graph.edges[node_or_link]:
+                return self._graph.edges[node_or_link][RESOURCES]
             else:
                 return {}
         else:
-            if RESOURCES in self._graph.node[node_or_link]:
-                return self._graph.node[node_or_link][RESOURCES]
+            if RESOURCES in self._graph.nodes[node_or_link]:
+                return self._graph.nodes[node_or_link][RESOURCES]
             else:
                 return {}
 
@@ -253,7 +251,7 @@ cdef class Topology:
         :return: True or False
         """
         try:
-            return parse_bool(self._graph.node[node][HAS_MBOX])
+            return parse_bool(self._graph.nodes[node][HAS_MBOX])
         except KeyError:
             return False
 
@@ -270,7 +268,7 @@ cdef class Topology:
         :param node: node ID
         :param val: True or False
         """
-        self._graph.node[node][HAS_MBOX] = str(val)
+        self._graph.nodes[node][HAS_MBOX] = str(val)
 
     cpdef set_mbox(self, int node, val=True):
         """
@@ -300,7 +298,7 @@ cdef class Topology:
         :return: True or False
         """
         try:
-            return self._graph.node[node][u'layer'] == EDGE_LAYER
+            return self._graph.nodes[node][u'layer'] == EDGE_LAYER
         except KeyError:
             return False
 

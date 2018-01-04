@@ -11,7 +11,7 @@ from hypothesis import given
 import hypothesis.strategies as st
 
 
-@given(st.integers(0,50))
+@given(st.integers(0, 50))
 @settings(max_examples=50)
 def test_complete_generators(size):
     """
@@ -26,7 +26,7 @@ def test_complete_generators(size):
                                   networkx.complete_graph(size))
 
 
-@given(st.integers(0,50))
+@given(st.integers(0, 50))
 @settings(max_examples=50)
 def test_chain_generators(size):
     """
@@ -40,7 +40,7 @@ def test_chain_generators(size):
                                   networkx.path_graph(size))
 
 
-@given(st.integers(0,20).filter(lambda x: x % 2 ==0)) # only even numbers
+@given(st.integers(0, 20).filter(lambda x: x % 2 == 0))  # only even numbers
 def test_fattree_generator(size):
     """
     Some basic test for FatTree generator. Ensure we return correct types
@@ -51,13 +51,14 @@ def test_fattree_generator(size):
     assert isinstance(topo, Topology)
     assert isinstance(topo.get_graph(), networkx.DiGraph)
     # correct size
-    assert topo.num_nodes() == 5*(size**2)/4 # \frac{5}{4} \times size^2
+    assert topo.num_nodes() == 5 * (size ** 2) / 4  # \frac{5}{4} \times size^2
     G = topo.get_graph()
     # every node has a layer attribute
-    assert all([u'layer' in G.node[n] for n in G.nodes_iter()])
+    assert all([u'layer' in G.node[n] for n in G.nodes()])
     # there are correct number of core switches
-    len([n for n in G.nodes_iter() if G.node[n][u'layer'] == CORE_LAYER]) == size**2/4
-    assert all([u'capacitymult' in G.edge[u][v] for u, v in G.edges_iter()])
+    assert len([n for n in G.nodes() if
+                G.node[n][u'layer'] == CORE_LAYER]) == size ** 2 / 4
+    assert all([u'capacitymult' in G.edges[link] for link in G.edges()])
 
 
 def test_fattree_err_message():
