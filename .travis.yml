@@ -6,7 +6,9 @@ python:
 install:
   - .travis/install.sh
 script:
+  # Disabling flake8 for now, because there are so many thing to fix
 #  - flake8
 #  - flake8 --config .flake8.cython
-  - py.test tests/
+  # Ignoring tests that rely on Gurobi, for now
+  - py.test tests/ --ignore tests/sol/opt --ignore tests/sol/composition
 cache: pip
