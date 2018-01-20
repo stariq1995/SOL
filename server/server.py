@@ -1,3 +1,4 @@
+from __future__ import print_function, absolute_import
 import argparse
 import logging
 
@@ -119,10 +120,10 @@ def composeview():
         
         # topology = Topology.from_json(data['topology'])
         topology = _topology
-        print "Topology from POST Request"
-        print data['topology']
-        print "Parsed topology using json_graph.node_link_graph()"
-        print topology.to_json()
+        print("Topology from POST Request")
+        print(data['topology'])
+        print("Parsed topology using json_graph.node_link_graph()")
+        print(topology.to_json())
     except KeyError:  # todo: is this right exception?
         abort(400)
 
