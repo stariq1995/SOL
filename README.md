@@ -5,6 +5,10 @@ SOL is a library that lets you rapidly prototype *network management application
 It is designed to work well with Software Defined Networking (SDN) as it makes use of the global view of the network to 
 compute a globally optimal (or near-optimal) solution.
 
+This repository contains the implementation of both the SOL libary, 
+and its extension **Chopin**, which allows intent-driven composition of multiple
+SDN applications. 
+
 Why optimizations?
 ------------------
 
@@ -35,13 +39,19 @@ A rough view of the SOL library and integrations is as follows:
 -   [SOL library](https://github.com/progwriter/SOL) (this repository)
 -   [ONOS integration](https://github.com/progwriter/sol-onos) Allows use of the SOL library from the
     [ONOS](http://onosproject.org/) controller
--   [SOL workflows](https://github.com/progwriter/SOL-workflows) A collection of examples and workflows to give users an idea of how SOL can be used.
 -   [TMgen library](https://github.com/progwriter/tmgen) A helper library for generating and manipulating traffic matrices.
 
 Disclaimer
 ----------
-SOL is a research project under active development. Some APIs, integrations and documentation/links are subject to
+SOL is a research project under development. Some APIs, integrations and documentation/links are subject to
 change.
+
+Original papers
+---------------
+
+* [SOL](http://cs.unc.edu/~victor/papers/sol.pdf)
+* Chopin (to appear in CoNEXT'2018)
+
 
 Python documentation
 --------------------
