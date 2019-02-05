@@ -41,6 +41,7 @@ def test_chain_generators(size):
 
 
 @given(st.integers(0, 20).filter(lambda x: x % 2 == 0))  # only even numbers
+@settings(deadline=10000)
 def test_fattree_generator(size):
     """
     Some basic test for FatTree generator. Ensure we return correct types
