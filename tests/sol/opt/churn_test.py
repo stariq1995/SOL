@@ -31,7 +31,8 @@ def test_stable():
 
     # Generate a single traffic class:
     # TrafficClass (id, name, source node, destination node)
-    tcs = [TrafficClass(0, u'classname', 0, 2, np.array([20, 30, 40, 50, 50, 50, 20]))]
+    vols = [20, 30, 40]
+    tcs = [TrafficClass(0, u'classname', 0, 2, np.array(vols))]
     # Generate all paths for this traffic class
     pptc = generate_paths_tc(topo, tcs, cutoff=100)
     # Application configuration
@@ -47,10 +48,12 @@ def test_stable():
     # app = App(pptc, **appconfig)
     # print(app.name)
 
+    curr = np.reshape(np.array([.25, .75]), (1, -1))
+
     app = AppBuilder().name('te') \
         .pptc(pptc)\
         .add_constr(Constraint.ROUTE_ALL)\
-        .objective(Objective.MIN_STABLE_LOAD, resource="bandwidth", weights=[0.5, 0.5])\
+        .objective(Objective.MIN_STABLE_LOAD, resource="bandwidth", weights=[.50, .50], current_allocation=curr)\
         .add_resource(name='bandwidth', applyto='links', cost_val=1).build()
 
     caps = NetworkCaps(topo)
@@ -68,10 +71,11 @@ def test_stable():
     # print(opt.get_solved_objective(te_app))
     # print(opt.get_solved_objective(churn_app))
 
-    churn_optvals = [opt.opt.getVarByName('churn_{}_{}'.format(app.name, e)).x for e in range(7)]
+    print(opt.get_var_values())
+    churn_optvals = [opt.opt.getVarByName('churn_{}_{}'.format(app.name, e)).x for e in range(len(vols))]
     print("churn vals:", churn_optvals)
     
-    load_optvals = [opt.opt.getVarByName('load_{}_{}'.format(app.name, e)).x for e in range(7)]
+    load_optvals = [opt.opt.getVarByName('load_{}_{}'.format(app.name, e)).x for e in range(len(vols))]
     print("load vals:", load_optvals)
 
     print(opt.get_xps()[0, 0, :])
@@ -80,8 +84,8 @@ def test_stable():
     print(opt.get_paths(0))
     print(opt.get_paths(1))
     print(opt.get_paths(2))
-    print(opt.get_paths(3))
-    print(opt.get_paths(4))
+    # print(opt.get_paths(3))
+    # print(opt.get_paths(4))
 
 
 def test_churn():
@@ -139,8 +143,8 @@ def test_churn():
     print(opt.get_paths(0))
     print(opt.get_paths(1))
     print(opt.get_paths(2))
-    print(opt.get_paths(3))
-    print(opt.get_paths(4))
+    # print(opt.get_paths(3))
+    # print(opt.get_paths(4))
     
     # for pi, p in enumerate(paths.paths(tcs[0])):
     #     if list(p.nodes()) == [0, 2]:

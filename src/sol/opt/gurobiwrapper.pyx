@@ -561,7 +561,7 @@ cdef class OptimizationGurobi:
         self.opt.update()
         return per_epoch_obj
     
-    cpdef min_churn(self, tcs=None, varname=None):
+    cpdef min_churn(self, tcs=None, varname=None, current_allocation=None):
         if varname is None:
             varname = Objective.MIN_CHURN.name
         
@@ -576,8 +576,14 @@ cdef class OptimizationGurobi:
                 for tc in tcs:
                     for pi, path in enumerate(self._all_pptc.paths(tc)):
                         churn_expr = LinExpr()
-                        churn_expr.addTerms(1, self._xps[tc.ID, pi, epoch])
-                        self.opt.addConstr(churn <= 1 - churn_expr)
+                        if not isinstance(current_allocation, ndarray):
+                            churn_expr.addTerms(1, self._xps[tc.ID, pi, epoch])
+                            self.opt.addConstr(churn <= 1 - churn_expr)
+                        else:
+                            churn_expr.addTerms(1, self._xps[tc.ID, pi, epoch])
+                            churn_expr.addConstant(-1 * current_allocation[tc.ID, pi])
+                            self.opt.addConstr(churn <= 1 - churn_expr)
+                            self.opt.addConstr(churn <= 1 + churn_expr)
             else:
                 for tc in tcs:
                     for pi, path in enumerate(self._all_pptc.paths(tc)):
@@ -588,13 +594,13 @@ cdef class OptimizationGurobi:
         self.opt.update()
         return per_epoch_obj
 
-    cpdef stable_min_load(self, unicode resource, tcs=None, varname=None, weights=[0.5, 0.5]):
+    cpdef stable_min_load(self, unicode resource, tcs=None, varname=None, weights=[0.5, 0.5], current_allocation=None):
         """
         This function combines the min_link_load and min_churn
         """
         logger.debug("Stable Minimum Load")
         load_objs = self.min_link_load(resource, tcs, 'load_{}'.format(varname))
-        churn_objs = self.min_churn(tcs, 'churn_{}'.format(varname))
+        churn_objs = self.min_churn(tcs, 'churn_{}'.format(varname), current_allocation=current_allocation)
         per_epoch_obj = zeros(self.num_epochs, dtype=object)
         for epoch in range(self.num_epochs):
             per_epoch_obj[epoch] = overall = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)

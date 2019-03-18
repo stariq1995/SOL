@@ -52,8 +52,8 @@ cdef class OptimizationGurobi:
     cpdef min_link_load(self, unicode resource, tcs=*, varname=*)
     cpdef min_latency(self, tcs=*, bool norm=*, cost_func=*, varname=*)
 
-    cpdef min_churn(self, tcs=*, varname=*)
-    cpdef stable_min_load(self, unicode resource, tcs=*, varname=*, weights=*)
+    cpdef min_churn(self, tcs=*, varname=*, current_allocation=*)
+    cpdef stable_min_load(self, unicode resource, tcs=*, varname=*, weights=*, current_allocation=*)
     
     cpdef max_flow(self, tcs=*, varname=*)
     cpdef min_enabled_nodes(self, cost_func=*, varname=*)
