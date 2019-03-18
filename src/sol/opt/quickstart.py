@@ -56,5 +56,6 @@ def from_app(topo, app, network_config):
     # For a single app the composition is not particularly important or sensitive,
     # so we go with reasonable defaults of worst across epochs.
     # Weight of 1 means no other apps, use full objective value as is.
-    opt.compose_objectives(array([epoch_objs]), EpochComposition.WORST, Fairness.WEIGHTED, array([1]))
+    print("changed to avg")
+    opt.compose_objectives(array([epoch_objs]), EpochComposition.AVG, Fairness.WEIGHTED, array([1]))
     return opt

@@ -14,6 +14,8 @@ class Objective(Enum):
     MIN_LATENCY = u'minlatency'
     MAX_FLOW = u'max_flow'
     MIN_ENABLED_NODES = u'min_enabled_nodes'
+    MIN_CHURN = u'minchurn'
+    MIN_STABLE_LOAD = u"minStableLoad"
 
 
 # Some useful objective constant

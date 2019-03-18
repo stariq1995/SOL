@@ -560,6 +560,53 @@ cdef class OptimizationGurobi:
             self.opt.addConstr(latency <= 1 - latency_expr)
         self.opt.update()
         return per_epoch_obj
+    
+    cpdef min_churn(self, tcs=None, varname=None):
+        if varname is None:
+            varname = Objective.MIN_CHURN.name
+        
+        if tcs is None:
+            tcs = list(self._all_pptc.tcs())
+
+        
+        per_epoch_obj = zeros(self.num_epochs, dtype=object)
+        for epoch in range(self.num_epochs):
+            per_epoch_obj[epoch] = churn = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
+            if epoch == 0:
+                for tc in tcs:
+                    for pi, path in enumerate(self._all_pptc.paths(tc)):
+                        churn_expr = LinExpr()
+                        churn_expr.addTerms(1, self._xps[tc.ID, pi, epoch])
+                        self.opt.addConstr(churn <= 1 - churn_expr)
+            else:
+                for tc in tcs:
+                    for pi, path in enumerate(self._all_pptc.paths(tc)):
+                        churn_expr = LinExpr()
+                        churn_expr.addTerms([1, -1], [self._xps[tc.ID, pi, epoch], self._xps[tc.ID, pi, epoch - 1]])
+                        self.opt.addConstr(churn <= 1 - churn_expr)
+                        self.opt.addConstr(churn <= 1 + churn_expr)
+        self.opt.update()
+        return per_epoch_obj
+
+    cpdef stable_min_load(self, unicode resource, tcs=None, varname=None, weights=[0.5, 0.5]):
+        """
+        This function combines the min_link_load and min_churn
+        """
+        logger.debug("Stable Minimum Load")
+        load_objs = self.min_link_load(resource, tcs, 'load_{}'.format(varname))
+        churn_objs = self.min_churn(tcs, 'churn_{}'.format(varname))
+        per_epoch_obj = zeros(self.num_epochs, dtype=object)
+        for epoch in range(self.num_epochs):
+            per_epoch_obj[epoch] = overall = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
+            overall_expr = LinExpr()
+            overall_expr.addTerms(weights, [load_objs[epoch], churn_objs[epoch]])
+            self.opt.addConstr(overall == overall_expr)
+        self.opt.update()
+        return per_epoch_obj
+
+                
+
+
 
     cpdef min_enabled_nodes(self, cost_func=None, varname=None):
         if varname is None:
@@ -1063,6 +1110,10 @@ cdef class OptimizationGurobi:
             epoch_objs = self.max_flow(*args, **kwargs)
         elif name == Objective.MIN_ENABLED_NODES:
             epoch_objs = self.min_enabled_nodes(*args, **kwargs)
+        elif name == Objective.MIN_CHURN:
+            epoch_objs = self.min_churn(*args, **kwargs)
+        elif name == Objective.MIN_STABLE_LOAD:
+            epoch_objs = self.stable_min_load(*args, **kwargs)
         else:
             raise InvalidConfigException("Unknown objective %s" % name)
         return epoch_objs
