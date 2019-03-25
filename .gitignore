@@ -24,3 +24,4 @@ docs/build
 .ipynb_checkpoints
 excludes.txt
 upload.sh
+*.DS_store

@@ -73,6 +73,7 @@ class EpochComposition(Enum):
     """
     AVG = u'sum'
     WORST = u'worst'
+    WEIGHTED = u'weighted'
 
 
 class Fairness(Enum):

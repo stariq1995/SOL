@@ -8,7 +8,7 @@ import networkx as nx
 
 from sol.opt.app import App
 from sol import (AppBuilder, NetworkCaps, NetworkConfig, Topology,
-                 TrafficClass, from_app)
+                 TrafficClass, from_app, from_app_weighted)
 from sol.topology.generators import complete_topology
 from sol.path.generate import generate_paths_tc
 from sol.utils.const import Constraint, Objective, EpochComposition, Fairness
@@ -27,7 +27,8 @@ def test_stable():
     # Generate a topology:
     topo = complete_topology(3)
     for l in topo.links():
-        topo.set_resource(l, 'bandwidth', 3 * (3 - 1) * 100)
+        # topo.set_resource(l, 'bandwidth', 3 * (3 - 1) * 100)
+        topo.set_resource(l, 'bandwidth', 50)
 
     # Generate a single traffic class:
     # TrafficClass (id, name, source node, destination node)
@@ -49,11 +50,14 @@ def test_stable():
     # print(app.name)
 
     curr = np.reshape(np.array([.25, .75]), (1, -1))
+    curr_vols = np.zeros(shape=(1, 1), dtype=float)
+    for tc in pptc.tcs():
+        curr_vols[tc.ID] = 10
 
     app = AppBuilder().name('te') \
         .pptc(pptc)\
         .add_constr(Constraint.ROUTE_ALL)\
-        .objective(Objective.MIN_STABLE_LOAD, resource="bandwidth", weights=[.50, .50], current_allocation=curr)\
+        .objective(Objective.MIN_STABLE_LOAD, resource="bandwidth", weights=[.50, .50], current_allocation=curr, current_vols=curr_vols, normalizer=100)\
         .add_resource(name='bandwidth', applyto='links', cost_val=1).build()
 
     caps = NetworkCaps(topo)
@@ -61,7 +65,7 @@ def test_stable():
     nconfig = NetworkConfig(caps)
     
 
-    opt = from_app(topo, app, nconfig)
+    opt = from_app_weighted(topo, app, nconfig, [3, 2, 1])
 
     # Create and solve an optimization based on the app
     # No link capacities will just result in a single shortest path
@@ -78,15 +82,23 @@ def test_stable():
     load_optvals = [opt.opt.getVarByName('load_{}_{}'.format(app.name, e)).x for e in range(len(vols))]
     print("load vals:", load_optvals)
 
-    print(opt.get_xps()[0, 0, :])
-    print(opt.get_xps()[0, 1, :])
+    # print(opt.get_xps()[0, 0, :])
+    # print(opt.get_xps()[0, 1, :])
 
-    print(opt.get_paths(0))
-    print(opt.get_paths(1))
-    print(opt.get_paths(2))
+    # print(opt.get_paths(0))
+    # print(opt.get_paths(1))
+    # print(opt.get_paths(2))
     # print(opt.get_paths(3))
     # print(opt.get_paths(4))
 
+    # print(opt._load_dict)
+    # for k, v in opt._load_dict['bandwidth'].items():
+    #     print(k, v)
+    # print(pptc)
+    # for tc in pptc.tcs():
+    #     print(tc.volFlows)
+
+    print(opt.volumes)
 
 def test_churn():
     """ Check that we can correctly implement shortest path routing """

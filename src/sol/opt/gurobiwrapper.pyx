@@ -83,6 +83,7 @@ cdef class OptimizationGurobi:
         self._do_time = True
         self._time = 0
 
+
         # Compute the set of all resources
         res_set = set()
         for node in topo.nodes():
@@ -91,11 +92,25 @@ cdef class OptimizationGurobi:
         for link in topo.links():
             rl = topo.get_resources(link)
             res_set.update(rl)
+
+
+
+
         # Ensure that number of epochs matches up across all traffic classes
         if len(set([ma.compressed(x.volFlows).size for x in all_pptc.tcs()])) != 1:
             raise ValueError(ERR_EPOCH_MISMATCH)
         # Store total number of epochs
         self.num_epochs = ma.compressed(next(all_pptc.tcs()).volFlows).size
+
+
+        # Store the total volumes for all traffic classes for all epochs
+        self.volumes = zeros(shape=(all_pptc.num_tcs(), self.num_epochs),
+                            dtype=float)
+        
+        for tc in all_pptc.tcs():
+            self.volumes[tc.ID, :] = ma.compressed(tc.volFlows)
+
+
         # Maximum number of paths for a single traffic class (to calculate the number of x_* variables)
         self._max_paths = all_pptc.max_paths(all=False)
         logger.debug('Gurobi wrapper computed: num_epochs=%d, max_paths=%d, num_tcs=%d' %
@@ -561,12 +576,26 @@ cdef class OptimizationGurobi:
         self.opt.update()
         return per_epoch_obj
     
-    cpdef min_churn(self, tcs=None, varname=None, current_allocation=None):
+    cpdef min_churn(self, tcs=None, varname=None, current_allocation=None, current_vols=None, normalizer=None):
         if varname is None:
             varname = Objective.MIN_CHURN.name
         
         if tcs is None:
             tcs = list(self._all_pptc.tcs())
+        
+        # Find the right normalization term if not available
+        if normalizer == None:
+            if not isinstance(current_vols, ndarray):
+                normalizer = np.max(self.volumes)
+            else:
+                normalizer = max(np.max(self.volumes), np.max(current_vols)) * 1.0
+        
+        # Normalize all volumes
+        if isinstance(current_vols, ndarray):
+            current_vols /= normalizer
+        self.volumes /= normalizer
+
+        
 
         
         per_epoch_obj = zeros(self.num_epochs, dtype=object)
@@ -576,31 +605,33 @@ cdef class OptimizationGurobi:
                 for tc in tcs:
                     for pi, path in enumerate(self._all_pptc.paths(tc)):
                         churn_expr = LinExpr()
-                        if not isinstance(current_allocation, ndarray):
+                        if (not isinstance(current_allocation, ndarray)) or (not isinstance(current_vols, ndarray)):
                             churn_expr.addTerms(1, self._xps[tc.ID, pi, epoch])
                             self.opt.addConstr(churn <= 1 - churn_expr)
                         else:
-                            churn_expr.addTerms(1, self._xps[tc.ID, pi, epoch])
-                            churn_expr.addConstant(-1 * current_allocation[tc.ID, pi])
+                            
+                            churn_expr.addTerms(self.volumes[tc.ID, epoch] , self._xps[tc.ID, pi, epoch])
+                            churn_expr.addConstant(-current_vols[tc.ID] * current_allocation[tc.ID, pi])
                             self.opt.addConstr(churn <= 1 - churn_expr)
                             self.opt.addConstr(churn <= 1 + churn_expr)
             else:
                 for tc in tcs:
                     for pi, path in enumerate(self._all_pptc.paths(tc)):
                         churn_expr = LinExpr()
-                        churn_expr.addTerms([1, -1], [self._xps[tc.ID, pi, epoch], self._xps[tc.ID, pi, epoch - 1]])
+                        churn_expr.addTerms([self.volumes[tc.ID, epoch], -self.volumes[tc.ID, epoch - 1]], 
+                                [self._xps[tc.ID, pi, epoch], self._xps[tc.ID, pi, epoch - 1]])
                         self.opt.addConstr(churn <= 1 - churn_expr)
                         self.opt.addConstr(churn <= 1 + churn_expr)
         self.opt.update()
         return per_epoch_obj
 
-    cpdef stable_min_load(self, unicode resource, tcs=None, varname=None, weights=[0.5, 0.5], current_allocation=None):
+    cpdef stable_min_load(self, unicode resource, tcs=None, varname=None, weights=[0.5, 0.5], current_allocation=None, current_vols=None, normalizer=None):
         """
         This function combines the min_link_load and min_churn
         """
         logger.debug("Stable Minimum Load")
         load_objs = self.min_link_load(resource, tcs, 'load_{}'.format(varname))
-        churn_objs = self.min_churn(tcs, 'churn_{}'.format(varname), current_allocation=current_allocation)
+        churn_objs = self.min_churn(tcs, 'churn_{}'.format(varname), current_allocation=current_allocation, current_vols=current_vols, normalizer=normalizer)
         per_epoch_obj = zeros(self.num_epochs, dtype=object)
         for epoch in range(self.num_epochs):
             per_epoch_obj[epoch] = overall = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
@@ -802,7 +833,7 @@ cdef class OptimizationGurobi:
         self.opt.update()
         return epoch_obj
 
-    cpdef compose_objectives(self, ndarray obj_arr, epoch_mode, fairness_mode, weight_arr):
+    cpdef compose_objectives(self, ndarray obj_arr, epoch_mode, fairness_mode, weight_arr, epoch_weights=None):
         """
         Compose multiple objectives, across different epochs, into a unified objective function.
 
@@ -811,15 +842,21 @@ cdef class OptimizationGurobi:
         :param weight_arr: An array containing weights of each objective function (length of this array should match
             the 1st dimension of *obj_arr*
         :param mode: the composition mode of objective functions across epochs
-            (:py:class:sol.utils.const.EpochComposition). Supported values are AVG and WORST.
+            (:py:class:sol.utils.const.EpochComposition). Supported values are AVG and WORST and WEIGHTED.
 
             AVG refers to summing up and averaging objective values across epochs, then having weights
             assigned to them.
 
             WORST refers to maximizing the combination of objective values for the worst epoch.
+
+            WEIGHTED refers to maximizing the weighted average of objective values across all epochs
         :param weight_arr: the weights array. Only applicable if the fairness_mode is "weighted"
+        :param epoch_weights: the epoch weight array, only to be used if EpochComposition.WEIGHTED is
+                            specified. Is normalised by the function.
         :return: A gurobi variable refering to the overall objective
         """
+
+        # logger.debug("epoch weights: %s" % repr(epoch_weights))
         # repeat the weight array across ecpochs if only a single set of weights has been specified
         if weight_arr.ndim == 1:
             weight_arr = tile(weight_arr, (1, self.num_epochs))
@@ -836,6 +873,20 @@ cdef class OptimizationGurobi:
                 expr = LinExpr()
                 expr.addTerms(1, self._compose_obj_one_epoch(e, obj_arr[:, e], fairness_mode, weight_arr[:, e]))
                 self.opt.addConstr(the_obj <= expr)
+        elif epoch_mode == EpochComposition.WEIGHTED:
+            if (not isinstance(epoch_weights, list)) or len(epoch_weights) != self.num_epochs:
+                # logger.debug("Did not find epoch weights in args")
+                epoch_weights = [1.0 / self.num_epochs for _ in range(self.num_epochs)]
+            # logger.debug("calculating sum over : %s"  %  repr(epoch_weights))
+            w_sum = sum(epoch_weights)
+            # logger.debug('weight sum: %d' % w_sum)
+            epoch_weights = [float(w) / w_sum for w in epoch_weights]
+            # logger.debug("Epoch weights used: %s" % repr(epoch_weights))
+            expr = LinExpr()
+            for e in range(self.num_epochs):
+                # Use addTerms, it's faster
+                expr.addTerms(epoch_weights[e], self._compose_obj_one_epoch(e, obj_arr[:, e], fairness_mode, weight_arr[:, e]))
+            self.opt.addConstr(the_obj <= expr / self.num_epochs)
         else:
             raise ValueError(ERR_UNKNOWN_MODE % (u'epoch composition', epoch_mode))
         self.opt.update()
