@@ -38,6 +38,8 @@ import time
 
 import cython
 from numpy import ma, zeros, arange, array, ndarray, frompyfunc, log, ones, full, tile, uint8
+from numpy import max as nmax
+from numpy import sum as nsum
 from numpy cimport ndarray
 from six import iterkeys, next
 from six.moves import range
@@ -241,6 +243,23 @@ cdef class OptimizationGurobi:
                 self._als[tc.ID, epoch].lb = 1
         # Update the model
         self.opt.update()
+
+    cpdef min_allocation(self, double minimal_volume):
+        """
+        Ensure that at least 'minimal volume' amount of traffic for each
+        traffic class 
+        """
+        tcs = list(self._all_pptc.tcs())
+        
+        for epoch in range(self.num_epochs):
+            for tc in tcs:
+                for pi, path in enumerate(self._all_pptc.paths(tc)):
+                    p = self.opt.addVar(vtype=GRB.BINARY, name='bin_v_{}_{}_{}'.format(tc.ID, pi, epoch))
+                    self.opt.addConstr(p + self._xps[tc.ID, pi, epoch] <= 1)
+                    self.opt.addConstr(((1 - p) * self._xps[tc.ID, pi, epoch] * self.volumes[tc.ID, epoch]) + (p * self.volumes[tc.ID, epoch]) >= minimal_volume)
+
+        self.opt.update()
+
 
 
     cpdef consume(self, tcs, unicode resource, capacities, mode, double cost_val, cost_funcs=None):
@@ -575,8 +594,76 @@ cdef class OptimizationGurobi:
             self.opt.addConstr(latency <= 1 - latency_expr)
         self.opt.update()
         return per_epoch_obj
+
+    cpdef min_churn_volumes_sum(self, tcs=None, varname=None, current_allocation=None, current_vols=None, normalizer=None):
+        if varname is None:
+            varname = Objective.MIN_CHURN.name
+        
+        if tcs is None:
+            tcs = list(self._all_pptc.tcs())
+        
+        # Find the right normalization term if not available
+        if not isinstance(current_vols, ndarray):
+            safe_normalizer = nmax(self.volumes)
+        else:
+            safe_normalizer = max(nmax(nsum(self.volumes, axis=1)), nsum(current_vols)) * 1.0
+        
+        if normalizer == None:
+            normalizer = safe_normalizer
+        else:
+            if normalizer < safe_normalizer:
+                logger.warning("Normalizer may be too low\nSafe Value: %d\tCurrent Value:%d" % (safe_normalizer, normalizer))
+        
+        # Normalize all volumes
+        if isinstance(current_vols, ndarray):
+            current_vols /= normalizer
+        normalized_volumes = self.volumes / normalizer
+
+        
+
+        
+        per_epoch_obj = zeros(self.num_epochs, dtype=object)
+        for epoch in range(self.num_epochs):
+            per_epoch_obj[epoch] = churn = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
+            churn_expr = LinExpr()
+            if epoch == 0:
+                for tc in tcs:
+                    for pi, path in enumerate(self._all_pptc.paths(tc)):
+                        y = self.opt.addVar(vtype=GRB.BINARY, name='biny_{}_{}_{}'.format(tc.ID, pi, epoch))
+                        p = self.opt.addVar(name='p_{}_{}_{}'.format(tc.ID, pi, epoch), lb=0, ub=1)
+                        n = self.opt.addVar(name='n_{}_{}_{}'.format(tc.ID, pi, epoch), lb=0, ub=1)
+                        local_churn = LinExpr()
+                        if (not isinstance(current_allocation, ndarray)) or (not isinstance(current_vols, ndarray)):
+                            local_churn.addTerms(normalized_volumes[tc.ID, epoch] , self._xps[tc.ID, pi, epoch])
+                        else:
+                            local_churn.addTerms(normalized_volumes[tc.ID, epoch] , self._xps[tc.ID, pi, epoch])
+                            local_churn.addConstant(-current_vols[tc.ID] * current_allocation[tc.ID, pi])
+                        self.opt.addConstr(local_churn == p - n)
+                        self.opt.addConstr(p <= y)
+                        self.opt.addConstr(n <= (1 - y))
+                        self.opt.addConstr(p >= 0)
+                        self.opt.addConstr(n >= 0)
+                        churn_expr.addTerms([1, 1], [p, n])
+            else:
+                for tc in tcs:
+                    for pi, path in enumerate(self._all_pptc.paths(tc)):
+                        y = self.opt.addVar(vtype=GRB.BINARY, name='biny_{}_{}_{}'.format(tc.ID, pi, epoch))
+                        p = self.opt.addVar(name='p_{}_{}_{}'.format(tc.ID, pi, epoch), lb=0, ub=1)
+                        n = self.opt.addVar(name='n_{}_{}_{}'.format(tc.ID, pi, epoch), lb=0, ub=1)
+                        local_churn = LinExpr()
+                        local_churn.addTerms([normalized_volumes[tc.ID, epoch], -normalized_volumes[tc.ID, epoch - 1]], 
+                                [self._xps[tc.ID, pi, epoch], self._xps[tc.ID, pi, epoch - 1]])
+                        self.opt.addConstr(local_churn == p - n)
+                        self.opt.addConstr(p <= y)
+                        self.opt.addConstr(n <= (1 - y))
+                        self.opt.addConstr(p >= 0)
+                        self.opt.addConstr(n >= 0)
+                        churn_expr.addTerms([1, 1], [p, n])
+            self.opt.addConstr(churn <= 1 - churn_expr)
+        self.opt.update()
+        return per_epoch_obj
     
-    cpdef min_churn(self, tcs=None, varname=None, current_allocation=None, current_vols=None, normalizer=None):
+    cpdef min_churn_volumes(self, tcs=None, varname=None, current_allocation=None, current_vols=None, normalizer=None):
         if varname is None:
             varname = Objective.MIN_CHURN.name
         
@@ -586,14 +673,63 @@ cdef class OptimizationGurobi:
         # Find the right normalization term if not available
         if normalizer == None:
             if not isinstance(current_vols, ndarray):
-                normalizer = np.max(self.volumes)
+                normalizer = nmax(self.volumes)
             else:
-                normalizer = max(np.max(self.volumes), np.max(current_vols)) * 1.0
+                normalizer = max(nmax(self.volumes), nmax(current_vols)) * 1.0
         
         # Normalize all volumes
         if isinstance(current_vols, ndarray):
             current_vols /= normalizer
-        self.volumes /= normalizer
+        normalized_volumes = self.volumes / normalizer
+
+        
+
+        
+        per_epoch_obj = zeros(self.num_epochs, dtype=object)
+        for epoch in range(self.num_epochs):
+            per_epoch_obj[epoch] = churn = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
+            if epoch == 0:
+                for tc in tcs:
+                    for pi, path in enumerate(self._all_pptc.paths(tc)):
+                        churn_expr = LinExpr()
+                        if (not isinstance(current_allocation, ndarray)) or (not isinstance(current_vols, ndarray)):
+                            churn_expr.addTerms(normalized_volumes[tc.ID, epoch], self._xps[tc.ID, pi, epoch])
+                            self.opt.addConstr(churn <= 1 - churn_expr)
+                        else:
+                            
+                            churn_expr.addTerms(normalized_volumes[tc.ID, epoch] , self._xps[tc.ID, pi, epoch])
+                            churn_expr.addConstant(-current_vols[tc.ID] * current_allocation[tc.ID, pi])
+                            self.opt.addConstr(churn <= 1 - churn_expr)
+                            self.opt.addConstr(churn <= 1 + churn_expr)
+            else:
+                for tc in tcs:
+                    for pi, path in enumerate(self._all_pptc.paths(tc)):
+                        churn_expr = LinExpr()
+                        churn_expr.addTerms([normalized_volumes[tc.ID, epoch], -normalized_volumes[tc.ID, epoch - 1]], 
+                                [self._xps[tc.ID, pi, epoch], self._xps[tc.ID, pi, epoch - 1]])
+                        self.opt.addConstr(churn <= 1 - churn_expr)
+                        self.opt.addConstr(churn <= 1 + churn_expr)
+        self.opt.update()
+        return per_epoch_obj
+
+    cpdef min_churn_absolute(self, tcs=None, varname=None, current_allocation=None, current_vols=None, normalizer=None):
+        if varname is None:
+            varname = Objective.MIN_CHURN.name
+        
+        if tcs is None:
+            tcs = list(self._all_pptc.tcs())
+        
+        # Find the right normalization term if not available
+        if normalizer == None:
+            if not isinstance(current_vols, ndarray):
+                normalizer = nmax(self.volumes)
+            else:
+                normalizer = max(nmax(self.volumes), nmax(current_vols)) * 1.0
+        
+        # Normalize all volumes
+        if isinstance(current_vols, ndarray):
+            current_vols /= normalizer
+        normalized_volumes = self.volumes / normalizer
 
         
 
@@ -610,28 +746,61 @@ cdef class OptimizationGurobi:
                             self.opt.addConstr(churn <= 1 - churn_expr)
                         else:
                             
-                            churn_expr.addTerms(self.volumes[tc.ID, epoch] , self._xps[tc.ID, pi, epoch])
-                            churn_expr.addConstant(-current_vols[tc.ID] * current_allocation[tc.ID, pi])
+                            churn_expr.addTerms(1, self._xps[tc.ID, pi, epoch])
+                            churn_expr.addConstant(-current_allocation[tc.ID, pi])
                             self.opt.addConstr(churn <= 1 - churn_expr)
                             self.opt.addConstr(churn <= 1 + churn_expr)
             else:
                 for tc in tcs:
                     for pi, path in enumerate(self._all_pptc.paths(tc)):
                         churn_expr = LinExpr()
-                        churn_expr.addTerms([self.volumes[tc.ID, epoch], -self.volumes[tc.ID, epoch - 1]], 
+                        churn_expr.addTerms([1, -1], 
                                 [self._xps[tc.ID, pi, epoch], self._xps[tc.ID, pi, epoch - 1]])
                         self.opt.addConstr(churn <= 1 - churn_expr)
                         self.opt.addConstr(churn <= 1 + churn_expr)
         self.opt.update()
         return per_epoch_obj
 
+
     cpdef stable_min_load(self, unicode resource, tcs=None, varname=None, weights=[0.5, 0.5], current_allocation=None, current_vols=None, normalizer=None):
         """
-        This function combines the min_link_load and min_churn
+        This function combines the min_link_load and min_churn_volumes
         """
         logger.debug("Stable Minimum Load")
         load_objs = self.min_link_load(resource, tcs, 'load_{}'.format(varname))
-        churn_objs = self.min_churn(tcs, 'churn_{}'.format(varname), current_allocation=current_allocation, current_vols=current_vols, normalizer=normalizer)
+        churn_objs = self.min_churn_volumes(tcs, 'churn_{}'.format(varname), current_allocation=current_allocation, current_vols=current_vols, normalizer=normalizer)
+        per_epoch_obj = zeros(self.num_epochs, dtype=object)
+        for epoch in range(self.num_epochs):
+            per_epoch_obj[epoch] = overall = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
+            overall_expr = LinExpr()
+            overall_expr.addTerms(weights, [load_objs[epoch], churn_objs[epoch]])
+            self.opt.addConstr(overall == overall_expr)
+        self.opt.update()
+        return per_epoch_obj
+
+    cpdef stable_min_load_sum(self, unicode resource, tcs=None, varname=None, weights=[0.5, 0.5], current_allocation=None, current_vols=None, normalizer=None):
+        """
+        This function combines the min_link_load and min_churn_volumes
+        """
+        logger.debug("Stable Minimum Load")
+        load_objs = self.min_link_load(resource, tcs, 'load_{}'.format(varname))
+        churn_objs = self.min_churn_volumes_sum(tcs, 'churn_{}'.format(varname), current_allocation=current_allocation, current_vols=current_vols, normalizer=normalizer)
+        per_epoch_obj = zeros(self.num_epochs, dtype=object)
+        for epoch in range(self.num_epochs):
+            per_epoch_obj[epoch] = overall = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
+            overall_expr = LinExpr()
+            overall_expr.addTerms(weights, [load_objs[epoch], churn_objs[epoch]])
+            self.opt.addConstr(overall == overall_expr)
+        self.opt.update()
+        return per_epoch_obj
+
+    cpdef stable_min_load_abs(self, unicode resource, tcs=None, varname=None, weights=[0.5, 0.5], current_allocation=None, current_vols=None, normalizer=None):
+        """
+        This function combines the min_link_load and min_churn_volumes
+        """
+        logger.debug("Stable Minimum Load")
+        load_objs = self.min_link_load(resource, tcs, 'load_{}'.format(varname))
+        churn_objs = self.min_churn_absolute(tcs, 'churn_{}'.format(varname), current_allocation=current_allocation, current_vols=current_vols, normalizer=normalizer)
         per_epoch_obj = zeros(self.num_epochs, dtype=object)
         for epoch in range(self.num_epochs):
             per_epoch_obj[epoch] = overall = self.opt.addVar(name='{}_{}'.format(varname, epoch), lb=0, ub=1)
@@ -1168,9 +1337,13 @@ cdef class OptimizationGurobi:
         elif name == Objective.MIN_ENABLED_NODES:
             epoch_objs = self.min_enabled_nodes(*args, **kwargs)
         elif name == Objective.MIN_CHURN:
-            epoch_objs = self.min_churn(*args, **kwargs)
+            epoch_objs = self.min_churn_volumes(*args, **kwargs)
         elif name == Objective.MIN_STABLE_LOAD:
             epoch_objs = self.stable_min_load(*args, **kwargs)
+        elif name == Objective.MIN_STABLE_LOAD_SUM:
+            epoch_objs = self.stable_min_load_sum(*args, **kwargs)
+        elif name == Objective.MIN_STABLE_LOAD_ABS:
+            epoch_objs = self.stable_min_load_abs(*args, **kwargs)
         else:
             raise InvalidConfigException("Unknown objective %s" % name)
         return epoch_objs
@@ -1200,5 +1373,7 @@ cdef class OptimizationGurobi:
                 self.fix_paths(*args, **kwargs)
             elif c[0] == Constraint.NODE_BUDGET:
                 self.node_budget(*args, **kwargs)
+            elif c[0] == Constraint.MIN_ALLOCATION:
+                self.min_allocation(*args, **kwargs)
             else:
                 raise InvalidConfigException("Unsupported constraint type %s" % c)

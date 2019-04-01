@@ -40,6 +40,7 @@ cdef class OptimizationGurobi:
 
     # Routing and path constraints
     cpdef route_all(self, tcs=*)
+    cpdef min_allocation(self, double minimal_volume)
     cpdef cap_num_paths(self, int max_paths, PPTC pptc=*)
     cpdef enforce_single_path(self, traffic_classes)
     cpdef flow_affinity(self, tc_pairs)
@@ -55,9 +56,13 @@ cdef class OptimizationGurobi:
     cpdef min_link_load(self, unicode resource, tcs=*, varname=*)
     cpdef min_latency(self, tcs=*, bool norm=*, cost_func=*, varname=*)
 
-    cpdef min_churn(self, tcs=*, varname=*, current_allocation=*, current_vols=*, normalizer=*)
+    cpdef min_churn_volumes(self, tcs=*, varname=*, current_allocation=*, current_vols=*, normalizer=*)
+    cpdef min_churn_volumes_sum(self, tcs=*, varname=*, current_allocation=*, current_vols=*, normalizer=*)
+    cpdef min_churn_absolute(self, tcs=*, varname=*, current_allocation=*, current_vols=*, normalizer=*)
     cpdef stable_min_load(self, unicode resource, tcs=*, varname=*, weights=*, current_allocation=*, current_vols=*, normalizer=*)
-    
+    cpdef stable_min_load_sum(self, unicode resource, tcs=*, varname=*, weights=*, current_allocation=*, current_vols=*, normalizer=*)
+    cpdef stable_min_load_abs(self, unicode resource, tcs=*, varname=*, weights=*, current_allocation=*, current_vols=*, normalizer=*)
+
     cpdef max_flow(self, tcs=*, varname=*)
     cpdef min_enabled_nodes(self, cost_func=*, varname=*)
     cpdef compose_objectives(self, ndarray obj_arr, epoch_mode, fairness_mode, weight_arr, epoch_weights=*)

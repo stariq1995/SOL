@@ -16,6 +16,8 @@ class Objective(Enum):
     MIN_ENABLED_NODES = u'min_enabled_nodes'
     MIN_CHURN = u'minchurn'
     MIN_STABLE_LOAD = u"minStableLoad"
+    MIN_STABLE_LOAD_SUM = u'minStableLoadSum'
+    MIN_STABLE_LOAD_ABS = u'minStableLoadAbs'
 
 
 # Some useful objective constant
@@ -38,6 +40,7 @@ class Constraint(Enum):
     MINDIFF = u'mindiff'
     NODE_BUDGET = u'node_budget'
     ALLOCATE_FLOW = u'allocate_flow'
+    MIN_ALLOCATION = u'minimal_allocation'
 
 
 class BinType(Enum):

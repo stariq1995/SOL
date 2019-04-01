@@ -25,3 +25,4 @@ docs/build
 excludes.txt
 upload.sh
 *.DS_store
+*.lp
