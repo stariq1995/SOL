@@ -253,10 +253,12 @@ cdef class OptimizationGurobi:
         
         for epoch in range(self.num_epochs):
             for tc in tcs:
+                tc_volume_for_curr_epoch = self.volumes[tc.ID, epoch]
+                min_possible_allocation = min(minimal_volume, tc_volume_for_curr_epoch)
                 for pi, path in enumerate(self._all_pptc.paths(tc)):
                     p = self.opt.addVar(vtype=GRB.BINARY, name='bin_v_{}_{}_{}'.format(tc.ID, pi, epoch))
                     self.opt.addConstr(p + self._xps[tc.ID, pi, epoch] <= 1)
-                    self.opt.addConstr(((1 - p) * self._xps[tc.ID, pi, epoch] * self.volumes[tc.ID, epoch]) + (p * self.volumes[tc.ID, epoch]) >= minimal_volume)
+                    self.opt.addConstr(((1 - p) * self._xps[tc.ID, pi, epoch] * tc_volume_for_curr_epoch) + (p * tc_volume_for_curr_epoch) >= min_possible_allocation)
 
         self.opt.update()
 
@@ -606,7 +608,7 @@ cdef class OptimizationGurobi:
         if not isinstance(current_vols, ndarray):
             safe_normalizer = nmax(self.volumes)
         else:
-            safe_normalizer = max(nmax(nsum(self.volumes, axis=1)), nsum(current_vols)) * 1.0
+            safe_normalizer = max(nmax(nsum(self.volumes, axis=0)), nsum(current_vols)) * 1.0
         
         if normalizer == None:
             normalizer = safe_normalizer

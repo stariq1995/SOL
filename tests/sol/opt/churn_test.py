@@ -59,7 +59,7 @@ def test_min_alloc():
     # Generate a single traffic class:
     # TrafficClass (id, name, source node, destination node)
     epochs = 3
-    vols = [8, 8, 8]
+    vols = [4, 8, 8]
     tcs = [TrafficClass(0, u'classname', 0, 2, np.array(vols))]
     # Generate all paths for this traffic class
     
@@ -70,13 +70,13 @@ def test_min_alloc():
     # curr = None
     curr_vols = np.zeros(shape=(1, 1), dtype=float)
     for tc in pptc.tcs():
-        curr_vols[tc.ID] = 8
+        curr_vols[tc.ID] = 0
     # curr_vols = None
 
     app = AppBuilder().name('te') \
         .pptc(pptc)\
         .add_constr(Constraint.ROUTE_ALL)\
-        .add_constr(Constraint.MIN_ALLOCATION, 0.0)\
+        .add_constr(Constraint.MIN_ALLOCATION, 5.0)\
         .objective(Objective.MIN_STABLE_LOAD, resource="bandwidth", weights=[1, 0], current_allocation=curr, current_vols=curr_vols, normalizer=100)\
         .add_resource(name='bandwidth', applyto='links', cost_val=1).build()
 
@@ -165,8 +165,7 @@ def test_stable():
     app = AppBuilder().name('te') \
         .pptc(pptc)\
         .add_constr(Constraint.ROUTE_ALL)\
-        .add_constr(Constraint.MIN_ALLOCATION, 5.0)\
-        .objective(Objective.MIN_STABLE_LOAD, resource="bandwidth", weights=[0, 1], current_allocation=curr, current_vols=curr_vols, normalizer=100)\
+        .objective(Objective.MIN_STABLE_LOAD_SUM, resource="bandwidth", weights=[1, 0], current_allocation=curr, current_vols=curr_vols, normalizer=100)\
         .add_resource(name='bandwidth', applyto='links', cost_val=1).build()
 
     caps = NetworkCaps(topo)
@@ -175,6 +174,9 @@ def test_stable():
     
 
     opt = from_app_weighted(topo, app, nconfig, [3, 2, 1])
+    for tc in pptc.tcs():
+        opt.cap_num_paths(max_paths=2, pptc=generate_paths_tc(topo, [tcs[tc.ID]], cutoff=100))
+    # opt.cap_num_paths(max_paths=4)
 
     print("Printing model")
     opt.write(CUR_DIR + "model.lp")
